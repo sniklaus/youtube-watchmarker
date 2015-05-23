@@ -102,7 +102,7 @@ var PreferenceHistory = {
 			{
 				// @formatter:off
 				PreferenceHistory.statementCount = PreferenceHistory.sqlserviceHandle.createStatement(
-					'SELECT COUNT(*) FROM PreferenceHistory '
+					'SELECT COUNT(*) AS intCount FROM PreferenceHistory '
 				);
 				// @formatter:on
 			}
@@ -291,7 +291,7 @@ var PreferenceHistory = {
 			var boolStep = PreferenceHistory.statementCount.step();
 			
 			if (boolStep === true) {
-				intCount = PreferenceHistory.statementCount.row.COUNT; // TODO: change
+				intCount = PreferenceHistory.statementCount.row.intCount;
 				
 			} else if (boolStep === false) {
 				intCount = 0;

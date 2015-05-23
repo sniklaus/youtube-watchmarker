@@ -45,56 +45,40 @@ var Youtube = {
 		}
 	},
 	
-	link: function() {
+	link: function(functionError, functionSuccess) {
 		{
-			if ((PreferenceYoutube.getStrKey() === '') && (PreferenceYoutube.getStrAccess() === '') && (PreferenceYoutube.getStrRefresh() === '')) {
-				window.open('https://accounts.google.com/o/oauth2/auth?response_type=' + encodeURIComponent('code') + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect) + '&scope=' + encodeURIComponent(Youtube.strScope), '_blank');
+			if (PreferenceYoutube.getStrKey() === '') {
+				{
+					window.open('https://accounts.google.com/o/oauth2/auth?response_type=' + encodeURIComponent('code') + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect) + '&scope=' + encodeURIComponent(Youtube.strScope), '_blank');
+				}
+				
+				functionSuccess();
 			}
 		}
 		
 		{
-			if ((PreferenceYoutube.getStrKey() !== '') && (PreferenceYoutube.getStrAccess() === '') && (PreferenceYoutube.getStrRefresh() === '')) {
+			if (PreferenceYoutube.getStrKey() !== '') {
 				jQuery.ajax({
 					'async': true,
 					'type': 'POST',
 					'url': 'https://www.googleapis.com/oauth2/v3/token',
 					'data':  'grant_type=' + encodeURIComponent('authorization_code') + '&code=' + encodeURIComponent(PreferenceYoutube.getStrKey()) + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&client_secret=' + encodeURIComponent(Youtube.strSecret) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect),
 					'dataType': 'json',
+					'error': function() {
+						functionError();
+					},
 					'success': function(jsonHandle) {
 						{
-							PreferenceYoutube.setStrAccess(jsonHandle.access_token);
+							if (jsonHandle.access_token !== undefined) {
+								PreferenceYoutube.setStrAccess(jsonHandle.access_token);
+							}
 							
-							PreferenceYoutube.setStrRefresh(jsonHandle.refresh_token);
+							if (jsonHandle.refresh_token !== undefined) {
+								PreferenceYoutube.setStrRefresh(jsonHandle.refresh_token);
+							}
 						}
-					},
-					'complete': function() {
-						{
-							YoutubeObserver.update();
-						}
-					}
-				});
-			}
-		}
-		
-		{
-			if ((PreferenceYoutube.getStrKey() !== '') && (PreferenceYoutube.getStrAccess() !== '') && (PreferenceYoutube.getStrRefresh() !== '')) {
-				jQuery.ajax({
-					'async': true,
-					'type': 'POST',
-					'url': 'https://www.googleapis.com/oauth2/v3/token',
-					'data':  'grant_type=' + encodeURIComponent('refresh_token') + '&refresh_token=' + encodeURIComponent(PreferenceYoutube.getStrRefresh()) + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&client_secret=' + encodeURIComponent(Youtube.strSecret) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect),
-					'dataType': 'json',
-					'success': function(jsonHandle) {
-						{
-							PreferenceYoutube.setStrAccess(jsonHandle.access_token);
-							
-							PreferenceYoutube.setStrRefresh(jsonHandle.refresh_token);
-						}
-					},
-					'complete': function() {
-						{
-							YoutubeObserver.update();
-						}
+						
+						functionSuccess();
 					}
 				});
 			}
@@ -131,6 +115,32 @@ var Youtube = {
 	},
 	
 	update: function() {
+		var functionAuth = function() {
+			jQuery.ajax({
+				'async': true,
+				'type': 'POST',
+				'url': 'https://www.googleapis.com/oauth2/v3/token',
+				'data':  'grant_type=' + encodeURIComponent('refresh_token') + '&refresh_token=' + encodeURIComponent(PreferenceYoutube.getStrRefresh()) + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&client_secret=' + encodeURIComponent(Youtube.strSecret) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect),
+				'dataType': 'json',
+				'error': function() {
+					functionError();
+				},
+				'success': function(jsonHandle) {
+					{
+						if (jsonHandle.access_token !== undefined) {
+							PreferenceYoutube.setStrAccess(jsonHandle.access_token);
+						}
+						
+						if (jsonHandle.refresh_token !== undefined) {
+							PreferenceYoutube.setStrRefresh(jsonHandle.refresh_token);
+						}
+					}
+					
+					functionChannels();
+				}
+			});
+		};
+		
 		var Channels_strHistory = '';
 		
 		var functionChannels = function() {
@@ -142,48 +152,113 @@ var Youtube = {
 					'Authorization': 'Bearer ' + PreferenceYoutube.getStrAccess()
 				}, 
 				'dataType': 'json',
+				'error': function() {
+					functionError();
+				},
 				'success': function(jsonHandle) {
 					{
 						Channels_strHistory = jsonHandle.items[0].contentDetails.relatedPlaylists.watchHistory;
 					}
 					
 					functionPlaylistitems();
-				},
-				'complete': function() {
-					{
-						YoutubeObserver.update();
-					}
 				}
 			});
 		};
+		
+		var Playlistitems_strPage = '';
 		
 		var functionPlaylistitems = function() {
 			jQuery.ajax({
 				'async': true,
 				'type': 'GET',
-				'url': 'https://www.googleapis.com/youtube/v3/playlistItems?key=' + encodeURIComponent(Youtube.strApi) + '&part=' + encodeURIComponent('snippet') + '&maxResults=' + encodeURIComponent('50') + '&playlistId=' + encodeURIComponent(Channels_strHistory),
+				'url': 'https://www.googleapis.com/youtube/v3/playlistItems?key=' + encodeURIComponent(Youtube.strApi) + '&part=' + encodeURIComponent('snippet') + '&maxResults=' + encodeURIComponent('50') + '&playlistId=' + encodeURIComponent(Channels_strHistory) + '&pageToken=' + encodeURIComponent(Playlistitems_strPage),
 				'headers': {
 					'Authorization': 'Bearer ' + PreferenceYoutube.getStrAccess()
 				}, 
 				'dataType': 'json',
+				'error': function() {
+					functionError();
+				},
 				'success': function(jsonHandle) {
+					var boolContinue = false;
+					
 					{
-						for (var intFor1 = 0; intFor1 < jsonHandle.items.length; intFor1 += 1) {
-							jsonHandle.items[intFor1].snippet.resourceId.videoId;
-							Date.parse(jsonHandle.items[intFor1].snippet.publishedAt);
-							jsonHandle.items[intFor1].snippet.title;
+						if (jsonHandle.nextPageToken === undefined) {
+							Playlistitems_strPage = '';
+							
+						} else if (jsonHandle.nextPageToken !== undefined) {
+							Playlistitems_strPage = jsonHandle.nextPageToken;
+							
 						}
 					}
-				},
-				'complete': function() {
+					
 					{
-						YoutubeObserver.update();
+						PreferenceHistory.acquire();
+						
+						PreferenceHistory.transactionOpen();
+						
+						for (var intFor1 = 0; intFor1 < jsonHandle.items.length; intFor1 += 1) {
+							var objectHistory = jsonHandle.items[intFor1];
+							
+							{
+								PreferenceHistory.selectOpen(
+									'SELECT   * ' +
+									'FROM     PreferenceHistory ' +
+									'WHERE    strIdent = :PARAM0 ',
+									[ objectHistory.snippet.resourceId.videoId ]
+								);
+								
+								PreferenceHistory.selectNext();
+								
+								if (PreferenceHistory.intIdent === 0) {
+									boolContinue = true;
+								}
+								
+								if (PreferenceHistory.intIdent === 0) {
+									PreferenceHistory.intIdent = 0;
+									PreferenceHistory.longTimestamp = Date.parse(objectHistory.snippet.publishedAt);
+									PreferenceHistory.strIdent = objectHistory.snippet.resourceId.videoId;
+									PreferenceHistory.strTitle = objectHistory.snippet.title;
+									PreferenceHistory.intCount = 1;
+									
+									PreferenceHistory.create();
+									
+								} else if (PreferenceHistory.intIdent !== 0) {
+									PreferenceHistory.intIdent = PreferenceHistory.intIdent;
+									PreferenceHistory.longTimestamp = Date.parse(objectHistory.snippet.publishedAt);
+									PreferenceHistory.strIdent = objectHistory.snippet.resourceId.videoId;
+									PreferenceHistory.strTitle = objectHistory.snippet.title;
+									PreferenceHistory.intCount = PreferenceHistory.intCount + 1;
+									
+									PreferenceHistory.save();
+									
+								}
+								
+								PreferenceHistory.selectClose();
+							}
+						}
+						
+						PreferenceHistory.transactionClose();
+						
+						PreferenceHistory.release();
 					}
+					
+					{
+						if (boolContinue === true) {
+							if (Playlistitems_strPage !== '') {
+								functionPlaylistitems();
+								
+								return;
+							}
+						}
+					}
+					
+					functionSuccess();
 				}
 			});
 		};
 		
-		functionChannels();
+		functionAuth();
 	}
 };
 Youtube.init();

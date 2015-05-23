@@ -18,21 +18,17 @@ PreferenceYoutubeObserver.addObserver(function() {
 	;
 });
 
-YoutubeObserver.addObserver(function() {
-	
-});
-
 jQuery(document).ready(function() {
 	{
 		// @formatter:off
 		PreferenceHistory.sqlserviceHandle.executeSimpleSQL(
-			'CREATE INDEX Index_longTimestamp ON PreferenceHistory (longTimestamp) '
+			'CREATE INDEX IF NOT EXISTS Index_longTimestamp ON PreferenceHistory (longTimestamp) '
 		);
 		// @formatter:on
 		
 		// @formatter:off
 		PreferenceHistory.sqlserviceHandle.executeSimpleSQL(
-			'CREATE INDEX Index_strIdent ON PreferenceHistory (strIdent) '
+			'CREATE INDEX IF NOT EXISTS Index_strIdent ON PreferenceHistory (strIdent) '
 		);
 		// @formatter:on
 	}
@@ -173,48 +169,46 @@ jQuery(document).ready(function() {
 						{
 							PreferenceHistory.acquire();
 							
-							for (var intFor1 = jsonObject.objectHistory.length - 1; intFor1 > -1; intFor1 -= 1) {
+							PreferenceHistory.transactionOpen();
+							
+							for (var intFor1 = 0; intFor1 < jsonObject.objectHistory.length; intFor1 += 1) {
+								var objectHistory = jsonObject.objectHistory[intFor1];
+								
 								{
 									PreferenceHistory.selectOpen(
 										'SELECT   * ' +
 										'FROM     PreferenceHistory ' +
 										'WHERE    strIdent = :PARAM0 ',
-										[ jsonObject.objectHistory[intFor1].strIdent ]
+										[ objectHistory.strIdent ]
 									);
+									
+									PreferenceHistory.selectNext();
 									
 									if (PreferenceHistory.intIdent === 0) {
 										PreferenceHistory.intIdent = 0;
-										PreferenceHistory.longTimestamp = jsonObject.objectHistory[intFor1].longTimestamp;
-										PreferenceHistory.strIdent = jsonObject.objectHistory[intFor1].strIdent;
-										PreferenceHistory.strTitle = jsonObject.objectHistory[intFor1].strTitle;
-										PreferenceHistory.intCount = jsonObject.objectHistory[intFor1].intCount;
+										PreferenceHistory.longTimestamp = objectHistory.longTimestamp;
+										PreferenceHistory.strIdent = objectHistory.strIdent;
+										PreferenceHistory.strTitle = objectHistory.strTitle;
+										PreferenceHistory.intCount = objectHistory.intCount;
 										
 										PreferenceHistory.create();
 										
 									} else if (PreferenceHistory.intIdent !== 0) {
-										if (PreferenceHistory.longTimestamp < jsonObject.objectHistory[intFor1].longTimestamp) {
-											PreferenceHistory.intIdent = PreferenceHistory.intIdent;
-											PreferenceHistory.longTimestamp = jsonObject.objectHistory[intFor1].longTimestamp;
-											PreferenceHistory.strIdent = jsonObject.objectHistory[intFor1].strIdent;
-											PreferenceHistory.strTitle = jsonObject.objectHistory[intFor1].strTitle;
-											PreferenceHistory.intCount = jsonObject.objectHistory[intFor1].intCount;
-											
-											PreferenceHistory.save();
-										}
+										PreferenceHistory.intIdent = PreferenceHistory.intIdent;
+										PreferenceHistory.longTimestamp = Math.max(PreferenceHistory.longTimestamp, objectHistory.longTimestamp);
+										PreferenceHistory.strIdent = PreferenceHistory.strIdent;
+										PreferenceHistory.strTitle = PreferenceHistory.strTitle;
+										PreferenceHistory.intCount = Math.max(PreferenceHistory.intCount, objectHistory.intCount);
+										
+										PreferenceHistory.save();
 										
 									}
 									
 									PreferenceHistory.selectClose();
 								}
-								
-								{
-									if ((intFor1 % 100) === 0) {
-										PreferenceHistory.release();
-										
-										PreferenceHistory.acquire();
-									}
-								}
 							}
+							
+							PreferenceHistory.transactionClose();
 							
 							PreferenceHistory.release();
 						}
@@ -240,8 +234,8 @@ jQuery(document).ready(function() {
 					PreferenceHistory.selectOpen(
 						'SELECT   * ' +
 						'FROM     PreferenceHistory ' +
-						'ORDER BY longTimestamp ASC ',
-						[ jsonObject.objectHistory[intFor1].strIdent ]
+						'ORDER BY longTimestamp DESC ',
+						[]
 					);
 					
 					do {
@@ -265,9 +259,13 @@ jQuery(document).ready(function() {
 				}
 				
 				{
-					var blobHandle = new Blob([ JSON.stringify(jsonObject) ], {
-						'type': 'text/plain; charset=utf-8'
-					});
+					jQuery('#idHistory_Export')
+						.attr({
+							'href': 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(jsonObject)),
+                        	'target': '_blank',
+							'download': 'Backup.yourect'
+						})
+					;
 				}
 			})
 		;
@@ -295,9 +293,5 @@ jQuery(document).ready(function() {
 				}
 			})
 		;
-	}
-	
-	{
-		
 	}
 });
