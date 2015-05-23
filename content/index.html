@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		
+		<meta name="viewport" content="width=1000" />
+		
+		<title>@string/General_Caption</title>
+		
+		<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAxlBMVEUAAABOWZ5BTZhCTZhHUpt7g7d5gbZ5grZ5grZ6grZsda9tdq9tdrBtd7Bsdq9ye7Jye7JzfLN0fbNxerJdaKdeaadfaahfaqhha6ldZ6dfaahfaqhjbat/h7mAh7mFjLx8hLh3gLV6grZ6grdfaahgaqlibKpha6ljbapRXKBSXKBUX6JTXqFSXaH///+uuNXEzOHx9Pvb4O+5wtv8/f+zvdi+x97m6vXr7/edqcujrs6/x97V2+vg5fGNmcKXo8jJ0eXQ1ucIdJUyAAAALnRSTlMACR0dI1BRUVJSiIiIiIi8vb29vdbW1tbW4uLi4uzs7Ozs7Ozx8fHx8f39/f39FstVagAAALZJREFUeNptz8cWgkAMBVAYR8Xee1fAnoQBBOz+/0+ZgaVmlXcX7ySG8TumKLV3x6PbsoSZZlkbLq7JlWb9itQiqtMn+vEDIn9cFgzWgBDD8AHB5dazGFqzAHk88PCzbDK45KUZgjuSw3BS4N85A1xQHTRE4PlxCqHaM2yJdyKKAGKydemcQde8AVYdhmKfMsCAugV9WGXCohAVjdLDTFnvremWvDbdssyeEYWmc97bjXzO/PP7F9bvG7XExUxsAAAAAElFTkSuQmCC" />
+		
+		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" />
+		
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+		
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.2/moment.min.js"></script>
+		
+		<script type="text/javascript" src="chrome://YouRect/content/libEffects.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libLanguage.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libModal.js"></script>
+		
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceHistory.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceHistoryObserver.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceYoutube.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceYoutubeObserver.js"></script>
+		
+		<script type="text/javascript" src="chrome://YouRect/content/libYoutube.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libYoutubeObserver.js"></script>
+		
+		<script type="text/javascript" src="chrome://YouRect/content/index.js"></script>
+		
+		<script type="text/javascript" src="https://apis.google.com/js/client.js?onload=functionYourectYoutube"></script>
+	</head>
+	<body>
+		<div id="idLogin">
+			<input class="form-control" id="idLogin_Key" type="text" />
+			
+			<a class="btn btn-primary" id="idLogin_Login">
+				Login
+			</a>
+		</div>
+		
+		<div id="idLogout">
+			<a class="btn btn-primary" id="idLogout_Logout">
+				Logout
+			</a>
+		</div>
+		
+		<div id="idHistory">
+			<div style="position:absolute; left:-1024px; top:-1024px;">
+				<input id="idHistory_File" type="file" accept=".yourect" />
+			</div>
+			
+			<a class="btn btn-primary" id="idHistory_Export">
+				Export
+			</a>
+			
+			<a class="btn btn-primary" id="idHistory_Import">
+				Import
+			</a>
+			
+			<a class="btn btn-primary" id="idHistory_Refresh">
+				Refresh
+			</a>
+		</div>
+	</body>
+</html>

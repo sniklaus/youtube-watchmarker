@@ -1,0 +1,24 @@
+general {
+	strOutput:Firefox
+	strType:Attribute
+	strPackage:'YouRect'
+	strName:'Youtube'
+}
+
+attribute {
+	strName:'strKey'
+	strType:str
+	strDefault:'""'
+}
+
+attribute {
+	strName:'strAccess'
+	strType:str
+	strDefault:'""'
+}
+
+attribute {
+	strName:'strRefresh'
+	strType:str
+	strDefault:'""'
+}

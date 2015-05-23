@@ -1,0 +1,30 @@
+general {
+	strOutput:Firefox
+	strType:Database
+	strPackage:'YouRect'
+	strName:'History'
+}
+
+attribute {
+	strName:'longTimestamp'
+	strType:long
+	strDefault:''
+}
+
+attribute {
+	strName:'strIdent'
+	strType:str
+	strDefault:''
+}
+
+attribute {
+	strName:'strTitle'
+	strType:str
+	strDefault:''
+}
+
+attribute {
+	strName:'intCount'
+	strType:int
+	strDefault:''
+}

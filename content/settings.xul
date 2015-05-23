@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+
+<?xml-stylesheet type="text/css" href="chrome://global/skin/" ?>
+
+<prefwindow xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<script type="text/javascript">
+		Components.utils.import('resource://gre/modules/Services.jsm');
+		
+		{
+			document.getElementsByTagName('prefwindow')[0].cancelDialog();
+		}
+		
+		{
+			Services.wm.getMostRecentWindow('navigator:browser').openUILinkIn('chrome://YouRect/content/settings.html', 'tab');
+		}
+	</script>
+</prefwindow>
