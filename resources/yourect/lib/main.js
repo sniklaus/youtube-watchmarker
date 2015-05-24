@@ -68,7 +68,7 @@ exports.main = function(optionsHandle) {
 				}
 				
 				{
-					toolbarpanelHandle.port.emit('eventShow');
+					toolbarpanelHandle.port.emit('eventShow', {});
 				}
 			});
 			
@@ -80,48 +80,15 @@ exports.main = function(optionsHandle) {
 				}
 				
 				{
-					toolbarpanelHandle.port.emit('eventHide');
+					toolbarpanelHandle.port.emit('eventHide', {});
 				}
 			});
 		}
 	}
 	
 	{
-    	var PreferenceHistory_sqlserviceHandle = Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.PreferenceHistory.sqlite' ]));
+    	var sqlservicePreferenceHistory = Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.PreferenceHistory.sqlite' ]));
     	
-    	var PreferenceHistory_statementCreate  = PreferenceHistory_sqlserviceHandle.createStatement(
-			'INSERT INTO PreferenceHistory ' +
-			'	( ' + 
-			'		longTimestamp, ' +
-			'		strIdent, ' +
-			'		strTitle, ' +
-			'		intCount ' +
-			'	) ' +
-			'VALUES ' +
-			'	( ' +
-			'		:longTimestamp, ' +
-			'		:strIdent, ' +
-			'		:strTitle, ' +
-			'		:intCount ' +
-			'	) '
-		);
-		
-		var PreferenceHistory_statementSave = PreferenceHistory_sqlserviceHandle.createStatement(
-			'UPDATE PreferenceHistory ' +
-			'SET ' +
-			'	longTimestamp = :longTimestamp, ' +
-			'	strIdent = :strIdent, ' +
-			'	strTitle = :strTitle, ' +
-			'	intCount = :intCount ' +
-			'WHERE intIdent = :intIdent '
-		);
-    	
-    	var PreferenceHistory_statementSelect = PreferenceHistory_sqlserviceHandle.createStatement(
-			'SELECT   * ' +
-			'FROM     PreferenceHistory ' +
-			'WHERE    strIdent IN (:strIdent) '
-		);
-		
 		require('sdk/page-mod').PageMod({
 			'include': '*.youtube.com',
 			'contentScriptFile': [
@@ -129,86 +96,122 @@ exports.main = function(optionsHandle) {
 				require('sdk/self').data.url('./hook.js')
 			],
 		    'onAttach': function(workerHandle) {
-		        workerHandle.port.on('eventWatch', function(strIdent, strTitle) {
-		        	if (strIdent === '') {
-		        		return;
-		        		
-		        	} else if (strTitle === '') {
-		        		return;
-		        		
-		        	}
+		        workerHandle.port.on('eventWatch', function(objectEvent) {
+		        	var Select_intIdent = 0;
+		        	var Select_longTimestamp = 0;
+		        	var Select_strIdent = '';
+		        	var Select_strTitle = '';
+		        	var Select_intCount = 0;
 		        	
-					/*{
-						PreferenceHistory.acquire();
-						
-						PreferenceHistory.selectOpen(
+		        	var functionSelect = function() {
+				    	var statementHandle = sqlservicePreferenceHistory.createStatement(
 							'SELECT   * ' +
 							'FROM     PreferenceHistory ' +
-							'WHERE    strIdent = :PARAM0 ',
-							[ strIdent ]
+							'WHERE    strIdent = :strIdent '
 						);
 						
-						PreferenceHistory.selectNext();
+						statementHandle.params.strIdent = objectEvent.strIdent;
 						
-						if (PreferenceHistory.intIdent === 0) {
-							boolContinue = true;
-						}
+						statementHandle.executeAsync({
+							'handleResult': function(resultHandle) {
+								var rowHandle = resultHandle.getNextRow();
+								
+								if (rowHandle !== null) {
+									Select_intIdent = rowHandle.getResultByName('intIdent');
+									Select_longTimestamp = rowHandle.getResultByName('longTimestamp');
+									Select_strIdent = rowHandle.getResultByName('strIdent');
+									Select_strTitle = rowHandle.getResultByName('strTitle');
+									Select_intCount = rowHandle.getResultByName('intCount');
+								}
+							},
+							'handleCompletion': function(aReason) {
+								if (Select_intIdent === 0) {
+									functionInsert();
+									
+								} else if (Select_intIdent !== 0) {
+									functionUpdate();
+									
+								}
+							}
+						});
+		        	};
+		        	
+		        	var functionInsert = function() {
+				    	var statementHandle = sqlservicePreferenceHistory.createStatement(
+							'INSERT INTO PreferenceHistory ' +
+							'	( ' + 
+							'		longTimestamp, ' +
+							'		strIdent, ' +
+							'		strTitle, ' +
+							'		intCount ' +
+							'	) ' +
+							'VALUES ' +
+							'	( ' +
+							'		:longTimestamp, ' +
+							'		:strIdent, ' +
+							'		:strTitle, ' +
+							'		:intCount ' +
+							'	) '
+						);
 						
-						if (PreferenceHistory.intIdent === 0) {
-							PreferenceHistory.intIdent = 0;
-							PreferenceHistory.longTimestamp = new Date().getTime();
-							PreferenceHistory.strIdent = strIdent;
-							PreferenceHistory.strTitle = strTitle;
-							PreferenceHistory.intCount = 1;
-							
-							PreferenceHistory.create();
-							
-						} else if (PreferenceHistory.intIdent !== 0) {
-							PreferenceHistory.intIdent = PreferenceHistory.intIdent;
-							PreferenceHistory.longTimestamp = new Date().getTime();
-							PreferenceHistory.strIdent = strIdent;
-							PreferenceHistory.strTitle = strTitle;
-							PreferenceHistory.intCount = PreferenceHistory.intCount + 1;
-							
-							PreferenceHistory.save();
-							
-						}
+						statementHandle.params.longTimestamp = new Date().getTime();
+						statementHandle.params.strIdent = objectEvent.strIdent;
+						statementHandle.params.strTitle = objectEvent.strTitle;
+						statementHandle.params.intCount = 1;
 						
-						PreferenceHistory.selectClose();
+						statementHandle.executeAsync();
+		        	};
+		        	
+		        	var functionUpdate = function() {
+				    	var statementHandle = sqlservicePreferenceHistory.createStatement(
+							'UPDATE PreferenceHistory ' +
+							'SET ' +
+							'	longTimestamp = :longTimestamp, ' +
+							'	strIdent = :strIdent, ' +
+							'	strTitle = :strTitle, ' +
+							'	intCount = :intCount ' +
+							'WHERE intIdent = :intIdent '
+						);
 						
-						PreferenceHistory.release();
-					}*/
+						statementHandle.params.intIdent = Select_intIdent;
+						statementHandle.params.longTimestamp = new Date().getTime();
+						statementHandle.params.strIdent = objectEvent.strIdent;
+						statementHandle.params.strTitle = objectEvent.strTitle;
+						statementHandle.params.intCount = Select_intCount + 1;
+						
+						statementHandle.executeAsync();
+		        	};
+		        	
+		        	functionSelect();
 		        });
 		        
-		        workerHandle.port.on('eventLookup', function(strLookup) {
-		        	if (strLookup.length === 0) {
-		        		return;
-		        	}
-		        	
-		        	{
-						PreferenceHistory_statementSelect.reset();
-		        	}
-		        	
-					{
-						var bindingarrayHandle = PreferenceHistory_statementSelect.newBindingParamsArray();
-						
-						for (var intFor1 = 0; intFor1 < strLookup.length; intFor1 += 1) {
-							var bindingHandle = bindingarrayHandle.newBindingParams();
+		        workerHandle.port.on('eventLookup', function(objectEvent) {
+		        	var functionSelect = function() {
+				    	var statementHandle = sqlservicePreferenceHistory.createStatement(
+							'SELECT   * ' +
+							'FROM     PreferenceHistory ' +
+							'WHERE    strIdent IN (:strIdent) '
+						);
+		        		
+						statementHandle.bindParameters((function() {
+							var bindingarrayHandle = statementHandle.newBindingParamsArray();
 							
-							{
-								bindingHandle.bindByName('strIdent', strLookup[intFor1]);
+							for (var intFor1 = 0; intFor1 < objectEvent.strLookup.length; intFor1 += 1) {
+								var bindingHandle = bindingarrayHandle.newBindingParams();
+								
+								{
+									bindingHandle.bindByName('strIdent', objectEvent.strLookup[intFor1]);
+								}
+								
+								{
+							  		bindingarrayHandle.addParams(bindingHandle);
+								}
 							}
 							
-							{
-						  		bindingarrayHandle.addParams(bindingHandle);
-							}
-						}
+							return bindingarrayHandle;
+						})());
 						
-						PreferenceHistory_statementSelect.bindParameters(bindingarrayHandle);
-					}
-					
-					{
-						PreferenceHistory_statementSelect.executeAsync({
+						statementHandle.executeAsync({
 							'handleResult': function(resultHandle) {
 								var strLookup = [];
 								
@@ -227,11 +230,15 @@ exports.main = function(optionsHandle) {
 								}
 								
 								{
-									workerHandle.port.emit('eventLookup', strLookup);
+									workerHandle.port.emit('eventLookup', {
+										'strLookup': strLookup
+									});
 								}
 							}
 						});
-					}
+					};
+					
+					functionSelect();
 		        });
 		    }
 		});

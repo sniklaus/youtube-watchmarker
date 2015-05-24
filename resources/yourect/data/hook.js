@@ -1,12 +1,19 @@
 'use strict';
 
-self.port.on('eventLookup', function(strLookup) {
-				console.log('lookup callback:' + strLookup.length);
+self.port.on('eventShow', function(objectEvent) {
+	
+});
+
+self.port.on('eventHide', function(objectEvent) {
+	
+});
+
+self.port.on('eventLookup', function(objectEvent) {
 	var boolLookup = {};
 	
 	{
-		for (var intFor1 = 0; intFor1 < strLookup.length; intFor1 += 1) {
-			boolLookup[strLookup[intFor1]] = true;
+		for (var intFor1 = 0; intFor1 < objectEvent.strLookup.length; intFor1 += 1) {
+			boolLookup[objectEvent.strLookup[intFor1]] = true;
 		}
 	}
 	
@@ -31,48 +38,53 @@ self.port.on('eventLookup', function(strLookup) {
 				
 			}
 			
-			if (boolLookup[strIdent] === true) {
-				jQuery(this)
-					.addClass('watched')
-					.append(jQuery('<div></div>')
-						.addClass('watched-badge')
-						.text('WATCHED')
-					)
-				;
-				
-			} else if (boolLookup[strIdent] !== true) {
-				jQuery(this)
-					.off('mousedown')
-					.on('mousedown', function(eventHandle) {
-						if (eventHandle.which !== 1) {
-							if (eventHandle.which !== 2) {
-								return;
+			{
+				if (boolLookup.hasOwnProperty(strIdent) === true) {
+					jQuery(this)
+						.addClass('watched')
+						.append(jQuery('<div></div>')
+							.addClass('watched-badge')
+							.text('WATCHED')
+						)
+					;
+					
+				} else if (boolLookup.hasOwnProperty(strIdent) === false) {
+					jQuery(this)
+						.off('mousedown')
+						.on('mousedown', function(eventHandle) {
+							if (eventHandle.which !== 1) {
+								if (eventHandle.which !== 2) {
+									return;
+								}
 							}
-						}
-						
-						jQuery(this)
-							.addClass('watched')
-							.append(jQuery('<div></div>')
-								.addClass('watched-badge')
-								.text('WATCHED')
-							)
-						;
-					})
-				;
-				
+							
+							jQuery(this)
+								.addClass('watched')
+								.append(jQuery('<div></div>')
+									.addClass('watched-badge')
+									.text('WATCHED')
+								)
+							;
+						})
+					;
+					
+				}
 			}
 		});
 	}
 });
 
-jQuery(document).ready(function() {
-	{
+var Hook = {
+	strIdent: '',
+	strTitle: '',
+	
+	updateWatch: function() {
 		var strIdent = '';
 		var strTitle = '';
 		
 		{
-			if (window.location.href.substr(0, 9) === '/watch?v=') {
-				strIdent = window.location.href.substr(9).split('&')[0]; 
+			if (window.location.href.split('/watch?v=').length === 2) {
+				strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
 			}
 			
 			if (jQuery('#eow-title').attr('title') !== undefined) {
@@ -80,69 +92,97 @@ jQuery(document).ready(function() {
 			}
 		}
 		
-		{
-			self.port.emit('eventWatch', strIdent, strTitle);
+		if (strIdent === '') {
+			return;
+			
+		} else if (strTitle === '') {
+			return;
+			
+		} else if (strIdent === Hook.strIdent) {
+			return;
+			
+		} else if (strTitle === Hook.strTitle) {
+			return;
+			
 		}
-	}
+		
+		{
+			Hook.strIdent = strIdent;
+			
+			Hook.strTitle = strTitle;
+		}
+		
+		{
+			self.port.emit('eventWatch', {
+				'strIdent': strIdent,
+				'strTitle': strTitle
+			});
+		}
+	},
 	
-	{
-		jQuery(document)
-			.off('update')
-			.on('update', function() {
-				console.log('lookup');
+	updateLookup: function() {
+	   	var strLookup = [];
+    	
+    	{
+			jQuery('a[href]').each(function() {
+				var strIdent = '';
 				
-			   	var strLookup = [];
-		    	
-		    	{
-					jQuery('a[href]').each(function() {
-						var strIdent = '';
-						
-						{
-							if (jQuery(this).attr('href').substr(0, 9) === '/watch?v=') {
-								strIdent = jQuery(this).attr('href').substr(9).split('&')[0]; 
-							}
-						}
-						
-						if (strIdent === '') {
-							return;
-							
-						} else if (jQuery(this).hasClass('watched') === true) {
-							return;
-							
-						} else if (jQuery(this).children().size() !== 1) {
-							return;
-							
-						}
-						
-						{
-							strLookup.push(strIdent);
-						}
-					});
+				{
+					if (jQuery(this).attr('href').substr(0, 9) === '/watch?v=') {
+						strIdent = jQuery(this).attr('href').substr(9).split('&')[0]; 
+					}
+				}
+				
+				if (strIdent === '') {
+					return;
+					
+				} else if (jQuery(this).hasClass('watched') === true) {
+					return;
+					
+				} else if (jQuery(this).children().size() !== 1) {
+					return;
+					
 				}
 				
 				{
-					self.port.emit('eventLookup', strLookup);
+					strLookup.push(strIdent);
 				}
-			})
-		;
+			});
+		}
 		
-		jQuery(document)
-			.trigger('update')
-		;
+		if (strLookup.length === 0) {
+			return;
+		}
+		
+		{
+			self.port.emit('eventLookup', {
+				'strLookup': strLookup
+			});
+		}
+	}
+};
+
+jQuery(document).ready(function() {	
+	{
+		Hook.updateWatch();
+	}
+	
+	{
+	   	Hook.updateLookup();
 	}
 	
 	{
 		new MutationObserver(function() {
-			jQuery(document)
-				.trigger('update')
-			;
+			{
+				Hook.updateWatch();
+			}
+			
+			{
+			   	Hook.updateLookup();
+			}
 		}).observe(document, {
 			'childList': true,
 			'subtree': true
 		});
-	}
-	
-	{
-		// TODO: autorefresh youtube if necessary
 	}
 });

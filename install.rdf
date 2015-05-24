@@ -21,7 +21,7 @@
 		<em:creator>CodeRect</em:creator>
 		<em:homepageURL>http://www.coderect.com/</em:homepageURL>
 		
-		<em:optionsURL>chrome://YouRect/content/settings.xul</em:optionsURL>
+		<em:optionsURL>chrome://YouRect/content/index.xul</em:optionsURL>
 		<em:optionsType>1</em:optionsType>
 		
 		<em:iconURL>chrome://YouRect/content/images/icon.png</em:iconURL>

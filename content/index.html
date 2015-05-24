@@ -29,36 +29,85 @@
 		<script type="text/javascript" src="chrome://YouRect/content/index.js"></script>
 	</head>
 	<body>
-		<div id="idLogin">
-			<input class="form-control" id="idLogin_Key" type="text" />
-			
-			<a class="btn btn-primary" id="idLogin_Login">
-				Login
-			</a>
-		</div>
-		
-		<div id="idLogout">
-			<a class="btn btn-primary" id="idLogout_Logout">
-				Logout
-			</a>
-		</div>
-		
-		<div id="idHistory">
-			<div style="position:absolute; left:-1024px; top:-1024px;">
-				<input id="idHistory_File" type="file" accept=".yourect" />
+		<div style="max-width:700px; margin:0px auto 0px auto; padding:20px;">
+			<div class="panel panel-default modal-content">
+				<div class="panel-heading">
+					History
+				</div>
+				<div class="panel-body">
+					<div style="position:absolute; left:-1024px; top:-1024px;">
+						<input id="idHistory_File" type="file" accept=".yourect" />
+					</div>
+					
+					<div id="idHistory_Description">
+						The database currently contains {{PreferenceHistory.intCount}} entries, which are only stored within Firefox. Removing the browser or even just this addon would therefore lead to the loss of your history. You are therefore highly encouraged to regularly export the database in order to have a backup.
+					</div>
+					
+					<div style="height:15px;"></div>
+					
+					<a class="btn btn-primary" id="idHistory_Export">
+						Export
+					</a>
+					
+					<a class="btn btn-primary" id="idHistory_Import">
+						Import
+					</a>
+					
+					<a class="btn btn-primary" id="idHistory_Reset">
+						Reset
+					</a>
+				</div>
 			</div>
 			
-			<a class="btn btn-primary" id="idHistory_Export">
-				Export
-			</a>
+			<div class="panel panel-default modal-content">
+				<div class="panel-heading">
+					Youtube
+				</div>
+				<div class="panel-body">
+					<div id="idYoutube_Description">
+						In order to synchronize your history across multiple devices, you can let this addon access your browsing information directly through your Youtube account. If you therefore choose to login below, the history will automatically be synchronized every hour.
+					</div>
+					
+					<div style="height:15px;"></div>
+					
+					<table style="width:100%;">
+						<tr>
+							<td>
+								<input class="form-control" id="idYoutube_Key" type="text" placeholder="Key" />
+							</td>
+							<td style="width:15px;">
+								
+							</td>
+							<td style="width:1%;">
+								<a class="btn btn-primary" id="idYoutube_Login">
+									Login
+								</a>
+							</td>
+						</tr>
+					</table>
+				</div>
+			</div>
 			
-			<a class="btn btn-primary" id="idHistory_Import">
-				Import
-			</a>
-			
-			<a class="btn btn-primary" id="idHistory_Refresh">
-				Refresh
-			</a>
+			<div class="panel panel-default modal-content">
+				<div class="panel-heading">
+					Youtube
+				</div>
+				<div class="panel-body">
+					<div id="idYoutube_Description">
+						This addon is currently allowed to access your browsing information directly through your Youtube account. The history will therefore automatically be synchronized every hour, in order to maintain a consistency across multiple devices.
+					</div>
+					
+					<div style="height:15px;"></div>
+					
+					<a class="btn btn-primary" id="idYoutube_Logout">
+						Logout
+					</a>
+					
+					<a class="btn btn-primary" id="idYoutube_Synchronize">
+						Synchronize
+					</a>
+				</div>
+			</div>
 		</div>
 	</body>
 </html>

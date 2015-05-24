@@ -228,7 +228,7 @@ var Youtube = {
 									PreferenceHistory.longTimestamp = Date.parse(objectHistory.snippet.publishedAt);
 									PreferenceHistory.strIdent = objectHistory.snippet.resourceId.videoId;
 									PreferenceHistory.strTitle = objectHistory.snippet.title;
-									PreferenceHistory.intCount = PreferenceHistory.intCount + 1;
+									PreferenceHistory.intCount = PreferenceHistory.intCount;
 									
 									PreferenceHistory.save();
 									

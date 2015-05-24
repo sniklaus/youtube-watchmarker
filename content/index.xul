@@ -11,7 +11,7 @@
 		}
 		
 		{
-			Services.wm.getMostRecentWindow('navigator:browser').openUILinkIn('chrome://YouRect/content/settings.html', 'tab');
+			Services.wm.getMostRecentWindow('navigator:browser').openUILinkIn('chrome://YouRect/content/index.html', 'tab');
 		}
 	</script>
 </prefwindow>
