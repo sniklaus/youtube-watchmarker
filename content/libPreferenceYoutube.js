@@ -95,6 +95,34 @@ var PreferenceYoutube = {
 		}
 	},
 	
+	getLongTimestamp: function() {
+		if (Services.prefs.prefHasUserValue('extensions.YouRect.Youtube.longTimestamp') === true) {
+			return parseInt(Services.prefs.getCharPref('extensions.YouRect.Youtube.longTimestamp'), 10);
+		}
+		
+		return 0;
+	},
+	
+	setLongTimestamp: function(longTimestamp) {
+		{
+			Services.prefs.setCharPref('extensions.YouRect.Youtube.longTimestamp', String(longTimestamp));
+		}
+		
+		{
+			PreferenceYoutubeObserver.update();
+		}
+	},
+	
+	clearLongTimestamp: function() {
+		{
+			Services.prefs.clearUserPref('extensions.YouRect.Youtube.longTimestamp');
+		}
+		
+		{
+			PreferenceYoutubeObserver.update();
+		}
+	},
+	
 	clear: function() {
 		{
 			PreferenceYoutubeObserver.boolEnabled = false;
@@ -106,6 +134,8 @@ var PreferenceYoutube = {
 			PreferenceYoutube.clearStrAccess();
 			
 			PreferenceYoutube.clearStrRefresh();
+			
+			PreferenceYoutube.clearLongTimestamp();
 		}
 		
 		{

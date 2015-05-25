@@ -22,3 +22,9 @@ attribute {
 	strType:str
 	strDefault:'""'
 }
+
+attribute {
+	strName:'longTimestamp'
+	strType:long
+	strDefault:'0'
+}

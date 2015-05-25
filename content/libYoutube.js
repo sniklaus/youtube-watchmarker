@@ -45,43 +45,37 @@ var Youtube = {
 		}
 	},
 	
+	authorize: function() {
+		{
+			window.open('https://accounts.google.com/o/oauth2/auth?response_type=' + encodeURIComponent('code') + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect) + '&scope=' + encodeURIComponent(Youtube.strScope), '_blank');
+		}
+	},
+	
 	link: function(functionError, functionSuccess) {
 		{
-			if (PreferenceYoutube.getStrKey() === '') {
-				{
-					window.open('https://accounts.google.com/o/oauth2/auth?response_type=' + encodeURIComponent('code') + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect) + '&scope=' + encodeURIComponent(Youtube.strScope), '_blank');
-				}
-				
-				functionSuccess();
-			}
-		}
-		
-		{
-			if (PreferenceYoutube.getStrKey() !== '') {
-				jQuery.ajax({
-					'async': true,
-					'type': 'POST',
-					'url': 'https://www.googleapis.com/oauth2/v3/token',
-					'data':  'grant_type=' + encodeURIComponent('authorization_code') + '&code=' + encodeURIComponent(PreferenceYoutube.getStrKey()) + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&client_secret=' + encodeURIComponent(Youtube.strSecret) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect),
-					'dataType': 'json',
-					'error': function() {
-						functionError();
-					},
-					'success': function(jsonHandle) {
-						{
-							if (jsonHandle.access_token !== undefined) {
-								PreferenceYoutube.setStrAccess(jsonHandle.access_token);
-							}
-							
-							if (jsonHandle.refresh_token !== undefined) {
-								PreferenceYoutube.setStrRefresh(jsonHandle.refresh_token);
-							}
+			jQuery.ajax({
+				'async': true,
+				'type': 'POST',
+				'url': 'https://www.googleapis.com/oauth2/v3/token',
+				'data':  'grant_type=' + encodeURIComponent('authorization_code') + '&code=' + encodeURIComponent(PreferenceYoutube.getStrKey()) + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&client_secret=' + encodeURIComponent(Youtube.strSecret) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect),
+				'dataType': 'json',
+				'error': function() {
+					functionError();
+				},
+				'success': function(jsonHandle) {
+					{
+						if (jsonHandle.access_token !== undefined) {
+							PreferenceYoutube.setStrAccess(jsonHandle.access_token);
 						}
 						
-						functionSuccess();
+						if (jsonHandle.refresh_token !== undefined) {
+							PreferenceYoutube.setStrRefresh(jsonHandle.refresh_token);
+						}
 					}
-				});
-			}
+					
+					functionSuccess();
+				}
+			});
 		}
 	},
 	
@@ -251,6 +245,10 @@ var Youtube = {
 								return;
 							}
 						}
+					}
+					
+					{
+						PreferenceYoutube.setLongTimestamp(new Date().getTime());
 					}
 					
 					functionSuccess();

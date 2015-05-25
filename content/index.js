@@ -1,25 +1,37 @@
 'use strict';
 
 PreferenceHistoryObserver.addObserver(function() {
-	jQuery('#idHistory_Description')
+	jQuery('#idIndex_History_Size')
 		.trigger('update')
 	;
 });
 
 PreferenceYoutubeObserver.addObserver(function() {
-	jQuery('#idYoutube_Key')
+	if (Youtube.linked() === true) {
+		
+		
+	} else if (Youtube.linked() === false) {
+		
+		
+	}
+	
+	jQuery('#idIndex_Youlogin_Authorize')
 		.trigger('update')
 	;
 	
-	jQuery('#idYoutube_Login')
+	jQuery('#idIndex_Youlogin_Login')
 		.trigger('update')
 	;
 	
-	jQuery('#idYoutube_Logout')
+	jQuery('#idIndex_Youlogin_Key')
 		.trigger('update')
 	;
 	
-	jQuery('#idYoutube_Synchronize')
+	jQuery('#idIndex_Youauth_Logout')
+		.trigger('update')
+	;
+	
+	jQuery('#idIndex_Youauth_Synchronize')
 		.trigger('update')
 	;
 });
@@ -40,7 +52,7 @@ jQuery(document).ready(function() {
 	}
 	
 	{
-		jQuery('#idHistory_File')
+		jQuery('#idIndex_History_File')
 			.off('change')
 			.on('change', function() {
 				if (jQuery(this).get(0).files === undefined) {
@@ -55,41 +67,39 @@ jQuery(document).ready(function() {
 					var filereaderHandle = new FileReader();
 					
 					filereaderHandle.onload = function(eventHandle) {
-						var jsonObject = JSON.parse(eventHandle.target.result);
+						var objectHistory = JSON.parse(eventHandle.target.result);
 						
 						{
 							PreferenceHistory.acquire();
 							
 							PreferenceHistory.transactionOpen();
 							
-							for (var intFor1 = 0; intFor1 < jsonObject.objectHistory.length; intFor1 += 1) {
-								var objectHistory = jsonObject.objectHistory[intFor1];
-								
+							for (var intFor1 = 0; intFor1 < objectHistory.length; intFor1 += 1) {
 								{
 									PreferenceHistory.selectOpen(
 										'SELECT   * ' +
 										'FROM     PreferenceHistory ' +
 										'WHERE    strIdent = :PARAM0 ',
-										[ objectHistory.strIdent ]
+										[ objectHistory[intFor1].strIdent ]
 									);
 									
 									PreferenceHistory.selectNext();
 									
 									if (PreferenceHistory.intIdent === 0) {
 										PreferenceHistory.intIdent = 0;
-										PreferenceHistory.longTimestamp = objectHistory.longTimestamp;
-										PreferenceHistory.strIdent = objectHistory.strIdent;
-										PreferenceHistory.strTitle = objectHistory.strTitle;
-										PreferenceHistory.intCount = objectHistory.intCount;
+										PreferenceHistory.longTimestamp = objectHistory[intFor1].longTimestamp;
+										PreferenceHistory.strIdent = objectHistory[intFor1].strIdent;
+										PreferenceHistory.strTitle = objectHistory[intFor1].strTitle;
+										PreferenceHistory.intCount = objectHistory[intFor1].intCount;
 										
 										PreferenceHistory.create();
 										
 									} else if (PreferenceHistory.intIdent !== 0) {
 										PreferenceHistory.intIdent = PreferenceHistory.intIdent;
-										PreferenceHistory.longTimestamp = Math.max(PreferenceHistory.longTimestamp, objectHistory.longTimestamp);
+										PreferenceHistory.longTimestamp = Math.max(PreferenceHistory.longTimestamp, objectHistory[intFor1].longTimestamp);
 										PreferenceHistory.strIdent = PreferenceHistory.strIdent;
 										PreferenceHistory.strTitle = PreferenceHistory.strTitle;
-										PreferenceHistory.intCount = Math.max(PreferenceHistory.intCount, objectHistory.intCount);
+										PreferenceHistory.intCount = Math.max(PreferenceHistory.intCount, objectHistory[intFor1].intCount);
 										
 										PreferenceHistory.save();
 										
@@ -112,50 +122,10 @@ jQuery(document).ready(function() {
 	}
 	
 	{
-		jQuery('#idHistory_Description')
-			.data({
-				'strText': jQuery('#idHistory_Description').text()
-			})
-			.off('update')
-			.on('update', function() {
-				var strText = jQuery(this).data('strText');
-				
-				{
-					var intCount = 0;
-					
-					{
-						PreferenceHistory.acquire();
-						
-						intCount = PreferenceHistory.count();
-						
-						PreferenceHistory.release();
-					}
-					
-					{
-						strText = strText.replace(new RegExp('{{PreferenceHistory.intCount}}', 'g'), intCount);
-					}
-				}
-				
-				{
-					jQuery(this)
-						.text(strText)
-					;
-				}
-			})
-		;
-		
-		jQuery('#idHistory_Description')
-			.trigger('update')
-		;
-	}
-	
-	{
-		jQuery('#idHistory_Export')
+		jQuery('#idIndex_History_Export')
 			.off('click')
 			.on('click', function() {
-				var jsonObject = {
-					'objectHistory': []
-				};
+				var objectHistory = [];
 				
 				{
 					PreferenceHistory.acquire();
@@ -174,7 +144,7 @@ jQuery(document).ready(function() {
 							break;
 						}
 						
-						jsonObject.objectHistory.push({
+						objectHistory.push({
 							'longTimestamp': PreferenceHistory.longTimestamp,
 							'strIdent': PreferenceHistory.strIdent,
 							'strTitle': PreferenceHistory.strTitle,
@@ -188,11 +158,11 @@ jQuery(document).ready(function() {
 				}
 				
 				{
-					jQuery('#idHistory_Export')
+					jQuery('#idIndex_History_Export')
 						.attr({
-							'href': 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(jsonObject)),
+							'href': 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(objectHistory)),
                         	'target': '_blank',
-							'download': 'Backup.yourect'
+							'download': moment(new Date().getTime()).format('YYYY.MM.DD') + '.history'
 						})
 					;
 				}
@@ -201,11 +171,11 @@ jQuery(document).ready(function() {
 	}
 	
 	{
-		jQuery('#idHistory_Import')
+		jQuery('#idIndex_History_Import')
 			.off('click')
 			.on('click', function() {
 				{
-					jQuery('#idHistory_File')
+					jQuery('#idIndex_History_File')
 						.click()
 					;
 				}
@@ -214,47 +184,94 @@ jQuery(document).ready(function() {
 	}
 	
 	{
-		jQuery('#idHistory_Reset')
+		jQuery('#idIndex_History_Reset')
 			.off('click')
 			.on('click', function() {
 				{
-					// TODO: prompt and reset
+					jQuery('#idIndex_ModalReset')
+						.modalShow()
+					;
 				}
 			})
 		;
 	}
 	
-	
-	/*
 	{
-		jQuery('#idYoutube_Key')
+		jQuery('#idIndex_History_Size')
 			.off('update')
 			.on('update', function() {
-				if (Youtube.linked() === true) {
-					jQuery(this)
-						.css({
-							'display': 'none'
-						})
-					;
+				var intCount = 0;
+				
+				{
+					PreferenceHistory.acquire();
 					
-				} else if (Youtube.linked() === false) {
-					jQuery(this)
-						.css({
-							'display': 'block'
-						})
-					;
+					intCount = PreferenceHistory.count();
 					
+					PreferenceHistory.release();
 				}
+				
+				jQuery(this)
+					.text(intCount)
+				;
 			})
 		;
 		
-		jQuery('#idYoutube_Key')
+		jQuery('#idIndex_History_Size')
 			.trigger('update')
 		;
 	}
 	
 	{
-		jQuery('#idYoutube_Login')
+		jQuery('#idIndex_ModalReset_Yes')
+			.off('click')
+			.on('click', function() {
+				{
+					jQuery('#idIndex_ModalReset')
+						.modalHide()
+					;
+				}
+				
+				{
+					PreferenceHistory.acquire();
+					
+					PreferenceHistory.clear();
+					
+					PreferenceHistory.release();
+				}
+			})
+		;
+	}
+	
+	{
+		jQuery('#idIndex_ModalReset_No')
+			.off('click')
+			.on('click', function() {
+				{
+					jQuery('#idIndex_ModalReset')
+						.modalHide()
+					;
+				}
+			})
+		;
+	}
+	
+	{
+		jQuery('#idIndex_Youlogin_Authorize')
+			.off('click')
+			.on('click', function() {
+				{
+					Youtube.authorize();
+				}
+			})
+		;
+		
+		jQuery('#idIndex_Youlogin_Authorize')
+			.trigger('update')
+		;
+	}
+	
+	{
+		jQuery('#idIndex_Youlogin_Login')
 			.off('click')
 			.on('click', function() {
 				{
@@ -265,95 +282,68 @@ jQuery(document).ready(function() {
 					Youtube.link();
 				}
 			})
-			.off('update')
-			.on('update', function() {
-				if (Youtube.linked() === true) {
-					jQuery(this)
-						.css({
-							'display': 'none'
-						})
-					;
-					
-				} else if (Youtube.linked() === false) {
-					jQuery(this)
-						.css({
-							'display': 'block'
-						})
-					;
-					
-				}
-			})
 		;
 		
-		jQuery('#idYoutube_Login')
+		jQuery('#idIndex_Youlogin_Login')
 			.trigger('update')
 		;
 	}
 	
 	{
-		jQuery('#idYoutube_Logout')
+		jQuery('#idIndex_Youlogin_Key')
+			.off('update')
+			.on('update', function() {
+				
+			})
+		;
+		
+		jQuery('#idIndex_Youlogin_Key')
+			.trigger('update')
+		;
+	}
+	
+	{
+		jQuery('#idIndex_Youauth_Logout')
 			.off('click')
 			.on('click', function() {
 				{
 					Youtube.unlink();
 				}
 			})
-			.off('update')
-			.on('update', function() {
-				if (Youtube.linked() === true) {
-					jQuery(this)
-						.css({
-							'display': 'block'
-						})
-					;
-					
-				} else if (Youtube.linked() === false) {
-					jQuery(this)
-						.css({
-							'display': 'none'
-						})
-					;
-					
-				}
-			})
 		;
 		
-		jQuery('#idYoutube_Logout')
+		jQuery('#idIndex_Youauth_Logout')
 			.trigger('update')
 		;
 	}
 	
 	{
-		jQuery('#idYoutube_Synchronize')
+		jQuery('#idIndex_Youauth_Synchronize')
 			.off('click')
 			.on('click', function() {
 				{
 					Youtube.update();
 				}
 			})
-			.off('update')
-			.on('update', function() {
-				if (Youtube.linked() === true) {
-					jQuery(this)
-						.css({
-							'display': 'block'
-						})
-					;
-					
-				} else if (Youtube.linked() === false) {
-					jQuery(this)
-						.css({
-							'display': 'none'
-						})
-					;
-					
-				}
-			})
 		;
 		
-		jQuery('#idYoutube_Synchronize')
+		jQuery('#idIndex_Youauth_Synchronize')
 			.trigger('update')
 		;
 	}
-	*/
+	
+	{
+		jQuery('#idIndex_Youauth_Timestamp')
+			.off('update')
+			.on('update', function() {
+				jQuery(this)
+					.text(moment(PreferenceYoutube.getLongTimestamp()).format('hh:mm:ss'))
+				;
+			})
+		;
+		
+		jQuery('#idIndex_Youauth_Timestamp')
+			.trigger('update')
+		;
+	}
 });

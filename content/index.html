@@ -9,12 +9,72 @@
 		
 		<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAxlBMVEUAAABOWZ5BTZhCTZhHUpt7g7d5gbZ5grZ5grZ6grZsda9tdq9tdrBtd7Bsdq9ye7Jye7JzfLN0fbNxerJdaKdeaadfaahfaqhha6ldZ6dfaahfaqhjbat/h7mAh7mFjLx8hLh3gLV6grZ6grdfaahgaqlibKpha6ljbapRXKBSXKBUX6JTXqFSXaH///+uuNXEzOHx9Pvb4O+5wtv8/f+zvdi+x97m6vXr7/edqcujrs6/x97V2+vg5fGNmcKXo8jJ0eXQ1ucIdJUyAAAALnRSTlMACR0dI1BRUVJSiIiIiIi8vb29vdbW1tbW4uLi4uzs7Ozs7Ozx8fHx8f39/f39FstVagAAALZJREFUeNptz8cWgkAMBVAYR8Xee1fAnoQBBOz+/0+ZgaVmlXcX7ySG8TumKLV3x6PbsoSZZlkbLq7JlWb9itQiqtMn+vEDIn9cFgzWgBDD8AHB5dazGFqzAHk88PCzbDK45KUZgjuSw3BS4N85A1xQHTRE4PlxCqHaM2yJdyKKAGKydemcQde8AVYdhmKfMsCAugV9WGXCohAVjdLDTFnvremWvDbdssyeEYWmc97bjXzO/PP7F9bvG7XExUxsAAAAAElFTkSuQmCC" />
 		
-		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" />
+		<script type="text/javascript" src="chrome://BookRect/content/jquery.js"></script>
 		
-		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+		<script type="text/javascript" src="chrome://BookRect/content/moment.js"></script>
 		
-		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.2/moment.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="chrome://BookRect/content/bootstrap.css" />
+		<style type="text/css">
+			.modal-overlay {
+				display:none;
+			    position:fixed;
+			    
+			    left:0px;
+			    right:0px;
+			    top:0px;
+			    bottom:0px;
+			    
+			    z-index:12000;
+			}
+			
+			.modal-dialog {
+				display:none;
+			    position:fixed;
+			    
+			    left:50%;
+			    top:50%;
+			    
+			    width:100%;
+			    
+			    z-index:12000;
+			    
+				margin:0px;
+			  	border:none;
+				border-spacing:0px;
+				padding:15px;
+			}
+		</style>
 		
+		<script type="text/javascript">
+			Components.utils.import('resource://gre/modules/Services.jsm');
+			
+			var jsLanguage = {
+				getStrStrings: function() {
+					var strStrings = [];
+					
+					{
+						var enumeratorHandle = Services.strings.createBundle('chrome://YouRect/locale/strings.properties').getSimpleEnumeration();
+						
+						do {
+							if (enumeratorHandle.hasMoreElements() === false) {
+								break;
+							}
+							
+							var propertyHandle = enumeratorHandle.getNext().QueryInterface(Components.interfaces.nsIPropertyElement);
+							
+							{
+								strStrings.push({
+									'strName': propertyHandle.key,
+									'strValue': propertyHandle.value
+								});
+							}
+						} while (true);
+					}
+					
+					return JSON.stringify(strStrings);
+				}
+			};
+		</script>
 		<script type="text/javascript" src="chrome://YouRect/content/libEffects.js"></script>
 		<script type="text/javascript" src="chrome://YouRect/content/libLanguage.js"></script>
 		<script type="text/javascript" src="chrome://YouRect/content/libModal.js"></script>
@@ -28,84 +88,120 @@
 		
 		<script type="text/javascript" src="chrome://YouRect/content/index.js"></script>
 	</head>
-	<body>
+	<body style="background-color:#EEEEEE;">
 		<div style="max-width:700px; margin:0px auto 0px auto; padding:20px;">
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					History
+					@string/Index_History_Caption
 				</div>
 				<div class="panel-body">
 					<div style="position:absolute; left:-1024px; top:-1024px;">
-						<input id="idHistory_File" type="file" accept=".yourect" />
+						<input id="idIndex_History_File" type="file" accept=".yourect" />
 					</div>
 					
-					<div id="idHistory_Description">
-						The database currently contains {{PreferenceHistory.intCount}} entries, which are only stored within Firefox. Removing the browser or even just this addon would therefore lead to the loss of your history. You are therefore highly encouraged to regularly export the database in order to have a backup.
+					<div style="text-align:justify;">
+						@string/Index_History_Description
 					</div>
 					
 					<div style="height:15px;"></div>
 					
-					<a class="btn btn-primary" id="idHistory_Export">
-						Export
+					<a class="btn btn-primary" id="idIndex_History_Export">
+						@string/Index_History_Export
 					</a>
 					
-					<a class="btn btn-primary" id="idHistory_Import">
-						Import
+					<a class="btn btn-primary" id="idIndex_History_Import">
+						@string/Index_History_Import
 					</a>
 					
-					<a class="btn btn-primary" id="idHistory_Reset">
-						Reset
+					<a class="btn btn-primary" id="idIndex_History_Reset">
+						@string/Index_History_Reset
 					</a>
+					
+					<div style="display:inline-block; vertical-align:top;">
+						<div class="input-group">
+							<div class="input-group-addon" style="text-align:right;">@string/Index_History_Size</div>
+							<div class="form-control" id="idIndex_History_Size" style="width:auto;"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<div class="modal-overlay"></div>
+			<div class="modal-dialog" id="idIndex_ModalReset" style="max-width:500px;">
+				<div class="panel panel-default modal-content">
+					<div class="panel-body">
+						<div style="text-align:justify;">
+							@string/Index_ModalReset_Description
+						</div>
+						
+						<hr></hr>
+						
+						<div class="pull-right">
+							<a class="btn btn-primary" id="idIndex_ModalReset_Yes" style="display:inline-block; font-size:12px;">
+								@string/Index_ModalReset_Yes
+							</a>
+							
+							<a class="btn btn-primary" id="idIndex_ModalReset_No" style="display:inline-block; font-size:12px;">
+								@string/Index_ModalReset_No
+							</a>
+						</div>
+					</div>
 				</div>
 			</div>
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					Youtube
+					@string/Index_Youlogin_Caption
 				</div>
 				<div class="panel-body">
-					<div id="idYoutube_Description">
-						In order to synchronize your history across multiple devices, you can let this addon access your browsing information directly through your Youtube account. If you therefore choose to login below, the history will automatically be synchronized every hour.
+					<div style="text-align:justify;">
+						@string/Index_Youlogin_Description
 					</div>
 					
 					<div style="height:15px;"></div>
 					
-					<table style="width:100%;">
-						<tr>
-							<td>
-								<input class="form-control" id="idYoutube_Key" type="text" placeholder="Key" />
-							</td>
-							<td style="width:15px;">
-								
-							</td>
-							<td style="width:1%;">
-								<a class="btn btn-primary" id="idYoutube_Login">
-									Login
-								</a>
-							</td>
-						</tr>
-					</table>
+					<a class="btn btn-primary" id="idIndex_Youlogin_Authorize">
+						@string/Index_Youlogin_Authorize
+					</a>
+					
+					<a class="btn btn-primary" id="idIndex_Youlogin_Login">
+						@string/Index_Youlogin_Login
+					</a>
+					
+					<div style="display:inline-block; vertical-align:top;">
+						<div class="input-group">
+							<div class="input-group-addon" style="text-align:right;">@string/Index_Youlogin_Key</div>
+							<input class="form-control" id="idIndex_Youlogin_Key" type="text" placeholder="..." />
+						</div>
+					</div>
 				</div>
 			</div>
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					Youtube
+					@string/Index_Youauth_Caption
 				</div>
 				<div class="panel-body">
-					<div id="idYoutube_Description">
-						This addon is currently allowed to access your browsing information directly through your Youtube account. The history will therefore automatically be synchronized every hour, in order to maintain a consistency across multiple devices.
+					<div style="text-align:justify;">
+						@string/Index_Youauth_Description
 					</div>
 					
 					<div style="height:15px;"></div>
 					
-					<a class="btn btn-primary" id="idYoutube_Logout">
-						Logout
+					<a class="btn btn-primary" id="idIndex_Youauth_Logout">
+						@string/Index_Youauth_Logout
 					</a>
 					
-					<a class="btn btn-primary" id="idYoutube_Synchronize">
-						Synchronize
+					<a class="btn btn-primary" id="idIndex_Youauth_Synchronize">
+						@string/Index_Youauth_Synchronize
 					</a>
+					
+					<div style="display:inline-block; vertical-align:top;">
+						<div class="input-group">
+							<div class="input-group-addon" style="text-align:right;">@string/Index_Youauth_Timestamp</div>
+							<div class="form-control" id="idIndex_Youauth_Timestamp" style="width:auto;"></div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
