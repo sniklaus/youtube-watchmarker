@@ -27,3 +27,5 @@ IF /I "%1" == "RELEASE" (
 
 del "%~dp0\content\sortable.css"
 del "%~dp0\content\sortable.js"
+
+xcopy "%~dp0\..\GenRect\AssetGen\jquery.js" "%~dp0\resources\yourect\data\jquery.js" /F /R /Y
