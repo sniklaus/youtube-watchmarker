@@ -109,6 +109,10 @@ var Youtube = {
 	},
 	
 	update: function(functionError, functionSuccess) {
+		if (Youtube.linked() === false) {
+			return;
+		}
+		
 		var functionAuth = function() {
 			jQuery.ajax({
 				'async': true,

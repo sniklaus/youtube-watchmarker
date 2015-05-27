@@ -9,11 +9,11 @@ self.port.on('eventHide', function(objectEvent) {
 });
 
 self.port.on('eventLookup', function(objectEvent) {
-	var boolLookup = {};
-	
 	{
-		for (var intFor1 = 0; intFor1 < objectEvent.strLookup.length; intFor1 += 1) {
-			boolLookup[objectEvent.strLookup[intFor1]] = true;
+		objectEvent.intIdent = {};
+		
+		for (var intFor1 = 0; intFor1 < objectEvent.strIdent.length; intFor1 += 1) {
+			objectEvent.intIdent[objectEvent.strIdent[intFor1]] = 1;
 		}
 	}
 	
@@ -43,10 +43,10 @@ self.port.on('eventLookup', function(objectEvent) {
 			}
 			
 			{
-				if (boolLookup.hasOwnProperty(strIdent) === true) {
+				if (objectEvent.intIdent.hasOwnProperty(strIdent) === true) {
 					Hook.updateMark(elementHandle[intFor1]);
 					
-				} else if (boolLookup.hasOwnProperty(strIdent) === false) {
+				} else if (objectEvent.intIdent.hasOwnProperty(strIdent) === false) {
 					elementHandle[intFor1].onmousedown = function(eventHandle) {
 						if ((eventHandle.button === 0) || (eventHandle.button === 1)) {
 							Hook.updateMark(this);
@@ -60,17 +60,16 @@ self.port.on('eventLookup', function(objectEvent) {
 });
 
 var Hook = {
-	strIdent: '',
-	strTitle: '',
-	
 	updateWatch: function() {
-		var strIdent = '';
-		var strTitle = '';
+	   	var objectEvent = {
+	   		'strIdent': '',
+	   		'strTitle': ''
+	   	};
 		
 		{
 			if (window.location !== null) {
 				if (window.location.href.split('/watch?v=').length === 2) {
-					strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
+					objectEvent.strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
 				}
 			}
 		}
@@ -78,41 +77,40 @@ var Hook = {
 		{
 			if (document.querySelector('#eow-title') !== null) {
 				if (document.querySelector('#eow-title').getAttribute('title') !== null) {
-					strTitle = document.querySelector('#eow-title').getAttribute('title');
+					objectEvent.strTitle = document.querySelector('#eow-title').getAttribute('title');
 				}
 			}
 		}
 		
-		if (strIdent === '') {
+		if (objectEvent.strIdent === '') {
 			return;
 			
-		} else if (strTitle === '') {
+		} else if (objectEvent.strTitle === '') {
 			return;
 			
-		} else if (strIdent === Hook.strIdent) {
+		} else if (objectEvent.strIdent === Hook.updateWatch.strIdent) {
 			return;
 			
-		} else if (strTitle === Hook.strTitle) {
+		} else if (objectEvent.strTitle === Hook.updateWatch.strTitle) {
 			return;
 			
 		}
 		
 		{
-			Hook.strIdent = strIdent;
+			Hook.updateWatch.strIdent = objectEvent.strIdent;
 			
-			Hook.strTitle = strTitle;
+			Hook.updateWatch.strTitle = objectEvent.strTitle;
 		}
 		
 		{
-			self.port.emit('eventWatch', {
-				'strIdent': strIdent,
-				'strTitle': strTitle
-			});
+			self.port.emit('eventWatch', objectEvent);
 		}
 	},
 	
 	updateLookup: function() {
-	   	var strLookup = [];
+	   	var objectEvent = {
+	   		'strIdent': []
+	   	};
 		
 		{
 			var elementHandle = document.querySelectorAll('a[href]');
@@ -140,19 +138,17 @@ var Hook = {
 				}
 				
 				{
-					strLookup.push(strIdent);
+					objectEvent.strIdent.push(strIdent);
 				}
 			}
 		}
 		
-		if (strLookup.length === 0) {
+		if (objectEvent.strIdent.length === 0) {
 			return;
 		}
 		
 		{
-			self.port.emit('eventLookup', {
-				'strLookup': strLookup
-			});
+			self.port.emit('eventLookup', objectEvent);
 		}
 	},
 	
