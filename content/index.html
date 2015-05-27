@@ -137,11 +137,11 @@
 						<hr></hr>
 						
 						<div class="pull-right">
-							<a class="btn btn-primary" id="idIndex_ModalReset_Yes" style="display:inline-block; font-size:12px;">
+							<a class="btn btn-primary" id="idIndex_ModalReset_Yes">
 								@string/Index_ModalReset_Yes
 							</a>
 							
-							<a class="btn btn-primary" id="idIndex_ModalReset_No" style="display:inline-block; font-size:12px;">
+							<a class="btn btn-primary" id="idIndex_ModalReset_No">
 								@string/Index_ModalReset_No
 							</a>
 						</div>
@@ -164,14 +164,38 @@
 						@string/Index_Youlogin_Authorize
 					</a>
 					
+					<div style="display:inline-block; vertical-align:top;">
+						<input class="form-control" id="idIndex_Youlogin_Key" type="text" placeholder="@string/Index_Youlogin_Key" />
+					</div>
+					
 					<a class="btn btn-primary" id="idIndex_Youlogin_Login">
 						@string/Index_Youlogin_Login
 					</a>
-					
-					<div style="display:inline-block; vertical-align:top;">
-						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">@string/Index_Youlogin_Key</div>
-							<input class="form-control" id="idIndex_Youlogin_Key" type="text" placeholder="..." />
+				</div>
+			</div>
+			
+			<div class="modal-overlay"></div>
+			<div class="modal-dialog" id="idIndex_ModalLogin" style="width:400px;">
+				<div class="panel panel-default modal-content">
+					<div class="panel-body">
+						<div class="alert alert-info" id="idIndex_ModalLogin_Loading" style="text-align:justify;">
+							@string/Index_ModalLogin_Loading
+						</div>
+						
+						<div class="alert alert-danger" id="idIndex_ModalLogin_Error" style="text-align:justify;">
+							@string/Index_ModalLogin_Error
+						</div>
+						
+						<div class="alert alert-success" id="idIndex_ModalLogin_Success" style="text-align:justify;">
+							@string/Index_ModalLogin_Success
+						</div>
+						
+						<hr></hr>
+						
+						<div class="pull-right">
+							<a class="btn btn-primary" id="idIndex_ModalLogin_Close">
+								@string/Index_ModalLogin_Close
+							</a>
 						</div>
 					</div>
 				</div>
@@ -200,6 +224,33 @@
 						<div class="input-group">
 							<div class="input-group-addon" style="text-align:right;">@string/Index_Youauth_Timestamp</div>
 							<div class="form-control" id="idIndex_Youauth_Timestamp" style="width:auto;"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<div class="modal-overlay"></div>
+			<div class="modal-dialog" id="idIndex_ModalSynchronize" style="width:400px;">
+				<div class="panel panel-default modal-content">
+					<div class="panel-body">
+						<div class="alert alert-info" id="idIndex_ModalSynchronize_Loading" style="text-align:justify;">
+							@string/Index_ModalSynchronize_Loading
+						</div>
+						
+						<div class="alert alert-danger" id="idIndex_ModalSynchronize_Error" style="text-align:justify;">
+							@string/Index_ModalSynchronize_Error
+						</div>
+						
+						<div class="alert alert-success" id="idIndex_ModalSynchronize_Success" style="text-align:justify;">
+							@string/Index_ModalSynchronize_Success
+						</div>
+						
+						<hr></hr>
+						
+						<div class="pull-right">
+							<a class="btn btn-primary" id="idIndex_ModalSynchronize_Close">
+								@string/Index_ModalSynchronize_Close
+							</a>
 						</div>
 					</div>
 				</div>

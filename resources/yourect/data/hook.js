@@ -18,59 +18,44 @@ self.port.on('eventLookup', function(objectEvent) {
 	}
 	
 	{
-		jQuery('a[href]').each(function() {
+		var elementHandle = document.querySelectorAll('a[href]');
+		
+		for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
 			var strIdent = '';
 			
 			{
-				if (jQuery(this).attr('href').substr(0, 9) === '/watch?v=') {
-					strIdent = jQuery(this).attr('href').substr(9).split('&')[0]; 
+				if (elementHandle[intFor1].getAttribute('href') !== null) {
+					if (elementHandle[intFor1].getAttribute('href').substr(0, 9) === '/watch?v=') {
+						strIdent = elementHandle[intFor1].getAttribute('href').substr(9).split('&')[0]; 
+					}
 				}
 			}
 			
 			if (strIdent === '') {
-				return;
+				continue;
 				
-			} else if (jQuery(this).hasClass('watched') === true) {
-				return;
+			} else if (elementHandle[intFor1].querySelector('img') === null) {
+				continue;
 				
-			} else if (jQuery(this).children().size() !== 1) {
-				return;
+			} else if (elementHandle[intFor1].classList.contains('watched') === true) {
+				continue;
 				
 			}
 			
 			{
 				if (boolLookup.hasOwnProperty(strIdent) === true) {
-					jQuery(this)
-						.addClass('watched')
-						.append(jQuery('<div></div>')
-							.addClass('watched-badge')
-							.text('WATCHED')
-						)
-					;
+					Hook.updateMark(elementHandle[intFor1]);
 					
 				} else if (boolLookup.hasOwnProperty(strIdent) === false) {
-					jQuery(this)
-						.off('mousedown')
-						.on('mousedown', function(eventHandle) {
-							if (eventHandle.which !== 1) {
-								if (eventHandle.which !== 2) {
-									return;
-								}
-							}
-							
-							jQuery(this)
-								.addClass('watched')
-								.append(jQuery('<div></div>')
-									.addClass('watched-badge')
-									.text('WATCHED')
-								)
-							;
-						})
-					;
+					elementHandle[intFor1].onmousedown = function(eventHandle) {
+						if ((eventHandle.button === 0) || (eventHandle.button === 1)) {
+							Hook.updateMark(this);
+						}
+					};
 					
 				}
 			}
-		});
+		}
 	}
 });
 
@@ -83,12 +68,18 @@ var Hook = {
 		var strTitle = '';
 		
 		{
-			if (window.location.href.split('/watch?v=').length === 2) {
-				strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
+			if (window.location !== null) {
+				if (window.location.href.split('/watch?v=').length === 2) {
+					strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
+				}
 			}
-			
-			if (jQuery('#eow-title').attr('title') !== undefined) {
-				strTitle = jQuery('#eow-title').attr('title');
+		}
+		
+		{
+			if (document.querySelector('#eow-title') !== null) {
+				if (document.querySelector('#eow-title').getAttribute('title') !== null) {
+					strTitle = document.querySelector('#eow-title').getAttribute('title');
+				}
 			}
 		}
 		
@@ -122,32 +113,36 @@ var Hook = {
 	
 	updateLookup: function() {
 	   	var strLookup = [];
-    	
-    	{
-			jQuery('a[href]').each(function() {
+		
+		{
+			var elementHandle = document.querySelectorAll('a[href]');
+			
+			for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
 				var strIdent = '';
 				
 				{
-					if (jQuery(this).attr('href').substr(0, 9) === '/watch?v=') {
-						strIdent = jQuery(this).attr('href').substr(9).split('&')[0]; 
+					if (elementHandle[intFor1].getAttribute('href') !== null) {
+						if (elementHandle[intFor1].getAttribute('href').substr(0, 9) === '/watch?v=') {
+							strIdent = elementHandle[intFor1].getAttribute('href').substr(9).split('&')[0]; 
+						}
 					}
 				}
 				
 				if (strIdent === '') {
-					return;
+					continue;
 					
-				} else if (jQuery(this).hasClass('watched') === true) {
-					return;
+				} else if (elementHandle[intFor1].querySelector('img') === null) {
+					continue;
 					
-				} else if (jQuery(this).children().size() !== 1) {
-					return;
+				} else if (elementHandle[intFor1].classList.contains('watched') === true) {
+					continue;
 					
 				}
 				
 				{
 					strLookup.push(strIdent);
 				}
-			});
+			}
 		}
 		
 		if (strLookup.length === 0) {
@@ -159,30 +154,59 @@ var Hook = {
 				'strLookup': strLookup
 			});
 		}
+	},
+	
+	updateMark: function(elementHandle) {
+		{
+			elementHandle.classList.add('watched');
+		}
+		
+		{
+			var elementBadge = document.createElement('div')
+			
+			elementBadge.classList.add('watched-badge');
+			elementBadge.innerHTML = 'WATCHED';
+			
+			elementHandle.appendChild(elementBadge);
+		}
 	}
 };
 
-jQuery(document).ready(function() {	
-	{
-		Hook.updateWatch();
-	}
+{
+	Hook.updateWatch();
+}
+
+{
+   	Hook.updateLookup();
+}
+
+{
+	var intThreshold = 0;
 	
-	{
-	   	Hook.updateLookup();
-	}
+	document.onclick = function() {
+		{
+			intThreshold = 8;
+		}
+	};
 	
-	{
-		new MutationObserver(function() {
-			{
-				Hook.updateWatch();
-			}
-			
-			{
-			   	Hook.updateLookup();
-			}
-		}).observe(document, {
-			'childList': true,
-			'subtree': true
-		});
-	}
-});
+	new MutationObserver(function(mutations) {
+		if (intThreshold === 0) {
+			return;
+		}
+		
+		{
+			intThreshold -= 1;
+		}
+		
+		{
+			Hook.updateWatch();
+		}
+		
+		{
+		   	Hook.updateLookup();
+		}
+	}).observe(document, {
+		'childList': true,
+		'subtree': true
+	});
+}

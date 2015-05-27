@@ -92,7 +92,6 @@ exports.main = function(optionsHandle) {
 		require('sdk/page-mod').PageMod({
 			'include': '*.youtube.com',
 			'contentScriptFile': [
-				require('sdk/self').data.url('./jquery.js'),
 				require('sdk/self').data.url('./hook.js')
 			],
 		    'onAttach': function(workerHandle) {

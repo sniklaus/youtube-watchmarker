@@ -108,7 +108,7 @@ var Youtube = {
 		return boolLinked;
 	},
 	
-	update: function() {
+	update: function(functionError, functionSuccess) {
 		var functionAuth = function() {
 			jQuery.ajax({
 				'async': true,
@@ -159,6 +159,7 @@ var Youtube = {
 			});
 		};
 		
+		var Playlistitems_intThreshold = 128;
 		var Playlistitems_strPage = '';
 		
 		var functionPlaylistitems = function() {
@@ -174,8 +175,6 @@ var Youtube = {
 					functionError();
 				},
 				'success': function(jsonHandle) {
-					var boolContinue = false;
-					
 					{
 						if (jsonHandle.nextPageToken === undefined) {
 							Playlistitems_strPage = '';
@@ -204,8 +203,8 @@ var Youtube = {
 								
 								PreferenceHistory.selectNext();
 								
-								if (PreferenceHistory.intIdent === 0) {
-									boolContinue = true;
+								if (PreferenceHistory.intIdent !== 0) {
+									Playlistitems_intThreshold -= 1;
 								}
 								
 								if (PreferenceHistory.intIdent === 0) {
@@ -238,7 +237,7 @@ var Youtube = {
 					}
 					
 					{
-						if (boolContinue === true) {
+						if (Playlistitems_intThreshold > 0) {
 							if (Playlistitems_strPage !== '') {
 								functionPlaylistitems();
 								
