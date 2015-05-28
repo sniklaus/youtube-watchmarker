@@ -1,15 +1,335 @@
 'use strict';
 
-var Components = {
-	'utils': require('chrome').Cu,
-	'interfaces': require('chrome').Ci
+var Cu = require('chrome').Cu;
+var Ci = require('chrome').Ci;
+
+Cu.import('resource://gre/modules/FileUtils.jsm');
+Cu.import('resource://gre/modules/Services.jsm');
+
+var XMLHttpRequest = require('sdk/net/xhr').XMLHttpRequest;
+
+var Request = {
+	init: function() {
+	
+	},
+	
+	dispel: function() {
+		
+	},
+	
+	update: function(objectArguments, functionCallback) {
+		var requestHandle = new XMLHttpRequest();
+		
+		requestHandle.onreadystatechange = function() {
+			if (requestHandle.readyState !== 4) {
+				return;
+			}
+			
+			var objectJson = null;
+			
+			try {
+				objectJson = JSON.parse(requestHandle.response);
+			} catch(e) {
+				objectJson = null;
+			}
+			
+			functionCallback({
+				'intStatus': requestHandle.status,
+				'strResponse': requestHandle.response,
+				'objectJson': objectJson
+			});
+		};
+		
+		if (objectArguments.strType === 'GET') {
+			requestHandle.open(objectArguments.strType, objectArguments.strLink + '?' + objectArguments.strData, true);
+			
+		} else if (objectArguments.strType === 'POST') {
+			requestHandle.open(objectArguments.strType, objectArguments.strLink, true);
+			
+		}
+		
+		for (var strHeader in objectArguments.strHeader) {
+			requestHandle.setRequestHeader(strHeader, objectArguments.strHeader[strHeader]);
+		}
+		
+		if (objectArguments.strType === 'GET') {
+			requestHandle.send();
+			
+		} else if (objectArguments.strType === 'POST') {
+			requestHandle.send(objectArguments.strData);
+			
+		}
+	}
 };
+Request.init();
 
-Components.utils.import('resource://gre/modules/FileUtils.jsm');
-Components.utils.import('resource://gre/modules/Services.jsm');
-
-var History = {
-	sqlserviceHandle: Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.PreferenceHistory.sqlite' ])),
+var Youtube = {
+	strApi: '',
+	strClient: '',
+	strSecret: '',
+	strRedirect: '',
+	strScope: '',
+	
+	sqlserviceHistory: null,
+	
+	init: function() {
+		{
+			Youtube.strApi = 'AIzaSyAqgO1S-h65tnJvWGpJnGu5xt5qSokFcNo';
+			
+			Youtube.strClient = '701883762296-67ev6up58cp45mkp184ishf84ru0746r.apps.googleusercontent.com';
+			
+			Youtube.strSecret = 'tt90dhQUf9HJyx3ju-_9dmOD';
+			
+			Youtube.strRedirect = 'urn:ietf:wg:oauth:2.0:oob';
+			
+			Youtube.strScope = 'https://www.googleapis.com/auth/youtube.readonly';
+		}
+		
+		{
+			Youtube.sqlserviceHistory = Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.PreferenceHistory.sqlite' ]));
+		}
+	},
+	
+	dispel: function() {
+		{
+			Youtube.strApi = '';
+			
+			Youtube.strClient = '';
+			
+			Youtube.strSecret = '';
+			
+			Youtube.strRedirect = '';
+			
+			Youtube.strScope = '';
+		}
+		
+		{
+			Youtube.sqlserviceHistory = null;
+		}
+	},
+	
+	updateSynchronize: function(objectArguments, functionCallback) {
+		if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strKey') === '') {
+			return;
+			
+		} else if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strAccess') === '') {
+			return;
+			
+		} else if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strRefresh') === '') {
+			return;
+			
+		}
+		
+		var Auth_strKey = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strKey');
+		var Auth_strAccess = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strAccess');
+		var Auth_strRefresh = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strRefresh');
+		
+		var functionAuth = function() {
+			Request.update({
+				'strType': 'POST',
+				'strLink': 'https://www.googleapis.com/oauth2/v3/token',
+				'strData': 'grant_type=' + encodeURIComponent('refresh_token') + '&refresh_token=' + encodeURIComponent(Auth_strRefresh) + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&client_secret=' + encodeURIComponent(Youtube.strSecret) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect),
+				'strHeader': {
+					'Content-Type': 'application/x-www-form-urlencoded'
+				}
+			}, function(objectArguments) {
+				if (objectArguments.intStatus !== 200) {
+					functionCallback(null);
+					
+					return;
+					
+				} else if (objectArguments.objectJson === null) {
+					functionCallback(null);
+					
+					return;
+					
+				}
+				
+				{
+					if (objectArguments.objectJson.access_token !== undefined) {
+						require('sdk/preferences/service').set('extensions.YouRect.Youtube.strAccess', objectArguments.objectJson.access_token);
+					}
+					
+					if (objectArguments.objectJson.refresh_token !== undefined) {
+						require('sdk/preferences/service').set('extensions.YouRect.Youtube.strRefresh', objectArguments.objectJson.refresh_token);
+					}
+				}
+				
+				functionChannels();
+			});
+		};
+		
+		var Channels_strHistory = '';
+		
+		var functionChannels = function() {
+			Request.update({
+				'strType': 'GET',
+				'strLink': 'https://www.googleapis.com/youtube/v3/channels',
+				'strData': 'key=' + encodeURIComponent(Youtube.strApi) + '&part=' + encodeURIComponent('contentDetails') + '&mine=' + encodeURIComponent('true'),
+				'strHeader': {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					'Authorization': 'Bearer ' + Auth_strAccess
+				}
+			}, function(objectArguments) {
+				if (objectArguments.intStatus !== 200) {
+					functionCallback(null);
+					
+					return;
+					
+				} else if (objectArguments.objectJson === null) {
+					functionCallback(null);
+					
+					return;
+					
+				}
+				
+				{
+					Channels_strHistory = objectArguments.objectJson.items[0].contentDetails.relatedPlaylists.watchHistory;
+				}
+				
+				functionPlaylistitems();
+			});
+		};
+		
+		var Playlistitems_intThreshold = objectArguments.intThreshold;
+		var Playlistitems_strNext = '';
+		var Playlistitems_resultHandle = [];
+		
+		var functionPlaylistitems = function() {
+			Request.update({
+				'strType': 'GET',
+				'strLink': 'https://www.googleapis.com/youtube/v3/playlistItems',
+				'strData': 'key=' + encodeURIComponent(Youtube.strApi) + '&part=' + encodeURIComponent('snippet') + '&maxResults=' + encodeURIComponent('50') + '&playlistId=' + encodeURIComponent(Channels_strHistory) + '&pageToken=' + encodeURIComponent(Playlistitems_strNext),
+				'strHeader': {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					'Authorization': 'Bearer ' + Auth_strAccess
+				}
+			}, function(objectArguments) {
+				if (objectArguments.intStatus !== 200) {
+					functionCallback(null);
+					
+					return;
+					
+				} else if (objectArguments.objectJson === null) {
+					functionCallback(null);
+					
+					return;
+					
+				}
+				
+				{
+					if (objectArguments.objectJson.nextPageToken === undefined) {
+						Playlistitems_strNext = '';
+						
+					} else if (objectArguments.objectJson.nextPageToken !== undefined) {
+						Playlistitems_strNext = objectArguments.objectJson.nextPageToken;
+						
+					}
+				}
+				
+				{
+					for (var intFor1 = 0; intFor1 < objectArguments.objectJson.items.length; intFor1 += 1) {
+						Playlistitems_resultHandle.push({
+							'longTimestamp': Date.parse(objectArguments.objectJson.items[intFor1].snippet.publishedAt),
+							'strIdent': objectArguments.objectJson.items[intFor1].snippet.resourceId.videoId,
+							'strTitle': objectArguments.objectJson.items[intFor1].snippet.title
+						});
+					}
+				}
+				
+				functionBegin();
+			});
+		};
+		
+    	var functionBegin = function() {
+    		{
+    			Youtube.sqlserviceHistory.beginTransaction();
+    		}
+    		
+			functionWatchIterator(null);
+    	};
+    	
+    	var WatchIterator_intIndex = 0;
+		
+		var functionWatchIterator = function(intIncrement) {
+			{
+				if (intIncrement === null) {
+					WatchIterator_intIndex = 0;
+					
+				} else if (intIncrement !== null) {
+					WatchIterator_intIndex += intIncrement;
+					
+				}
+			}
+			
+			{
+				if (WatchIterator_intIndex < Playlistitems_resultHandle.length) {
+					functionWatch();
+					
+				} else if (WatchIterator_intIndex >= Playlistitems_resultHandle.length) {
+					functionCommit();
+					
+				}
+			}
+		};
+		
+		var functionWatch = function() {
+			{
+				Youtube.updateWatch({
+					'longTimestamp': Playlistitems_resultHandle[WatchIterator_intIndex].longTimestamp,
+					'strIdent': Playlistitems_resultHandle[WatchIterator_intIndex].strIdent,
+					'strTitle': Playlistitems_resultHandle[WatchIterator_intIndex].strTitle,
+					'intCount': 1
+				}, function(objectArguments) {
+					if (objectArguments === null) {
+						functionCallback(null);
+						
+						return;
+					}
+					
+					{
+						if (objectArguments.intIdent !== 0) {
+							Playlistitems_intThreshold -= 1;
+						}
+					}
+					
+					functionWatchIterator(1);
+				});
+			}
+		};
+    	
+    	var functionCommit = function() {
+    		{
+    			Youtube.sqlserviceHistory.commitTransaction();
+    		}
+    		
+			functionFinalize();
+    	};
+		
+		var functionFinalize = function() {
+			{
+				Playlistitems_resultHandle = [];
+			}
+			
+			{
+				if (Playlistitems_intThreshold > 0) {
+					if (Playlistitems_strNext !== '') {
+						functionPlaylistitems();
+						
+						return;
+					}
+				}
+			}
+			
+			{
+				require('sdk/preferences/service').set('extensions.YouRect.Youtube.longTimestamp', String(new Date().getTime()));
+			}
+			
+			functionCallback({});
+		};
+    	
+		functionAuth();
+	},
 	
 	updateWatch: function(objectArguments, functionCallback) {
     	var Select_intIdent = 0;
@@ -19,7 +339,7 @@ var History = {
     	var Select_intCount = 0;
     	
     	var functionSelect = function() {
-	    	var statementHandle = History.sqlserviceHandle.createStatement(
+	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
 				'SELECT   * ' +
 				'FROM     PreferenceHistory ' +
 				'WHERE    strIdent = :strIdent '
@@ -40,7 +360,7 @@ var History = {
 					}
 				},
 				'handleCompletion': function(intReason) {
-					if (intReason === Components.interfaces.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -58,7 +378,7 @@ var History = {
     	};
     	
     	var functionInsert = function() {
-	    	var statementHandle = History.sqlserviceHandle.createStatement(
+	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
 				'INSERT INTO PreferenceHistory ' +
 				'	( ' + 
 				'		longTimestamp, ' +
@@ -82,7 +402,7 @@ var History = {
 			
 			statementHandle.executeAsync({
 				'handleCompletion': function(intReason) {
-					if (intReason === Components.interfaces.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -100,7 +420,7 @@ var History = {
     	};
     	
     	var functionUpdate = function() {
-	    	var statementHandle = History.sqlserviceHandle.createStatement(
+	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
 				'UPDATE PreferenceHistory ' +
 				'SET ' +
 				'	longTimestamp = :longTimestamp, ' +
@@ -118,7 +438,7 @@ var History = {
 			
 			statementHandle.executeAsync({
 				'handleCompletion': function(intReason) {
-					if (intReason === Components.interfaces.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -142,7 +462,7 @@ var History = {
 		var Select_strIdent = [];
 		
     	var functionSelect = function() {
-	    	var statementHandle = History.sqlserviceHandle.createStatement(
+	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
 				'SELECT   * ' +
 				'FROM     PreferenceHistory ' +
 				'WHERE    strIdent IN (:strIdent) '
@@ -181,7 +501,7 @@ var History = {
 					} while (true);
 				},
 				'handleCompletion': function(intReason) {
-					if (intReason === Components.interfaces.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -195,216 +515,9 @@ var History = {
 		};
 		
 		functionSelect();
-	},
-	
-	updateYoutube: function(objectArguments, functionCallback) {
-		if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strKey') === '') {
-			return;
-			
-		} else if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strAccess') === '') {
-			return;
-			
-		} else if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strRefresh') === '') {
-			return;
-			
-		}
-		
-		var Auth_strKey = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strKey');
-		var Auth_strAccess = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strAccess');
-		var Auth_strRefresh = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strRefresh');
-		
-		var functionAuth = function() {
-			require('sdk/request').Request({
-				'url': 'https://www.googleapis.com/oauth2/v3/token',
-				'content':  'grant_type=' + encodeURIComponent('refresh_token') + '&refresh_token=' + encodeURIComponent(Auth_strRefresh) + '&client_id=' + encodeURIComponent(objectArguments.strClient) + '&client_secret=' + encodeURIComponent(objectArguments.strSecret) + '&redirect_uri=' + encodeURIComponent(objectArguments.strRedirect),
-				'onComplete': function(responseHandle) {
-					if (responseHandle.status !== 200) {
-						functionCallback(null);
-						
-						return;
-						
-					} else if (responseHandle.json === null) {
-						functionCallback(null);
-						
-						return;
-						
-					}
-					
-					{
-						if (jsonHandle.access_token !== undefined) {
-							require('sdk/preferences/service').set('extensions.YouRect.Youtube.strAccess', responseHandle.json.access_token);
-						}
-						
-						if (jsonHandle.refresh_token !== undefined) {
-							require('sdk/preferences/service').set('extensions.YouRect.Youtube.strRefresh', responseHandle.json.refresh_token);
-						}
-					}
-					
-					functionChannels();
-				}
-			}).post();
-		};
-		
-		var Channels_strHistory = '';
-		
-		var functionChannels = function() {
-			require('sdk/request').Request({
-				'url': 'https://www.googleapis.com/youtube/v3/channels?key=' + encodeURIComponent(objectArguments.strApi) + '&part=' + encodeURIComponent('contentDetails') + '&mine=' + encodeURIComponent('true'),
-				'headers': {
-					'Authorization': 'Bearer ' + Auth_strAccess
-				},
-				'onComplete': function(responseHandle) {
-					if (responseHandle.status !== 200) {
-						functionCallback(null);
-						
-						return;
-						
-					} else if (responseHandle.json === null) {
-						functionCallback(null);
-						
-						return;
-						
-					}
-					
-					{
-						Channels_strHistory = responseHandle.json.items[0].contentDetails.relatedPlaylists.watchHistory;
-					}
-					
-					functionPlaylistitems();
-				}
-			}).get();
-		};
-		
-		var Playlistitems_intThreshold = 128;
-		var Playlistitems_strNext = '';
-		var Playlistitems_resultHandle = [];
-		
-		var functionPlaylistitems = function() {
-			require('sdk/request').Request({
-				'url': 'https://www.googleapis.com/youtube/v3/playlistItems?key=' + encodeURIComponent(objectArguments.strApi) + '&part=' + encodeURIComponent('snippet') + '&maxResults=' + encodeURIComponent('50') + '&playlistId=' + encodeURIComponent(Channels_strHistory) + '&pageToken=' + encodeURIComponent(Playlistitems_strNext),
-				'headers': {
-					'Authorization': 'Bearer ' + Auth_strAccess
-				},
-				'onComplete': function(responseHandle) {
-					if (responseHandle.status !== 200) {
-						functionCallback(null);
-						
-						return;
-						
-					} else if (responseHandle.json === null) {
-						functionCallback(null);
-						
-						return;
-						
-					}
-					
-					{
-						if (responseHandle.json.nextPageToken === undefined) {
-							Playlistitems_strNext = '';
-							
-						} else if (responseHandle.json.nextPageToken !== undefined) {
-							Playlistitems_strNext = responseHandle.json.nextPageToken;
-							
-						}
-					}
-					
-					{
-						for (var intFor1 = 0; intFor1 < responseHandle.json.items.length; intFor1 += 1) {
-							Playlistitems_resultHandle.push({
-								'longTimestamp': Date.parse(responseHandle.json.items[intFor1].snippet.publishedAt),
-								'strIdent': responseHandle.json.items[intFor1].snippet.resourceId.videoId,
-								'strTitle': responseHandle.json.items[intFor1].snippet.title
-							});
-						}
-					}
-					
-					functionBegin();
-				}
-			}).get();
-		};
-		
-    	var functionBegin = function() {
-    		{
-    			History.sqlserviceHandle.beginTransaction();
-    		}
-    		
-			functionWatchIterator(0);
-    	};
-    	
-    	var WatchIterator_intIndex = 0;
-		
-		var functionWatchIterator = function(intIncrement) {
-			{
-				WatchIterator_intIndex += intIncrement;
-			}
-			
-			{
-				if (WatchIterator_intIndex < FilesystemRead_strFiles.length) {
-					functionWatch();
-					
-				} else if (WatchIterator_intIndex >= FilesystemRead_strFiles.length) {
-					functionCommit();
-					
-				}
-			}
-		};
-		
-		var functionWatch = function() {
-			{
-				History.updateWatch({
-					'longTimestamp': Playlistitems_resultHandle[WatchIterator_intIndex].longTimestamp,
-					'strIdent': Playlistitems_resultHandle[WatchIterator_intIndex].strIdent,
-					'strTitle': Playlistitems_resultHandle[WatchIterator_intIndex].strTitle,
-					'intCount': 1
-				}, function(objectArguments) {
-					if (objectArguments === null) {
-						functionCallback(null);
-						
-						return;
-					}
-					
-					{
-						if (objectArguments.intIdent !== 0) {
-							Playlistitems_intThreshold -= 1;
-						}
-					}
-					
-					functionWatchIterator(1);
-				});
-			}
-		};
-    	
-    	var functionCommit = function() {
-    		{
-    			History.sqlserviceHandle.commitTransaction();
-    		}
-    		
-			{
-				if (Playlistitems_intThreshold > 0) {
-					if (Playlistitems_strNext !== '') {
-    					{
-    						Playlistitems_resultHandle = [];
-    					}
-    					
-    					{
-							functionPlaylistitems();
-						}
-						
-						return;
-					}
-				}
-			}
-			
-			{
-				require('sdk/preferences/service').set('extensions.YouRect.Youtube.longTimestamp', new Date().getTime());
-			}
-			
-			functionCallback({});
-    	};
-    	
-		functionAuth();
 	}
 };
+Youtube.init();
 
 exports.main = function(optionsHandle) {
 	{
@@ -423,7 +536,7 @@ exports.main = function(optionsHandle) {
 					return channelHandle;
 				},
 				'getURIFlags': function(uriHandle) {
-					return Components.interfaces.nsIAboutModule.ALLOW_SCRIPT;
+					return Ci.nsIAboutModule.ALLOW_SCRIPT;
 				}
 			})
 		});
@@ -435,7 +548,7 @@ exports.main = function(optionsHandle) {
 			'label': 'YouRect',
 			'icon': 'chrome://YouRect/content/images/icon.png'
 		});
-
+		
 		{
 			toolbarbuttonHandle.on('click', function(stateHandle) {
 				{
@@ -497,7 +610,7 @@ exports.main = function(optionsHandle) {
 			],
 		    'onAttach': function(workerHandle) {
 		        workerHandle.port.on('eventWatch', function(objectEvent) {
-					History.updateWatch({
+					Youtube.updateWatch({
 						'longTimestamp': new Date().getTime(),
 						'strIdent': objectEvent.strIdent,
 						'strTitle': objectEvent.strTitle,
@@ -508,7 +621,7 @@ exports.main = function(optionsHandle) {
 		        });
 		        
 		        workerHandle.port.on('eventLookup', function(objectEvent) {
-					History.updateLookup({
+					Youtube.updateLookup({
 						'strIdent': objectEvent.strIdent
 					}, function(objectArguments) {
 						if (objectArguments === null) {
@@ -525,12 +638,17 @@ exports.main = function(optionsHandle) {
 	}
 	
 	{
+		require('sdk/timers').setTimeout(function() {
+			Youtube.updateSynchronize({
+				'intThreshold': 128
+			}, function(objectArguments) {
+				
+			});
+		}, 5 * 1000);
+		
 		require('sdk/timers').setInterval(function() {
-			History.updateYoutube({
-				'strApi': 'AIzaSyAqgO1S-h65tnJvWGpJnGu5xt5qSokFcNo',
-				'strClient': '701883762296-67ev6up58cp45mkp184ishf84ru0746r.apps.googleusercontent.com',
-				'strSecret': 'tt90dhQUf9HJyx3ju-_9dmOD',
-				'strRedirect': 'urn:ietf:wg:oauth:2.0:oob'
+			Youtube.updateSynchronize({
+				'intThreshold': 128
 			}, function(objectArguments) {
 				
 			});

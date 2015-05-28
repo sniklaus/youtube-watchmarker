@@ -244,7 +244,8 @@ jQuery(document).ready(function() {
 			.off('click')
 			.on('click', function() {
 				{
-					Youtube.authorize();
+					
+					window.open('https://accounts.google.com/o/oauth2/auth?response_type=' + encodeURIComponent('code') + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect) + '&scope=' + encodeURIComponent(Youtube.strScope), '_blank');
 				}
 			})
 		;

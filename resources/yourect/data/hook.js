@@ -170,39 +170,45 @@ var Hook = {
 
 {
 	Hook.updateWatch();
-}
-
-{
+	
    	Hook.updateLookup();
 }
 
 {
-	var intThreshold = 0;
-	
-	document.onclick = function() {
-		{
-			intThreshold = 8;
-		}
-	};
-	
-	new MutationObserver(function(mutations) {
-		if (intThreshold === 0) {
+	var observerHandle = new MutationObserver(function() {
+		if (observerHandle.intThreshold === 0) {
+			observerHandle.disconnect();
+			
 			return;
 		}
 		
 		{
-			intThreshold -= 1;
+			observerHandle.intThreshold -= 1;
 		}
 		
 		{
 			Hook.updateWatch();
+			
+		   	Hook.updateLookup();
+		}
+	});
+	
+	document.onclick = function(eventHandle) {
+		if (eventHandle.button !== 0) {
+			return;
 		}
 		
 		{
-		   	Hook.updateLookup();
+			observerHandle.intThreshold = 8;
 		}
-	}).observe(document, {
-		'childList': true,
-		'subtree': true
-	});
+		
+		{
+			observerHandle.disconnect();
+			
+			observerHandle.observe(document, {
+				'childList': true,
+				'subtree': true
+			});
+		}
+	};
 }
