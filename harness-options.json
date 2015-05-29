@@ -10,18 +10,19 @@
  "manifest": {
   "yourect/main": {
    "docsSHA256": null, 
-   "jsSHA256": "507f3b10285bb607bb48f2877d994fd68c7d836a3a55889d26b6beb70777b6bc", 
+   "jsSHA256": "fd033edb2880d8defee1247f607c92d1049e76cad0b3de31d02a5a825d04354a", 
    "moduleName": "main", 
    "packageName": "yourect", 
    "requirements": {
     "chrome": "chrome", 
     "sdk/core/heritage": "sdk/core/heritage", 
-    "sdk/net/xhr": "sdk/net/xhr", 
     "sdk/page-mod": "sdk/page-mod", 
     "sdk/panel": "sdk/panel", 
     "sdk/platform/xpcom": "sdk/platform/xpcom", 
     "sdk/preferences/service": "sdk/preferences/service", 
+    "sdk/request": "sdk/request", 
     "sdk/self": "sdk/self", 
+    "sdk/tabs": "sdk/tabs", 
     "sdk/timers": "sdk/timers", 
     "sdk/ui/button/toggle": "sdk/ui/button/toggle"
    }, 

@@ -1,19 +1,15 @@
 'use strict';
 
-self.port.on('eventShow', function(objectEvent) {
+self.port.on('youtubeWatch', function(objectArguments) {
 	
 });
 
-self.port.on('eventHide', function(objectEvent) {
-	
-});
-
-self.port.on('eventLookup', function(objectEvent) {
+self.port.on('youtubeLookup', function(objectArguments) {
 	{
-		objectEvent.intIdent = {};
+		objectArguments.intIdent = {};
 		
-		for (var intFor1 = 0; intFor1 < objectEvent.strIdent.length; intFor1 += 1) {
-			objectEvent.intIdent[objectEvent.strIdent[intFor1]] = 1;
+		for (var intFor1 = 0; intFor1 < objectArguments.strIdent.length; intFor1 += 1) {
+			objectArguments.intIdent[objectArguments.strIdent[intFor1]] = 1;
 		}
 	}
 	
@@ -43,13 +39,13 @@ self.port.on('eventLookup', function(objectEvent) {
 			}
 			
 			{
-				if (objectEvent.intIdent.hasOwnProperty(strIdent) === true) {
-					Hook.updateMark(elementHandle[intFor1]);
+				if (objectArguments.intIdent.hasOwnProperty(strIdent) === true) {
+					Youtube.updateMark(elementHandle[intFor1]);
 					
-				} else if (objectEvent.intIdent.hasOwnProperty(strIdent) === false) {
+				} else if (objectArguments.intIdent.hasOwnProperty(strIdent) === false) {
 					elementHandle[intFor1].onmousedown = function(eventHandle) {
 						if ((eventHandle.button === 0) || (eventHandle.button === 1)) {
-							Hook.updateMark(this);
+							Youtube.updateMark(this);
 						}
 					};
 					
@@ -59,17 +55,19 @@ self.port.on('eventLookup', function(objectEvent) {
 	}
 });
 
-var Hook = {
-	updateWatch: function() {
-	   	var objectEvent = {
-	   		'strIdent': '',
-	   		'strTitle': ''
-	   	};
+var Youtube = {
+	watch: function() {
+	   	var objectArguments = {
+			'longTimestamp': new Date().getTime(),
+			'strIdent': '',
+			'strTitle': '',
+			'intCount': 1
+		};
 		
 		{
 			if (window.location !== null) {
 				if (window.location.href.split('/watch?v=').length === 2) {
-					objectEvent.strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
+					objectArguments.strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
 				}
 			}
 		}
@@ -77,38 +75,38 @@ var Hook = {
 		{
 			if (document.querySelector('#eow-title') !== null) {
 				if (document.querySelector('#eow-title').getAttribute('title') !== null) {
-					objectEvent.strTitle = document.querySelector('#eow-title').getAttribute('title');
+					objectArguments.strTitle = document.querySelector('#eow-title').getAttribute('title');
 				}
 			}
 		}
 		
-		if (objectEvent.strIdent === '') {
+		if (objectArguments.strIdent === '') {
 			return;
 			
-		} else if (objectEvent.strTitle === '') {
+		} else if (objectArguments.strTitle === '') {
 			return;
 			
-		} else if (objectEvent.strIdent === Hook.updateWatch.strIdent) {
+		} else if (objectArguments.strIdent === Youtube.watch.strIdent) {
 			return;
 			
-		} else if (objectEvent.strTitle === Hook.updateWatch.strTitle) {
+		} else if (objectArguments.strTitle === Youtube.watch.strTitle) {
 			return;
 			
 		}
 		
 		{
-			Hook.updateWatch.strIdent = objectEvent.strIdent;
+			Youtube.watch.strIdent = objectArguments.strIdent;
 			
-			Hook.updateWatch.strTitle = objectEvent.strTitle;
+			Youtube.watch.strTitle = objectArguments.strTitle;
 		}
 		
 		{
-			self.port.emit('eventWatch', objectEvent);
+			self.port.emit('eventWatch', objectArguments);
 		}
 	},
 	
-	updateLookup: function() {
-	   	var objectEvent = {
+	lookup: function() {
+	   	var objectArguments = {
 	   		'strIdent': []
 	   	};
 		
@@ -138,17 +136,17 @@ var Hook = {
 				}
 				
 				{
-					objectEvent.strIdent.push(strIdent);
+					objectArguments.strIdent.push(strIdent);
 				}
 			}
 		}
 		
-		if (objectEvent.strIdent.length === 0) {
+		if (objectArguments.strIdent.length === 0) {
 			return;
 		}
 		
 		{
-			self.port.emit('eventLookup', objectEvent);
+			self.port.emit('youtubeLookup', objectArguments);
 		}
 	},
 	
@@ -169,9 +167,9 @@ var Hook = {
 };
 
 {
-	Hook.updateWatch();
+	Youtube.watch();
 	
-   	Hook.updateLookup();
+   	Youtube.lookup();
 }
 
 {
@@ -187,9 +185,9 @@ var Hook = {
 		}
 		
 		{
-			Hook.updateWatch();
+			Youtube.watch();
 			
-		   	Hook.updateLookup();
+		   	Youtube.lookup();
 		}
 	});
 	

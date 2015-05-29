@@ -1,67 +1,19 @@
 'use strict';
 
-var Cu = require('chrome').Cu;
-var Ci = require('chrome').Ci;
+var requireChrome = require('chrome');
+var requireHeritage = require('sdk/core/heritage');
+var requirePagemod = require('sdk/page-mod');
+var requirePanel = require('sdk/panel');
+var requirePreferences = require('sdk/preferences/service');
+var requireRequest = require('sdk/request');
+var requireSelf = require('sdk/self');
+var requireTabs = require('sdk/tabs');
+var requireTimers = require('sdk/timers');
+var requireToggle = require('sdk/ui/button/toggle');
+var requireXpcom = require('sdk/platform/xpcom');
 
-Cu.import('resource://gre/modules/FileUtils.jsm');
-Cu.import('resource://gre/modules/Services.jsm');
-
-var XMLHttpRequest = require('sdk/net/xhr').XMLHttpRequest;
-
-var Request = {
-	init: function() {
-	
-	},
-	
-	dispel: function() {
-		
-	},
-	
-	update: function(objectArguments, functionCallback) {
-		var requestHandle = new XMLHttpRequest();
-		
-		requestHandle.onreadystatechange = function() {
-			if (requestHandle.readyState !== 4) {
-				return;
-			}
-			
-			var objectJson = null;
-			
-			try {
-				objectJson = JSON.parse(requestHandle.response);
-			} catch(e) {
-				objectJson = null;
-			}
-			
-			functionCallback({
-				'intStatus': requestHandle.status,
-				'strResponse': requestHandle.response,
-				'objectJson': objectJson
-			});
-		};
-		
-		if (objectArguments.strType === 'GET') {
-			requestHandle.open(objectArguments.strType, objectArguments.strLink + '?' + objectArguments.strData, true);
-			
-		} else if (objectArguments.strType === 'POST') {
-			requestHandle.open(objectArguments.strType, objectArguments.strLink, true);
-			
-		}
-		
-		for (var strHeader in objectArguments.strHeader) {
-			requestHandle.setRequestHeader(strHeader, objectArguments.strHeader[strHeader]);
-		}
-		
-		if (objectArguments.strType === 'GET') {
-			requestHandle.send();
-			
-		} else if (objectArguments.strType === 'POST') {
-			requestHandle.send(objectArguments.strData);
-			
-		}
-	}
-};
-Request.init();
+requireChrome.Cu.import('resource://gre/modules/FileUtils.jsm');
+requireChrome.Cu.import('resource://gre/modules/Services.jsm');
 
 var Youtube = {
 	strApi: '',
@@ -88,6 +40,16 @@ var Youtube = {
 		{
 			Youtube.sqlserviceHistory = Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.PreferenceHistory.sqlite' ]));
 		}
+		
+		{
+			Youtube.sqlserviceHistory.executeSimpleSQL(
+				'CREATE INDEX IF NOT EXISTS Index_longTimestamp ON PreferenceHistory (longTimestamp) '
+			);
+			
+			Youtube.sqlserviceHistory.executeSimpleSQL(
+				'CREATE INDEX IF NOT EXISTS Index_strIdent ON PreferenceHistory (strIdent) '
+			);
+		}
 	},
 	
 	dispel: function() {
@@ -108,87 +70,157 @@ var Youtube = {
 		}
 	},
 	
-	updateSynchronize: function(objectArguments, functionCallback) {
-		if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strKey') === '') {
+	authorize: function() {
+		{
+			var strContent = [];
+			
+			strContent.push('response_type' + '=' + 'code');
+			strContent.push('client_id' + '=' + Youtube.strClient);
+			strContent.push('redirect_uri' + '=' + Youtube.strRedirect);
+			strContent.push('scope' + '=' + Youtube.strScope);
+			
+			requireTabs.open({
+				'url': 'https://accounts.google.com/o/oauth2/auth' + '?' + strContent.join('&'),
+				'inBackground': false
+			});
+		}
+	},
+	
+	link: function(objectArguments, functionCallback) {
+		var functionAuth = function() {
+			requireRequest.Request({
+				'url': 'https://www.googleapis.com/oauth2/v3/token',
+				'content': {
+					'grant_type': 'authorization_code',
+					'code': functionCallback.strKey,
+					'client_id': Youtube.strClient,
+					'client_secret': Youtube.strSecret,
+					'redirect_uri': Youtube.strRedirect
+				},
+				'headers': {
+					'Content-Type': 'application/x-www-form-urlencoded'
+				},
+				'onComplete': function(responseHandle) {
+					if (responseHandle.status !== 200) {
+						functionCallback(null);
+						
+						return;
+						
+					} else if (responseHandle.json === null) {
+						functionCallback(null);
+						
+						return;
+						
+					}
+					
+					{
+						if (responseHandle.json.access_token !== undefined) {
+							requirePreferences.set('extensions.YouRect.Youtube.strAccess', responseHandle.json.access_token);
+						}
+						
+						if (responseHandle.json.refresh_token !== undefined) {
+							requirePreferences.set('extensions.YouRect.Youtube.strRefresh', responseHandle.json.refresh_token);
+						}
+					}
+					
+					functionCallback({});
+				}
+			}).post();
+		};
+	},
+	
+	unlink: function() {
+		{
+			requirePreferences.get('extensions.YouRect.Youtube.strAccess', '');
+			
+			requirePreferences.get('extensions.YouRect.Youtube.strRefresh', '');
+		}
+	},
+	
+	synchronize: function(objectArguments, functionCallback) {
+		if (requirePreferences.get('extensions.YouRect.Youtube.strAccess') === '') {
 			return;
 			
-		} else if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strAccess') === '') {
-			return;
-			
-		} else if (require('sdk/preferences/service').get('extensions.YouRect.Youtube.strRefresh') === '') {
+		} else if (requirePreferences.get('extensions.YouRect.Youtube.strRefresh') === '') {
 			return;
 			
 		}
 		
-		var Auth_strKey = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strKey');
-		var Auth_strAccess = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strAccess');
-		var Auth_strRefresh = require('sdk/preferences/service').get('extensions.YouRect.Youtube.strRefresh');
-		
 		var functionAuth = function() {
-			Request.update({
-				'strType': 'POST',
-				'strLink': 'https://www.googleapis.com/oauth2/v3/token',
-				'strData': 'grant_type=' + encodeURIComponent('refresh_token') + '&refresh_token=' + encodeURIComponent(Auth_strRefresh) + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&client_secret=' + encodeURIComponent(Youtube.strSecret) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect),
-				'strHeader': {
+			requireRequest.Request({
+				'url': 'https://www.googleapis.com/oauth2/v3/token',
+				'content': {
+					'grant_type': 'refresh_token',
+					'refresh_token': requirePreferences.get('extensions.YouRect.Youtube.strRefresh'),
+					'client_id': Youtube.strClient,
+					'client_secret': Youtube.strSecret,
+					'redirect_uri': Youtube.strRedirect
+				},
+				'headers': {
 					'Content-Type': 'application/x-www-form-urlencoded'
-				}
-			}, function(objectArguments) {
-				if (objectArguments.intStatus !== 200) {
-					functionCallback(null);
-					
-					return;
-					
-				} else if (objectArguments.objectJson === null) {
-					functionCallback(null);
-					
-					return;
-					
-				}
-				
-				{
-					if (objectArguments.objectJson.access_token !== undefined) {
-						require('sdk/preferences/service').set('extensions.YouRect.Youtube.strAccess', objectArguments.objectJson.access_token);
+				},
+				'onComplete': function(responseHandle) {
+					if (responseHandle.status !== 200) {
+						functionCallback(null);
+						
+						return;
+						
+					} else if (responseHandle.json === null) {
+						functionCallback(null);
+						
+						return;
+						
 					}
 					
-					if (objectArguments.objectJson.refresh_token !== undefined) {
-						require('sdk/preferences/service').set('extensions.YouRect.Youtube.strRefresh', objectArguments.objectJson.refresh_token);
+					{
+						if (responseHandle.json.access_token !== undefined) {
+							requirePreferences.set('extensions.YouRect.Youtube.strAccess', responseHandle.json.access_token);
+						}
+						
+						if (responseHandle.json.refresh_token !== undefined) {
+							requirePreferences.set('extensions.YouRect.Youtube.strRefresh', responseHandle.json.refresh_token);
+						}
 					}
+					
+					functionChannels();
 				}
-				
-				functionChannels();
-			});
+			}).post();
 		};
 		
 		var Channels_strHistory = '';
 		
 		var functionChannels = function() {
-			Request.update({
-				'strType': 'GET',
-				'strLink': 'https://www.googleapis.com/youtube/v3/channels',
-				'strData': 'key=' + encodeURIComponent(Youtube.strApi) + '&part=' + encodeURIComponent('contentDetails') + '&mine=' + encodeURIComponent('true'),
-				'strHeader': {
+			requireRequest.Request({
+				'url': 'https://www.googleapis.com/youtube/v3/channels',
+				'content': {
+					'key': Youtube.strApi,
+					'part': 'contentDetails',
+					'mine': 'true'
+				},
+				'headers': {
 					'Content-Type': 'application/x-www-form-urlencoded',
-					'Authorization': 'Bearer ' + Auth_strAccess
+					'Authorization': 'Bearer ' + requirePreferences.get('extensions.YouRect.Youtube.strAccess')
+				},
+				'onComplete': function(responseHandle) {
+					if (responseHandle.status !== 200) {
+						functionCallback(null);
+						
+						return;
+						
+					} else if (responseHandle.json === null) {
+						functionCallback(null);
+						
+						return;
+						
+					}
+					
+					{
+						Channels_strHistory = responseHandle.json.items[0].contentDetails.relatedPlaylists.watchHistory;
+					}
+					
+					functionPlaylistitems();
 				}
-			}, function(objectArguments) {
-				if (objectArguments.intStatus !== 200) {
-					functionCallback(null);
-					
-					return;
-					
-				} else if (objectArguments.objectJson === null) {
-					functionCallback(null);
-					
-					return;
-					
-				}
-				
-				{
-					Channels_strHistory = objectArguments.objectJson.items[0].contentDetails.relatedPlaylists.watchHistory;
-				}
-				
-				functionPlaylistitems();
-			});
+			}).get();
 		};
 		
 		var Playlistitems_intThreshold = objectArguments.intThreshold;
@@ -196,49 +228,55 @@ var Youtube = {
 		var Playlistitems_resultHandle = [];
 		
 		var functionPlaylistitems = function() {
-			Request.update({
-				'strType': 'GET',
-				'strLink': 'https://www.googleapis.com/youtube/v3/playlistItems',
-				'strData': 'key=' + encodeURIComponent(Youtube.strApi) + '&part=' + encodeURIComponent('snippet') + '&maxResults=' + encodeURIComponent('50') + '&playlistId=' + encodeURIComponent(Channels_strHistory) + '&pageToken=' + encodeURIComponent(Playlistitems_strNext),
-				'strHeader': {
+			requireRequest.Request({
+				'url': 'https://www.googleapis.com/youtube/v3/playlistItems',
+				'content': {
+					'key': Youtube.strApi,
+					'part': 'snippet',
+					'maxResults': '50',
+					'playlistId': Channels_strHistory,
+					'pageToken': Playlistitems_strNext
+				},
+				'headers': {
 					'Content-Type': 'application/x-www-form-urlencoded',
-					'Authorization': 'Bearer ' + Auth_strAccess
-				}
-			}, function(objectArguments) {
-				if (objectArguments.intStatus !== 200) {
-					functionCallback(null);
-					
-					return;
-					
-				} else if (objectArguments.objectJson === null) {
-					functionCallback(null);
-					
-					return;
-					
-				}
-				
-				{
-					if (objectArguments.objectJson.nextPageToken === undefined) {
-						Playlistitems_strNext = '';
+					'Authorization': 'Bearer ' + requirePreferences.get('extensions.YouRect.Youtube.strAccess')
+				},
+				'onComplete': function(responseHandle) {
+					if (responseHandle.status !== 200) {
+						functionCallback(null);
 						
-					} else if (objectArguments.objectJson.nextPageToken !== undefined) {
-						Playlistitems_strNext = objectArguments.objectJson.nextPageToken;
+						return;
+						
+					} else if (responseHandle.json === null) {
+						functionCallback(null);
+						
+						return;
 						
 					}
-				}
-				
-				{
-					for (var intFor1 = 0; intFor1 < objectArguments.objectJson.items.length; intFor1 += 1) {
-						Playlistitems_resultHandle.push({
-							'longTimestamp': Date.parse(objectArguments.objectJson.items[intFor1].snippet.publishedAt),
-							'strIdent': objectArguments.objectJson.items[intFor1].snippet.resourceId.videoId,
-							'strTitle': objectArguments.objectJson.items[intFor1].snippet.title
-						});
+					
+					{
+						if (responseHandle.json.nextPageToken === undefined) {
+							Playlistitems_strNext = '';
+							
+						} else if (responseHandle.json.nextPageToken !== undefined) {
+							Playlistitems_strNext = responseHandle.json.nextPageToken;
+							
+						}
 					}
+					
+					{
+						for (var intFor1 = 0; intFor1 < responseHandle.json.items.length; intFor1 += 1) {
+							Playlistitems_resultHandle.push({
+								'longTimestamp': Date.parse(responseHandle.json.items[intFor1].snippet.publishedAt),
+								'strIdent': responseHandle.json.items[intFor1].snippet.resourceId.videoId,
+								'strTitle': responseHandle.json.items[intFor1].snippet.title
+							});
+						}
+					}
+					
+					functionBegin();
 				}
-				
-				functionBegin();
-			});
+			}).get();
 		};
 		
     	var functionBegin = function() {
@@ -275,7 +313,7 @@ var Youtube = {
 		
 		var functionWatch = function() {
 			{
-				Youtube.updateWatch({
+				Youtube.watch({
 					'longTimestamp': Playlistitems_resultHandle[WatchIterator_intIndex].longTimestamp,
 					'strIdent': Playlistitems_resultHandle[WatchIterator_intIndex].strIdent,
 					'strTitle': Playlistitems_resultHandle[WatchIterator_intIndex].strTitle,
@@ -322,7 +360,7 @@ var Youtube = {
 			}
 			
 			{
-				require('sdk/preferences/service').set('extensions.YouRect.Youtube.longTimestamp', String(new Date().getTime()));
+				requirePreferences.set('extensions.YouRect.Youtube.longTimestamp', String(new Date().getTime()));
 			}
 			
 			functionCallback({});
@@ -331,7 +369,7 @@ var Youtube = {
 		functionAuth();
 	},
 	
-	updateWatch: function(objectArguments, functionCallback) {
+	watch: function(objectArguments, functionCallback) {
     	var Select_intIdent = 0;
     	var Select_longTimestamp = 0;
     	var Select_strIdent = '';
@@ -360,7 +398,7 @@ var Youtube = {
 					}
 				},
 				'handleCompletion': function(intReason) {
-					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -402,7 +440,7 @@ var Youtube = {
 			
 			statementHandle.executeAsync({
 				'handleCompletion': function(intReason) {
-					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -438,7 +476,7 @@ var Youtube = {
 			
 			statementHandle.executeAsync({
 				'handleCompletion': function(intReason) {
-					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -458,7 +496,7 @@ var Youtube = {
     	functionSelect();
 	},
 	
-	updateLookup: function(objectArguments, functionCallback) {
+	lookup: function(objectArguments, functionCallback) {
 		var Select_strIdent = [];
 		
     	var functionSelect = function() {
@@ -501,7 +539,7 @@ var Youtube = {
 					} while (true);
 				},
 				'handleCompletion': function(intReason) {
-					if (intReason === Ci.mozIStorageStatementCallback.REASON_ERROR) {
+					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
 						functionCallback(null);
 						
 						return;
@@ -521,10 +559,10 @@ Youtube.init();
 
 exports.main = function(optionsHandle) {
 	{
-		require('sdk/platform/xpcom').Factory({
+		requireXpcom.Factory({
 			'contract': '@mozilla.org/network/protocol/about;1?what=yourect',
-			'Component': require('sdk/core/heritage').Class({
-				'extends': require('sdk/platform/xpcom').Unknown,
+			'Component': requireHeritage.Class({
+				'extends': requireXpcom.Unknown,
 				'interfaces': [ 'nsIAboutModule' ],
 				'newChannel': function(uriHandle) {
 					var channelHandle = Services.io.newChannel('chrome://yourect/content/index.html', null, null);
@@ -536,101 +574,60 @@ exports.main = function(optionsHandle) {
 					return channelHandle;
 				},
 				'getURIFlags': function(uriHandle) {
-					return Ci.nsIAboutModule.ALLOW_SCRIPT;
+					return requireChrome.Ci.nsIAboutModule.ALLOW_SCRIPT;
 				}
 			})
 		});
 	}
 	
-	{	
-		var toolbarbuttonHandle = require('sdk/ui/button/toggle').ToggleButton({
-			'id': 'idYouRect_Toolbarbutton',
-			'label': 'YouRect',
-			'icon': 'chrome://YouRect/content/images/icon.png'
-		});
-		
-		{
-			toolbarbuttonHandle.on('click', function(stateHandle) {
-				{
-					if (stateHandle.checked === true) {
-						toolbarpanelHandle.show({
-							'position': toolbarbuttonHandle
-						});
-						
-					} else if (stateHandle.checked === false) {
-						toolbarpanelHandle.hide();
-						
-					}
-				}
-			});
-		}
-		
-		var toolbarpanelHandle = require('sdk/panel').Panel({
-			'width': 640,
-			'height': 480,
-			'contentURL': 'about:yourect',
-			'contentScriptFile': [
-				require('sdk/self').data.url('./jquery.js'),
-				require('sdk/self').data.url('./panel.js')
-			]
-		});
-		
-		{
-			toolbarpanelHandle.on('show', function() {
-				{
-					toolbarbuttonHandle.state('window', {
-						'checked': true
-					});
-				}
-				
-				{
-					toolbarpanelHandle.port.emit('eventShow', {});
-				}
-			});
-			
-			toolbarpanelHandle.on('hide', function() {
-				{
-					toolbarbuttonHandle.state('window', {
-						'checked': false
-					});
-				}
-				
-				{
-					toolbarpanelHandle.port.emit('eventHide', {});
-				}
-			});
-		}
-	}
-	
 	{
-		require('sdk/page-mod').PageMod({
-			'include': '*.youtube.com',
+		requirePagemod.PageMod({
+			'include': [ 'about:yourect', 'chrome://yourect/content/index.html' ],
 			'contentScriptFile': [
-				require('sdk/self').data.url('./hook.js')
+				requireSelf.data.url('./jquery.js'),
+				requireSelf.data.url('./moment.js'),
+				requireSelf.data.url('./libEffects.js'),
+				requireSelf.data.url('./libLanguage.preface.js'),
+				requireSelf.data.url('./libLanguage.js'),
+				requireSelf.data.url('./libModal.js'),
+				requireSelf.data.url('./libPreferenceHistory.js'),
+				requireSelf.data.url('./libPreferenceHistoryObserver.js'),
+				requireSelf.data.url('./libPreferenceYoutube.js'),
+				requireSelf.data.url('./libPreferenceYoutubeObserver.js'),
+				requireSelf.data.url('./index.js')
 			],
 		    'onAttach': function(workerHandle) {
-		        workerHandle.port.on('eventWatch', function(objectEvent) {
-					Youtube.updateWatch({
-						'longTimestamp': new Date().getTime(),
-						'strIdent': objectEvent.strIdent,
-						'strTitle': objectEvent.strTitle,
-						'intCount': 1
-					}, function(objectArguments) {
-						
+		        workerHandle.port.on('youtubeAuthorize', function(objectArguments) {
+					Youtube.authorize();
+		        });
+				
+		        workerHandle.port.on('youtubeLink', function(objectArguments) {
+					Youtube.link(objectArguments, function(objectArguments) {
+						workerHandle.port.emit('youtubeLink', objectArguments);
 					});
 		        });
-		        
-		        workerHandle.port.on('eventLookup', function(objectEvent) {
-					Youtube.updateLookup({
-						'strIdent': objectEvent.strIdent
-					}, function(objectArguments) {
+				
+		        workerHandle.port.on('youtubeUnlink', function(objectArguments) {
+					Youtube.unlink(objectArguments);
+		        });
+				
+		        workerHandle.port.on('youtubeSynchronize', function(objectArguments) {
+					workerHandle.port.emit('youtubeSynchronize', {
+						'strStatus': 'statusLoading'
+					});
+					
+					Youtube.synchronize(objectArguments, function(objectArguments) {
 						if (objectArguments === null) {
-							return;
+							workerHandle.port.emit('youtubeSynchronize', {
+								'strStatus': 'statusError'
+							});
+							
+						} else if (objectArguments !== null) {
+							workerHandle.port.emit('youtubeSynchronize', {
+								'strStatus': 'statusSuccess'
+							});
+							
 						}
-						
-						workerHandle.port.emit('eventLookup', {
-							'strIdent': objectArguments.strIdent
-						});
 					});
 		        });
 		    }
@@ -638,16 +635,75 @@ exports.main = function(optionsHandle) {
 	}
 	
 	{
-		require('sdk/timers').setTimeout(function() {
-			Youtube.updateSynchronize({
-				'intThreshold': 128
-			}, function(objectArguments) {
-				
-			});
-		}, 5 * 1000);
+		requirePagemod.PageMod({
+			'include': [ '*.youtube.com' ],
+			'contentScriptFile': [
+				requireSelf.data.url('./youtube.js')
+			],
+		    'onAttach': function(workerHandle) {
+		        workerHandle.port.on('youtubeWatch', function(objectArguments) {
+					Youtube.watch(objectArguments, function(objectArguments) {
+						workerHandle.port.emit('youtubeWatch', objectArguments);
+					});
+		        });
+		        
+		        workerHandle.port.on('youtubeLookup', function(objectArguments) {
+					Youtube.lookup(objectArguments, function(objectArguments) {
+						workerHandle.port.emit('youtubeLookup', objectArguments);
+					});
+		        });
+		    }
+		});
+	}
+	
+	{	
+		var toolbarbuttonHandle = requireToggle.ToggleButton({
+			'id': 'idToolbarbutton',
+			'label': 'YouRect',
+			'icon': 'chrome://YouRect/content/images/icon.png'
+		});
 		
-		require('sdk/timers').setInterval(function() {
-			Youtube.updateSynchronize({
+		{
+			toolbarbuttonHandle.on('click', function(stateHandle) {
+				if (stateHandle.checked === true) {
+					toolbarpanelHandle.show({
+						'position': toolbarbuttonHandle
+					});
+				}
+			});
+			
+			toolbarbuttonHandle.on('click', function(stateHandle) {
+				if (stateHandle.checked === false) {
+					toolbarpanelHandle.hide();
+				}
+			});
+		}
+		
+		var toolbarpanelHandle = requirePanel.Panel({
+			'width': 640,
+			'height': 480,
+			'contentURL': 'about:yourect',
+			'contentScriptFile': []
+		});
+		
+		{
+			toolbarpanelHandle.on('show', function() {
+				toolbarbuttonHandle.state('window', {
+					'checked': true
+				});
+			});
+			
+			toolbarpanelHandle.on('hide', function() {
+				toolbarbuttonHandle.state('window', {
+					'checked': false
+				});
+			});
+		}
+	}
+	
+	{
+		requireTimers.setInterval(function() {
+			Youtube.synchronize({
 				'intThreshold': 128
 			}, function(objectArguments) {
 				

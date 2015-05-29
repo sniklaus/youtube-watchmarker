@@ -1,5 +1,191 @@
 'use strict';
 
+self.port.on('youtubeLink', function() {
+	{
+		if (objectArguments.strStatus === 'statusLoading') {
+			{
+				jQuery('#idIndex_ModalLogin_Loading')
+					.css({
+						'display': 'block'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Error')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Success')
+					.css({
+						'display': 'none'
+					})
+				;
+			}
+			
+			{
+				jQuery('#idIndex_ModalLogin_Close')
+					.addClass('disabled')
+				;
+			}
+			
+		} else if (objectArguments.strStatus === 'statusError') {
+			{
+				jQuery('#idIndex_ModalLogin_Loading')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Error')
+					.css({
+						'display': 'block'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Success')
+					.css({
+						'display': 'none'
+					})
+				;
+			}
+			
+			{
+				jQuery('#idIndex_ModalLogin_Close')
+					.removeClass('disabled')
+				;
+			}
+			
+		} else if (objectArguments.strStatus === 'statusSuccess') {
+			{
+				jQuery('#idIndex_ModalLogin_Loading')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Error')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Success')
+					.css({
+						'display': 'block'
+					})
+				;
+			}
+			
+			{
+				jQuery('#idIndex_ModalLogin_Close')
+					.removeClass('disabled')
+				;
+			}
+			
+		}
+	}
+	
+	{
+		PreferenceHistoryObserver.update();
+		
+		PreferenceYoutubeObserver.update();
+	}
+});
+
+self.port.on('youtubeSynchronize', function(objectArguments) {
+	{
+		if (objectArguments.strStatus === 'statusLoading') {
+			{
+				jQuery('#idIndex_ModalSynchronize_Loading')
+					.css({
+						'display': 'block'
+					})
+				;
+				
+				jQuery('#idIndex_ModalSynchronize_Error')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalSynchronize_Success')
+					.css({
+						'display': 'none'
+					})
+				;
+			}
+			
+			{
+				jQuery('#idIndex_ModalSynchronize_Close')
+					.addClass('disabled')
+				;
+			}
+			
+		} else if (objectArguments.strStatus === 'statusError') {
+			{
+				jQuery('#idIndex_ModalSynchronize_Loading')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalSynchronize_Error')
+					.css({
+						'display': 'block'
+					})
+				;
+				
+				jQuery('#idIndex_ModalSynchronize_Success')
+					.css({
+						'display': 'none'
+					})
+				;
+			}
+			
+			{
+				jQuery('#idIndex_ModalSynchronize_Close')
+					.removeClass('disabled')
+				;
+			}
+			
+		} else if (objectArguments.strStatus === 'statusSuccess') {
+			{
+				jQuery('#idIndex_ModalSynchronize_Loading')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalSynchronize_Error')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalSynchronize_Success')
+					.css({
+						'display': 'block'
+					})
+				;
+			}
+			
+			{
+				jQuery('#idIndex_ModalSynchronize_Close')
+					.removeClass('disabled')
+				;
+			}
+			
+		}
+	}
+
+	{
+		PreferenceHistoryObserver.update();
+		
+		PreferenceYoutubeObserver.update();
+	}
+});
+
 PreferenceHistoryObserver.addObserver(function() {
 	jQuery('#idIndex_History_Size')
 		.trigger('update')
@@ -21,20 +207,6 @@ PreferenceYoutubeObserver.addObserver(function() {
 });
 
 jQuery(document).ready(function() {
-	{
-		// @formatter:off
-		PreferenceHistory.sqlserviceHandle.executeSimpleSQL(
-			'CREATE INDEX IF NOT EXISTS Index_longTimestamp ON PreferenceHistory (longTimestamp) '
-		);
-		// @formatter:on
-		
-		// @formatter:off
-		PreferenceHistory.sqlserviceHandle.executeSimpleSQL(
-			'CREATE INDEX IF NOT EXISTS Index_strIdent ON PreferenceHistory (strIdent) '
-		);
-		// @formatter:on
-	}
-	
 	{
 		jQuery('#idIndex_History_File')
 			.off('change')
@@ -244,8 +416,7 @@ jQuery(document).ready(function() {
 			.off('click')
 			.on('click', function() {
 				{
-					
-					window.open('https://accounts.google.com/o/oauth2/auth?response_type=' + encodeURIComponent('code') + '&client_id=' + encodeURIComponent(Youtube.strClient) + '&redirect_uri=' + encodeURIComponent(Youtube.strRedirect) + '&scope=' + encodeURIComponent(Youtube.strScope), '_blank');
+					self.port.emit('youtubeAuthorize', {});
 				}
 			})
 		;
@@ -255,14 +426,24 @@ jQuery(document).ready(function() {
 		jQuery('#idIndex_Youlogin_Login')
 			.off('update')
 			.on('update', function() {
-				if (Youtube.linked() === true) {
+				var boolLinked = true;
+				
+				if (PreferenceYoutube.getStrAccess() === '') {
+					boolLinked = false;
+					
+				} else if (PreferenceYoutube.getStrRefresh() === '') {
+					boolLinked = false;
+					
+				}
+				
+				if (boolLinked === true) {
 					jQuery(this).closest('.panel')
 						.css({
 							'display': 'none'
 						})
 					;
 					
-				} else if (Youtube.linked() === false) {
+				} else if (boolLinked === false) {
 					jQuery(this).closest('.panel')
 						.css({
 							'display': 'block'
@@ -274,10 +455,6 @@ jQuery(document).ready(function() {
 			.off('click')
 			.on('click', function() {
 				{
-					PreferenceYoutube.setStrKey(jQuery('#idIndex_Youlogin_Key').val());
-				}
-				
-				{
 					jQuery('#idIndex_ModalLogin')
 						.modalShow({
 							'boolDim': true,
@@ -287,84 +464,8 @@ jQuery(document).ready(function() {
 				}
 				
 				{
-					jQuery('#idIndex_ModalLogin_Loading')
-						.css({
-							'display': 'block'
-						})
-					;
-					
-					jQuery('#idIndex_ModalLogin_Error')
-						.css({
-							'display': 'none'
-						})
-					;
-					
-					jQuery('#idIndex_ModalLogin_Success')
-						.css({
-							'display': 'none'
-						})
-					;
-				}
-				
-				{
-					jQuery('#idIndex_ModalLogin_Close')
-						.addClass('disabled')
-					;
-				}
-				
-				{
-					Youtube.link(function() {
-						{
-							jQuery('#idIndex_ModalLogin_Loading')
-								.css({
-									'display': 'none'
-								})
-							;
-							
-							jQuery('#idIndex_ModalLogin_Error')
-								.css({
-									'display': 'block'
-								})
-							;
-							
-							jQuery('#idIndex_ModalLogin_Success')
-								.css({
-									'display': 'none'
-								})
-							;
-						}
-						
-						{
-							jQuery('#idIndex_ModalLogin_Close')
-								.removeClass('disabled')
-							;
-						}
-					}, function() {
-						{
-							jQuery('#idIndex_ModalLogin_Loading')
-								.css({
-									'display': 'none'
-								})
-							;
-							
-							jQuery('#idIndex_ModalLogin_Error')
-								.css({
-									'display': 'none'
-								})
-							;
-							
-							jQuery('#idIndex_ModalLogin_Success')
-								.css({
-									'display': 'block'
-								})
-							;
-						}
-						
-						{
-							jQuery('#idIndex_ModalLogin_Close')
-								.removeClass('disabled')
-							;
-						}
+					self.port.emit('youtubeLink', {
+						'strKey': jQuery('#idIndex_Youlogin_Key').val()
 					});
 				}
 			})
@@ -392,14 +493,24 @@ jQuery(document).ready(function() {
 		jQuery('#idIndex_Youauth_Logout')
 			.off('update')
 			.on('update', function() {
-				if (Youtube.linked() === true) {
+				var boolLinked = true;
+				
+				if (PreferenceYoutube.getStrAccess() === '') {
+					boolLinked = false;
+					
+				} else if (PreferenceYoutube.getStrRefresh() === '') {
+					boolLinked = false;
+					
+				}
+				
+				if (boolLinked === true) {
 					jQuery(this).closest('.panel')
 						.css({
 							'display': 'block'
 						})
 					;
 					
-				} else if (Youtube.linked() === false) {
+				} else if (boolLinked === false) {
 					jQuery(this).closest('.panel')
 						.css({
 							'display': 'none'
@@ -423,24 +534,6 @@ jQuery(document).ready(function() {
 	
 	{
 		jQuery('#idIndex_Youauth_Synchronize')
-			.off('update')
-			.on('update', function() {
-				if (Youtube.linked() === true) {
-					jQuery(this).closest('.panel')
-						.css({
-							'display': 'block'
-						})
-					;
-					
-				} else if (Youtube.linked() === false) {
-					jQuery(this).closest('.panel')
-						.css({
-							'display': 'none'
-						})
-					;
-					
-				}
-			})
 			.off('click')
 			.on('click', function() {
 				{
@@ -453,91 +546,11 @@ jQuery(document).ready(function() {
 				}
 				
 				{
-					jQuery('#idIndex_ModalSynchronize_Loading')
-						.css({
-							'display': 'block'
-						})
-					;
-					
-					jQuery('#idIndex_ModalSynchronize_Error')
-						.css({
-							'display': 'none'
-						})
-					;
-					
-					jQuery('#idIndex_ModalSynchronize_Success')
-						.css({
-							'display': 'none'
-						})
-					;
-				}
-				
-				{
-					jQuery('#idIndex_ModalSynchronize_Close')
-						.addClass('disabled')
-					;
-				}
-				
-				{
-					Youtube.update(function() {
-						{
-							jQuery('#idIndex_ModalSynchronize_Loading')
-								.css({
-									'display': 'none'
-								})
-							;
-							
-							jQuery('#idIndex_ModalSynchronize_Error')
-								.css({
-									'display': 'block'
-								})
-							;
-							
-							jQuery('#idIndex_ModalSynchronize_Success')
-								.css({
-									'display': 'none'
-								})
-							;
-						}
-						
-						{
-							jQuery('#idIndex_ModalSynchronize_Close')
-								.removeClass('disabled')
-							;
-						}
-					}, function() {
-						{
-							jQuery('#idIndex_ModalSynchronize_Loading')
-								.css({
-									'display': 'none'
-								})
-							;
-							
-							jQuery('#idIndex_ModalSynchronize_Error')
-								.css({
-									'display': 'none'
-								})
-							;
-							
-							jQuery('#idIndex_ModalSynchronize_Success')
-								.css({
-									'display': 'block'
-								})
-							;
-						}
-						
-						{
-							jQuery('#idIndex_ModalSynchronize_Close')
-								.removeClass('disabled')
-							;
-						}
+					self.port.emit('youtubeSynchronize', {
+						'intThreshold': 256
 					});
 				}
 			})
-		;
-		
-		jQuery('#idIndex_Youauth_Synchronize')
-			.trigger('update')
 		;
 	}
 	
