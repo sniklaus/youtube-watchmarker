@@ -6,12 +6,6 @@ general {
 }
 
 attribute {
-	strName:'strKey'
-	strType:str
-	strDefault:'""'
-}
-
-attribute {
 	strName:'strAccess'
 	strType:str
 	strDefault:'""'

@@ -1,6 +1,17 @@
 'use strict';
 
-self.port.on('youtubeLink', function() {
+self.port.on('youtubeLink', function(objectArguments) {
+	{
+		if (objectArguments.strStatus === 'statusLoading') {
+			jQuery('#idIndex_ModalLogin')
+				.modalShow({
+					'boolDim': true,
+					'boolModal': true
+				})
+			;
+		}
+	}
+	
 	{
 		if (objectArguments.strStatus === 'statusLoading') {
 			{
@@ -94,6 +105,17 @@ self.port.on('youtubeLink', function() {
 });
 
 self.port.on('youtubeSynchronize', function(objectArguments) {
+	{
+		if (objectArguments.strStatus === 'statusLoading') {
+			jQuery('#idIndex_ModalSynchronize')
+				.modalShow({
+					'boolDim': true,
+					'boolModal': true
+				})
+			;
+		}
+	}
+	
 	{
 		if (objectArguments.strStatus === 'statusLoading') {
 			{
@@ -471,15 +493,6 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.off('click')
 		.on('click', function() {
 			{
-				jQuery('#idIndex_ModalLogin')
-					.modalShow({
-						'boolDim': true,
-						'boolModal': true
-					})
-				;
-			}
-			
-			{
 				self.port.emit('youtubeLink', {
 					'strKey': jQuery('#idIndex_Youlogin_Key').val()
 				});
@@ -506,7 +519,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.off('click')
 		.on('click', function() {
 			{
-				Youtube.unlink();
+				self.port.emit('youtubeUnlink', {});
 			}
 		})
 	;
@@ -516,19 +529,6 @@ PreferenceYoutubeObserver.addObserver(function() {
 	jQuery('#idIndex_Youauth_Synchronize')
 		.off('click')
 		.on('click', function() {
-			jQuery(this).trigger('fake');
-		})
-		.off('fake')
-		.on('fake', function() {
-			{
-				jQuery('#idIndex_ModalSynchronize')
-					.modalShow({
-						'boolDim': true,
-						'boolModal': true
-					})
-				;
-			}
-			
 			{
 				self.port.emit('youtubeSynchronize', {
 					'intThreshold': 256

@@ -11,34 +11,6 @@ var PreferenceYoutube = {
 		
 	},
 	
-	getStrKey: function() {
-		if (Services.prefs.prefHasUserValue('extensions.YouRect.Youtube.strKey') === true) {
-			return Services.prefs.getCharPref('extensions.YouRect.Youtube.strKey');
-		}
-		
-		return "";
-	},
-	
-	setStrKey: function(strKey) {
-		{
-			Services.prefs.setCharPref('extensions.YouRect.Youtube.strKey', strKey);
-		}
-		
-		{
-			PreferenceYoutubeObserver.update();
-		}
-	},
-	
-	clearStrKey: function() {
-		{
-			Services.prefs.clearUserPref('extensions.YouRect.Youtube.strKey');
-		}
-		
-		{
-			PreferenceYoutubeObserver.update();
-		}
-	},
-	
 	getStrAccess: function() {
 		if (Services.prefs.prefHasUserValue('extensions.YouRect.Youtube.strAccess') === true) {
 			return Services.prefs.getCharPref('extensions.YouRect.Youtube.strAccess');
@@ -129,8 +101,6 @@ var PreferenceYoutube = {
 		}
 		
 		{
-			PreferenceYoutube.clearStrKey();
-			
 			PreferenceYoutube.clearStrAccess();
 			
 			PreferenceYoutube.clearStrRefresh();

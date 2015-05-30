@@ -92,7 +92,7 @@ var Youtube = {
 				'url': 'https://www.googleapis.com/oauth2/v3/token',
 				'content': {
 					'grant_type': 'authorization_code',
-					'code': functionCallback.strKey,
+					'code': objectArguments.strKey,
 					'client_id': Youtube.strClient,
 					'client_secret': Youtube.strSecret,
 					'redirect_uri': Youtube.strRedirect
@@ -127,6 +127,8 @@ var Youtube = {
 				}
 			}).post();
 		};
+		
+		functionAuth();
 	},
 	
 	unlink: function() {
@@ -594,8 +596,22 @@ exports.main = function(optionsHandle) {
 		        });
 				
 		        workerHandle.port.on('youtubeLink', function(objectArguments) {
+					workerHandle.port.emit('youtubeLink', {
+						'strStatus': 'statusLoading'
+					});
+					
 					Youtube.link(objectArguments, function(objectArguments) {
-						workerHandle.port.emit('youtubeLink', objectArguments);
+						if (objectArguments === null) {
+							workerHandle.port.emit('youtubeLink', {
+								'strStatus': 'statusError'
+							});
+							
+						} else if (objectArguments !== null) {
+							workerHandle.port.emit('youtubeLink', {
+								'strStatus': 'statusSuccess'
+							});
+							
+						}
 					});
 		        });
 				
