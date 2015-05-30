@@ -9,6 +9,10 @@
 		
 		<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAxlBMVEUAAABOWZ5BTZhCTZhHUpt7g7d5gbZ5grZ5grZ6grZsda9tdq9tdrBtd7Bsdq9ye7Jye7JzfLN0fbNxerJdaKdeaadfaahfaqhha6ldZ6dfaahfaqhjbat/h7mAh7mFjLx8hLh3gLV6grZ6grdfaahgaqlibKpha6ljbapRXKBSXKBUX6JTXqFSXaH///+uuNXEzOHx9Pvb4O+5wtv8/f+zvdi+x97m6vXr7/edqcujrs6/x97V2+vg5fGNmcKXo8jJ0eXQ1ucIdJUyAAAALnRSTlMACR0dI1BRUVJSiIiIiIi8vb29vdbW1tbW4uLi4uzs7Ozs7Ozx8fHx8f39/f39FstVagAAALZJREFUeNptz8cWgkAMBVAYR8Xee1fAnoQBBOz+/0+ZgaVmlXcX7ySG8TumKLV3x6PbsoSZZlkbLq7JlWb9itQiqtMn+vEDIn9cFgzWgBDD8AHB5dazGFqzAHk88PCzbDK45KUZgjuSw3BS4N85A1xQHTRE4PlxCqHaM2yJdyKKAGKydemcQde8AVYdhmKfMsCAugV9WGXCohAVjdLDTFnvremWvDbdssyeEYWmc97bjXzO/PP7F9bvG7XExUxsAAAAAElFTkSuQmCC" />
 		
+		<script type="text/javascript" src="chrome://YouRect/content/jquery.js"></script>
+		
+		<script type="text/javascript" src="chrome://YouRect/content/moment.js"></script>
+		
 		<link rel="stylesheet" type="text/css" href="chrome://YouRect/content/bootstrap.css" />
 		<style type="text/css">
 			.modal-overlay {
@@ -40,6 +44,45 @@
 				padding:15px;
 			}
 		</style>
+		
+		<script type="text/javascript">
+			Components.utils.import('resource://gre/modules/Services.jsm');
+			
+			var jsLanguage = {
+				getStrStrings: function() {
+					var strStrings = [];
+					
+					{
+						var enumeratorHandle = Services.strings.createBundle('chrome://YouRect/locale/strings.properties').getSimpleEnumeration();
+						
+						do {
+							if (enumeratorHandle.hasMoreElements() === false) {
+								break;
+							}
+							
+							var propertyHandle = enumeratorHandle.getNext().QueryInterface(Components.interfaces.nsIPropertyElement);
+							
+							{
+								strStrings.push({
+									'strName': propertyHandle.key,
+									'strValue': propertyHandle.value
+								});
+							}
+						} while (true);
+					}
+					
+					return JSON.stringify(strStrings);
+				}
+			};
+		</script>
+		<script type="text/javascript" src="chrome://YouRect/content/libEffects.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libLanguage.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libModal.js"></script>
+		
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceHistory.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceHistoryObserver.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceYoutube.js"></script>
+		<script type="text/javascript" src="chrome://YouRect/content/libPreferenceYoutubeObserver.js"></script>
 	</head>
 	<body style="background-color:#EEEEEE;">
 		<div style="max-width:700px; margin:0px auto 0px auto; padding:20px 20px 0px 20px;">

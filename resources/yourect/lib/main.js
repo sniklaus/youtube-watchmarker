@@ -139,9 +139,13 @@ var Youtube = {
 	
 	synchronize: function(objectArguments, functionCallback) {
 		if (requirePreferences.get('extensions.YouRect.Youtube.strAccess') === '') {
+			functionCallback(null);
+			
 			return;
 			
 		} else if (requirePreferences.get('extensions.YouRect.Youtube.strRefresh') === '') {
+			functionCallback(null);
+			
 			return;
 			
 		}
@@ -583,19 +587,7 @@ exports.main = function(optionsHandle) {
 	{
 		requirePagemod.PageMod({
 			'include': [ 'about:yourect', 'chrome://yourect/content/index.html' ],
-			'contentScriptFile': [
-				requireSelf.data.url('./jquery.js'),
-				requireSelf.data.url('./moment.js'),
-				requireSelf.data.url('./libEffects.js'),
-				requireSelf.data.url('./libLanguage.preface.js'),
-				requireSelf.data.url('./libLanguage.js'),
-				requireSelf.data.url('./libModal.js'),
-				requireSelf.data.url('./libPreferenceHistory.js'),
-				requireSelf.data.url('./libPreferenceHistoryObserver.js'),
-				requireSelf.data.url('./libPreferenceYoutube.js'),
-				requireSelf.data.url('./libPreferenceYoutubeObserver.js'),
-				requireSelf.data.url('./index.js')
-			],
+			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
 		    'onAttach': function(workerHandle) {
 		        workerHandle.port.on('youtubeAuthorize', function(objectArguments) {
 					Youtube.authorize();
@@ -637,9 +629,7 @@ exports.main = function(optionsHandle) {
 	{
 		requirePagemod.PageMod({
 			'include': [ '*.youtube.com' ],
-			'contentScriptFile': [
-				requireSelf.data.url('./youtube.js')
-			],
+			'contentScriptFile': [ requireSelf.data.url('./youtube.js') ],
 		    'onAttach': function(workerHandle) {
 		        workerHandle.port.on('youtubeWatch', function(objectArguments) {
 					Youtube.watch(objectArguments, function(objectArguments) {

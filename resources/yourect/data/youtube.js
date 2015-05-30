@@ -14,7 +14,7 @@ self.port.on('youtubeLookup', function(objectArguments) {
 	}
 	
 	{
-		var elementHandle = document.querySelectorAll('a[href]');
+		var elementHandle = window.document.querySelectorAll('a[href]');
 		
 		for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
 			var strIdent = '';
@@ -73,9 +73,9 @@ var Youtube = {
 		}
 		
 		{
-			if (document.querySelector('#eow-title') !== null) {
-				if (document.querySelector('#eow-title').getAttribute('title') !== null) {
-					objectArguments.strTitle = document.querySelector('#eow-title').getAttribute('title');
+			if (window.document.querySelector('#eow-title') !== null) {
+				if (window.document.querySelector('#eow-title').getAttribute('title') !== null) {
+					objectArguments.strTitle = window.document.querySelector('#eow-title').getAttribute('title');
 				}
 			}
 		}
@@ -111,7 +111,7 @@ var Youtube = {
 	   	};
 		
 		{
-			var elementHandle = document.querySelectorAll('a[href]');
+			var elementHandle = window.document.querySelectorAll('a[href]');
 			
 			for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
 				var strIdent = '';
@@ -156,7 +156,7 @@ var Youtube = {
 		}
 		
 		{
-			var elementBadge = document.createElement('div')
+			var elementBadge = window.document.createElement('div')
 			
 			elementBadge.classList.add('watched-badge');
 			elementBadge.innerHTML = 'WATCHED';
@@ -191,7 +191,7 @@ var Youtube = {
 		}
 	});
 	
-	document.onclick = function(eventHandle) {
+	window.document.onclick = function(eventHandle) {
 		if (eventHandle.button !== 0) {
 			return;
 		}
@@ -203,7 +203,7 @@ var Youtube = {
 		{
 			observerHandle.disconnect();
 			
-			observerHandle.observe(document, {
+			observerHandle.observe(window.document, {
 				'childList': true,
 				'subtree': true
 			});

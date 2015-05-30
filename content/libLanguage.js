@@ -29,13 +29,13 @@ var Language = {
 };
 Language.init();
 
-jQuery(document).ready(function() {
+jQuery(window.document).ready(function() {
 	{
-		document.title = Language.updateContent(document.title);
+		window.document.title = Language.updateContent(window.document.title);
 	}
 	
 	{
-		jQuery('body').find('*').contents()
+		jQuery(window.document.body).find('*').contents()
 			.filter(function() {
 				return this.nodeType === Node.TEXT_NODE;
 			})
@@ -52,7 +52,7 @@ jQuery(document).ready(function() {
 	}
 	
 	{
-		jQuery('body').find('[value]')
+		jQuery(window.document.body).find('[value]')
 			.each(function() {
 				var strContent = jQuery(this).attr('value');
 				
@@ -64,7 +64,7 @@ jQuery(document).ready(function() {
 			})
 		;
 		
-		jQuery('body').find('[placeholder]')
+		jQuery(window.document.body).find('[placeholder]')
 			.each(function() {
 				var strContent = jQuery(this).attr('placeholder');
 				
