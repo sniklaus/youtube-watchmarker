@@ -70,6 +70,68 @@ var Youtube = {
 		}
 	},
 	
+	bind: function(portHandle) {
+		portHandle.on('youtubeAuthorize', function(objectArguments) {
+			Youtube.authorize();
+		});
+		
+		portHandle.on('youtubeLink', function(objectArguments) {
+			portHandle.emit('youtubeLink', {
+				'strStatus': 'statusLoading'
+			});
+			
+			Youtube.link(objectArguments, function(objectArguments) {
+				if (objectArguments === null) {
+					portHandle.emit('youtubeLink', {
+						'strStatus': 'statusError'
+					});
+					
+				} else if (objectArguments !== null) {
+					portHandle.emit('youtubeLink', {
+						'strStatus': 'statusSuccess'
+					});
+					
+				}
+			});
+		});
+		
+		portHandle.on('youtubeUnlink', function(objectArguments) {
+			Youtube.unlink(objectArguments);
+		});
+		
+		portHandle.on('youtubeSynchronize', function(objectArguments) {
+			portHandle.emit('youtubeSynchronize', {
+				'strStatus': 'statusLoading'
+			});
+			
+			Youtube.synchronize(objectArguments, function(objectArguments) {
+				if (objectArguments === null) {
+					portHandle.emit('youtubeSynchronize', {
+						'strStatus': 'statusError'
+					});
+					
+				} else if (objectArguments !== null) {
+					portHandle.emit('youtubeSynchronize', {
+						'strStatus': 'statusSuccess'
+					});
+					
+				}
+			});
+		});
+		
+		portHandle.on('youtubeWatch', function(objectArguments) {
+			Youtube.watch(objectArguments, function(objectArguments) {
+				portHandle.emit('youtubeWatch', objectArguments);
+			});
+		});
+		
+		portHandle.on('youtubeLookup', function(objectArguments) {
+			Youtube.lookup(objectArguments, function(objectArguments) {
+				portHandle.emit('youtubeLookup', objectArguments);
+			});
+		});
+	},
+	
 	authorize: function() {
 		{
 			var strContent = [];
@@ -591,53 +653,9 @@ exports.main = function(optionsHandle) {
 			'include': [ 'about:yourect', 'chrome://yourect/content/index.html' ],
 			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
 		    'onAttach': function(workerHandle) {
-		        workerHandle.port.on('youtubeAuthorize', function(objectArguments) {
-					Youtube.authorize();
-		        });
-				
-		        workerHandle.port.on('youtubeLink', function(objectArguments) {
-					workerHandle.port.emit('youtubeLink', {
-						'strStatus': 'statusLoading'
-					});
-					
-					Youtube.link(objectArguments, function(objectArguments) {
-						if (objectArguments === null) {
-							workerHandle.port.emit('youtubeLink', {
-								'strStatus': 'statusError'
-							});
-							
-						} else if (objectArguments !== null) {
-							workerHandle.port.emit('youtubeLink', {
-								'strStatus': 'statusSuccess'
-							});
-							
-						}
-					});
-		        });
-				
-		        workerHandle.port.on('youtubeUnlink', function(objectArguments) {
-					Youtube.unlink(objectArguments);
-		        });
-				
-		        workerHandle.port.on('youtubeSynchronize', function(objectArguments) {
-					workerHandle.port.emit('youtubeSynchronize', {
-						'strStatus': 'statusLoading'
-					});
-					
-					Youtube.synchronize(objectArguments, function(objectArguments) {
-						if (objectArguments === null) {
-							workerHandle.port.emit('youtubeSynchronize', {
-								'strStatus': 'statusError'
-							});
-							
-						} else if (objectArguments !== null) {
-							workerHandle.port.emit('youtubeSynchronize', {
-								'strStatus': 'statusSuccess'
-							});
-							
-						}
-					});
-		        });
+				{
+					Youtube.bind(workerHandle.port);
+				}
 		    }
 		});
 	}
@@ -647,17 +665,9 @@ exports.main = function(optionsHandle) {
 			'include': [ '*.youtube.com' ],
 			'contentScriptFile': [ requireSelf.data.url('./youtube.js') ],
 		    'onAttach': function(workerHandle) {
-		        workerHandle.port.on('youtubeWatch', function(objectArguments) {
-					Youtube.watch(objectArguments, function(objectArguments) {
-						workerHandle.port.emit('youtubeWatch', objectArguments);
-					});
-		        });
-		        
-		        workerHandle.port.on('youtubeLookup', function(objectArguments) {
-					Youtube.lookup(objectArguments, function(objectArguments) {
-						workerHandle.port.emit('youtubeLookup', objectArguments);
-					});
-		        });
+				{
+					Youtube.bind(workerHandle.port);
+				}
 		    }
 		});
 	}
@@ -666,7 +676,7 @@ exports.main = function(optionsHandle) {
 		var toolbarbuttonHandle = requireToggle.ToggleButton({
 			'id': 'idToolbarbutton',
 			'label': 'YouRect',
-			'icon': 'chrome://YouRect/content/images/icon.png'
+			'icon': 'chrome://yourect/content/images/icon.png'
 		});
 		
 		{
@@ -688,8 +698,8 @@ exports.main = function(optionsHandle) {
 		var toolbarpanelHandle = requirePanel.Panel({
 			'width': 640,
 			'height': 480,
-			'contentURL': 'about:yourect',
-			'contentScriptFile': []
+			'contentURL': 'chrome://yourect/content/index.html',
+			'contentScriptFile': [ requireSelf.data.url('./index.js') ]
 		});
 		
 		{
@@ -704,6 +714,10 @@ exports.main = function(optionsHandle) {
 					'checked': false
 				});
 			});
+		}
+		
+		{
+			Youtube.bind(toolbarpanelHandle.port);
 		}
 	}
 	

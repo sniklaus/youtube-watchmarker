@@ -2,16 +2,16 @@
 
 <?xml-stylesheet type="text/css" href="chrome://global/skin/" ?>
 
-<prefwindow xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<prefwindow xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" id="idPrefwindow">
 	<script type="text/javascript">
 		Components.utils.import('resource://gre/modules/Services.jsm');
 		
 		{
-			document.getElementsByTagName('prefwindow')[0].cancelDialog();
+			window.document.getElementsByTagName('prefwindow')[0].cancelDialog();
 		}
 		
 		{
-			Services.wm.getMostRecentWindow('navigator:browser').openUILinkIn('chrome://YouRect/content/index.html', 'tab');
+			Services.wm.getMostRecentWindow('navigator:browser').openUILinkIn('about:yourect', 'tab');
 		}
 	</script>
 </prefwindow>

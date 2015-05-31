@@ -30,7 +30,7 @@
 			<Description>
 				<em:locale>de</em:locale>
 				<em:name>Youtube Watchmarker</em:name>
-				<em:description>Bereits gesehene Videos werden automatisch markiert.</em:description>
+				<em:description>Bereits auf Youtube gesehene Videos werden automatisch markiert.</em:description>
 				<em:translator>CodeRect</em:translator>
 			</Description>
 		</em:localized>
@@ -39,7 +39,7 @@
 			<Description>
 				<em:locale>en-US</em:locale>
 				<em:name>Youtube Watchmarker</em:name>
-				<em:description>Automatically mark videos that you have already watched.</em:description>
+				<em:description>Automatically mark videos on Youtube that you have already watched.</em:description>
 				<em:translator>CodeRect</em:translator>
 			</Description>
 		</em:localized>

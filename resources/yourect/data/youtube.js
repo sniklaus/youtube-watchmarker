@@ -209,4 +209,33 @@ var Youtube = {
 			});
 		}
 	};
+	
+	window.setInterval(function() {
+		if (observerHandle.strHref === window.location.href) {
+			return;
+		}
+		
+		{
+			observerHandle.strHref = window.location.href;
+		}
+		
+		{
+			Youtube.watch();
+			
+		   	Youtube.lookup();
+		}
+		
+		{
+			observerHandle.intThreshold = 8;
+		}
+		
+		{
+			observerHandle.disconnect();
+			
+			observerHandle.observe(window.document, {
+				'childList': true,
+				'subtree': true
+			});
+		}
+	}, 500);
 }
