@@ -42,13 +42,13 @@ var Youtube = {
 		}
 		
 		{
-			Youtube.sqlserviceHistory.executeSimpleSQL(
+			 Youtube.sqlserviceHistory.createStatement(
 				'CREATE INDEX IF NOT EXISTS Index_longTimestamp ON PreferenceHistory (longTimestamp) '
-			);
+			).executeAsync();
 			
-			Youtube.sqlserviceHistory.executeSimpleSQL(
+			 Youtube.sqlserviceHistory.createStatement(
 				'CREATE INDEX IF NOT EXISTS Index_strIdent ON PreferenceHistory (strIdent) '
-			);
+			).executeAsync();
 		}
 	},
 	
@@ -70,24 +70,24 @@ var Youtube = {
 		}
 	},
 	
-	bind: function(portHandle) {
-		portHandle.on('youtubeAuthorize', function(objectArguments) {
-			Youtube.authorize();
+	bind: function(bindHandle) {
+		bindHandle.port.on('youtubeAuthorize', function(objectArguments) {
+			Youtube.authorize.call(bindHandle);
 		});
 		
-		portHandle.on('youtubeLink', function(objectArguments) {
-			portHandle.emit('youtubeLink', {
+		bindHandle.port.on('youtubeLink', function(objectArguments) {
+			bindHandle.port.emit('youtubeLink', {
 				'strStatus': 'statusLoading'
 			});
 			
-			Youtube.link(objectArguments, function(objectArguments) {
+			Youtube.link.call(bindHandle, objectArguments, function(objectArguments) {
 				if (objectArguments === null) {
-					portHandle.emit('youtubeLink', {
+					bindHandle.port.emit('youtubeLink', {
 						'strStatus': 'statusError'
 					});
 					
 				} else if (objectArguments !== null) {
-					portHandle.emit('youtubeLink', {
+					bindHandle.port.emit('youtubeLink', {
 						'strStatus': 'statusSuccess'
 					});
 					
@@ -95,23 +95,23 @@ var Youtube = {
 			});
 		});
 		
-		portHandle.on('youtubeUnlink', function(objectArguments) {
-			Youtube.unlink(objectArguments);
+		bindHandle.port.on('youtubeUnlink', function(objectArguments) {
+			Youtube.unlink.call(bindHandle, objectArguments);
 		});
 		
-		portHandle.on('youtubeSynchronize', function(objectArguments) {
-			portHandle.emit('youtubeSynchronize', {
+		bindHandle.port.on('youtubeSynchronize', function(objectArguments) {
+			bindHandle.port.emit('youtubeSynchronize', {
 				'strStatus': 'statusLoading'
 			});
 			
-			Youtube.synchronize(objectArguments, function(objectArguments) {
+			Youtube.synchronize.call(bindHandle, objectArguments, function(objectArguments) {
 				if (objectArguments === null) {
-					portHandle.emit('youtubeSynchronize', {
+					bindHandle.port.emit('youtubeSynchronize', {
 						'strStatus': 'statusError'
 					});
 					
 				} else if (objectArguments !== null) {
-					portHandle.emit('youtubeSynchronize', {
+					bindHandle.port.emit('youtubeSynchronize', {
 						'strStatus': 'statusSuccess'
 					});
 					
@@ -119,15 +119,15 @@ var Youtube = {
 			});
 		});
 		
-		portHandle.on('youtubeWatch', function(objectArguments) {
-			Youtube.watch(objectArguments, function(objectArguments) {
-				portHandle.emit('youtubeWatch', objectArguments);
+		bindHandle.port.on('youtubeWatch', function(objectArguments) {
+			Youtube.watch.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('youtubeWatch', objectArguments);
 			});
 		});
 		
-		portHandle.on('youtubeLookup', function(objectArguments) {
-			Youtube.lookup(objectArguments, function(objectArguments) {
-				portHandle.emit('youtubeLookup', objectArguments);
+		bindHandle.port.on('youtubeLookup', function(objectArguments) {
+			Youtube.lookup.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('youtubeLookup', objectArguments);
 			});
 		});
 	},
@@ -654,7 +654,7 @@ exports.main = function(optionsHandle) {
 			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
 		    'onAttach': function(workerHandle) {
 				{
-					Youtube.bind(workerHandle.port);
+					Youtube.bind(workerHandle);
 				}
 		    }
 		});
@@ -666,7 +666,7 @@ exports.main = function(optionsHandle) {
 			'contentScriptFile': [ requireSelf.data.url('./youtube.js') ],
 		    'onAttach': function(workerHandle) {
 				{
-					Youtube.bind(workerHandle.port);
+					Youtube.bind(workerHandle);
 				}
 		    }
 		});
@@ -717,7 +717,7 @@ exports.main = function(optionsHandle) {
 		}
 		
 		{
-			Youtube.bind(toolbarpanelHandle.port);
+			Youtube.bind(toolbarpanelHandle);
 		}
 	}
 	

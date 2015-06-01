@@ -44,9 +44,13 @@ self.port.on('youtubeLookup', function(objectArguments) {
 					
 				} else if (objectArguments.intIdent.hasOwnProperty(strIdent) === false) {
 					elementHandle[intFor1].onmousedown = function(eventHandle) {
-						if ((eventHandle.button === 0) || (eventHandle.button === 1)) {
-							Youtube.updateMark(this);
+						if (eventHandle.button !== 0) {
+							if (eventHandle.button !== 1) {
+								return;
+							}
 						}
+						
+						Youtube.updateMark(this);
 					};
 					
 				}
@@ -151,6 +155,14 @@ var Youtube = {
 	},
 	
 	updateMark: function(elementHandle) {
+		if (elementHandle.querySelector('img') === null) {
+			return;
+			
+		} else if (elementHandle.classList.contains('watched') === true) {
+			return;
+			
+		}
+		
 		{
 			elementHandle.classList.add('watched');
 		}

@@ -1,0 +1,83 @@
+.cssTreeview {
+
+}
+
+.cssTreeviewNodeContainer {
+
+}
+
+.cssTreeviewNode {
+	cursor:pointer;
+	
+	display:block;
+	position:relative;
+	
+	margin:0px;
+	border:none;
+	border-spacing:0px;
+	padding:7px;
+	
+	background-color:#FFFFFF;
+	
+	color:#000000;
+	font-size:12px;
+	font-weight:normal;
+	font-family:Tahoma;
+	text-decoration:none;
+	text-align:left;
+	line-height:1;
+	white-space:normal;
+}
+
+.cssTreeviewNode:hover {
+	background-color:#CCCCCC;
+	
+	color:#000000;
+	font-size:12px;
+	font-weight:normal;
+	font-family:Tahoma;
+	text-decoration:none;
+	text-align:left;
+	line-height:1;
+	white-space:normal;
+}
+
+.cssTreeviewNodeImage {
+	display:block;
+	position:absolute;
+	
+	left:7px;
+	top:7px;
+}
+
+.cssTreeviewNodeImage img {
+	width:16px;
+	height:16px;
+}
+
+.cssTreeviewNodeTitle {
+	margin:2px 0px 0px 26px;
+	border:none;
+	border-spacing:0px;
+	padding:0px;
+	
+	color:#000000;
+	font-size:12px;
+	font-weight:normal;
+	font-family:Tahoma;
+	text-decoration:none;
+	text-align:left;
+	line-height:1;
+	white-space:normal;
+}
+
+.cssTreeviewNodeExtension {
+
+}
+
+.cssTreeviewNodePlaceholder {
+	margin:0px 0px 0px 28px;
+	border:none;
+	border-spacing:0px;
+	padding:0px;
+}
