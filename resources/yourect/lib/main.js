@@ -2,6 +2,7 @@
 
 var requireChrome = require('chrome');
 var requireHeritage = require('sdk/core/heritage');
+var requireIndexedb = require('sdk/indexed-db');
 var requirePagemod = require('sdk/page-mod');
 var requirePanel = require('sdk/panel');
 var requirePreferences = require('sdk/preferences/service');
@@ -15,107 +16,203 @@ var requireXpcom = require('sdk/platform/xpcom');
 requireChrome.Cu.import('resource://gre/modules/FileUtils.jsm');
 requireChrome.Cu.import('resource://gre/modules/Services.jsm');
 
-var Youtube = {
-	strApi: '',
-	strClient: '',
-	strSecret: '',
-	strRedirect: '',
-	strScope: '',
-	
-	sqlserviceHistory: null,
+var Database = {
+	sqlserviceHandle: null,
 	
 	init: function() {
 		{
-			Youtube.strApi = 'AIzaSyAqgO1S-h65tnJvWGpJnGu5xt5qSokFcNo';
-			
-			Youtube.strClient = '701883762296-67ev6up58cp45mkp184ishf84ru0746r.apps.googleusercontent.com';
-			
-			Youtube.strSecret = 'tt90dhQUf9HJyx3ju-_9dmOD';
-			
-			Youtube.strRedirect = 'urn:ietf:wg:oauth:2.0:oob';
-			
-			Youtube.strScope = 'https://www.googleapis.com/auth/youtube.readonly';
+			Database.sqlserviceHandle = Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.Database.sqlite' ]));
 		}
 		
 		{
-			Youtube.sqlserviceHistory = Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.PreferenceHistory.sqlite' ]));
-		}
-		
-		{
-			 Youtube.sqlserviceHistory.createStatement(
-				'CREATE INDEX IF NOT EXISTS Index_longTimestamp ON PreferenceHistory (longTimestamp) '
+			Database.sqlserviceHandle.createStatement(
+				'CREATE INDEX IF NOT EXISTS Index_longTimestamp ON Database (longTimestamp) '
 			).executeAsync();
 			
-			 Youtube.sqlserviceHistory.createStatement(
-				'CREATE INDEX IF NOT EXISTS Index_strIdent ON PreferenceHistory (strIdent) '
+			Database.sqlserviceHandle.createStatement(
+				'CREATE INDEX IF NOT EXISTS Index_strIdent ON Database (strIdent) '
 			).executeAsync();
 		}
 	},
 	
 	dispel: function() {
 		{
-			Youtube.strApi = '';
+			Database.sqlserviceHandle = null;
+		}
+	},
+	
+	bind: function(bindHandle) {
+		bindHandle.port.on('databaseCount', function(objectArguments) {
+			Database.count.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('databaseCount', objectArguments);
+			});
+		});
+		
+		bindHandle.port.on('databaseSave', function(objectArguments) {
+			Database.save.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('databaseSave', objectArguments);
+			});
+		});
+		
+		bindHandle.port.on('databaseLoad', function(objectArguments) {
+			Database.load.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('databaseLoad', objectArguments);
+			});
+		});
+	},
+	
+	count: function(objectArguments, functionCallback) {
+    	var Select_intCount = 0;
+		
+    	var functionSelect = function() {
+	    	var statementHandle = Database.sqlserviceHandle.createStatement(
+				'SELECT COUNT(*) AS intCount FROM Database '
+			);
 			
+			statementHandle.executeAsync({
+				'handleResult': function(resultHandle) {
+					var rowHandle = resultHandle.getNextRow();
+					
+					if (rowHandle !== null) {
+						Select_intCount = rowHandle.getResultByName('intCount');
+					}
+				},
+				'handleCompletion': function(intReason) {
+					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
+						functionCallback(null);
+						
+						return;
+					}
+					
+					functionCallback({
+						'intCount': Select_intCount
+					});
+				}
+			});
+    	};
+		
+		functionSelect();
+	},
+	
+	save: function(objectArguments, functionCallback) {
+		var Select_resultHandle = [];
+		
+    	var functionSelect = function() {
+	    	var statementHandle = Database.sqlserviceHandle.createStatement(
+				'SELECT   * ' +
+				'FROM     Database '
+			);
+    		
+			statementHandle.executeAsync({
+				'handleResult': function(resultHandle) {
+					do {
+						var rowHandle = resultHandle.getNextRow();
+						
+						if (rowHandle === null) {
+							break;
+						}
+						
+						{
+							Select_resultHandle.push({
+								'intIdent': rowHandle.getResultByName('intIdent'),
+								'longTimestamp': rowHandle.getResultByName('longTimestamp'),
+								'strIdent': rowHandle.getResultByName('strIdent'),
+								'strTitle': rowHandle.getResultByName('strTitle'),
+								'intCount': rowHandle.getResultByName('intCount')
+							});
+						}
+					} while (true);
+				},
+				'handleCompletion': function(intReason) {
+					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
+						functionCallback(null);
+						
+						return;
+					}
+					
+					functionCallback({
+						'resultHandle': Select_resultHandle
+					});
+				}
+			});
+		};
+		
+		functionSelect();
+	},
+	
+	load: function(objectArguments, functionCallback) {
+		
+	}
+};
+Database.init();
+
+var Youtube = {
+	strApi: '',
+	
+	strClient: '',
+	strSecret: '',
+	strRedirect: '',
+	
+	strScope: '',
+	
+	init: function() {
+		{
+			Youtube.strApi = 'AIzaSyAqgO1S-h65tnJvWGpJnGu5xt5qSokFcNo';
+		}
+		
+		{
+			Youtube.strClient = '701883762296-67ev6up58cp45mkp184ishf84ru0746r.apps.googleusercontent.com';
+			
+			Youtube.strSecret = 'tt90dhQUf9HJyx3ju-_9dmOD';
+			
+			Youtube.strRedirect = 'urn:ietf:wg:oauth:2.0:oob';
+		}
+		
+		{
+			Youtube.strScope = 'https://www.googleapis.com/auth/youtube.readonly';
+		}
+	},
+	
+	dispel: function() {
+		{
+			Youtube.strApi = '';
+		}
+		
+		{
 			Youtube.strClient = '';
 			
 			Youtube.strSecret = '';
 			
 			Youtube.strRedirect = '';
-			
-			Youtube.strScope = '';
 		}
 		
 		{
-			Youtube.sqlserviceHistory = null;
+			Youtube.strScope = '';
 		}
 	},
 	
 	bind: function(bindHandle) {
 		bindHandle.port.on('youtubeAuthorize', function(objectArguments) {
-			Youtube.authorize.call(bindHandle);
+			Youtube.authorize.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('youtubeAuthorize', objectArguments);
+			});
 		});
 		
 		bindHandle.port.on('youtubeLink', function(objectArguments) {
-			bindHandle.port.emit('youtubeLink', {
-				'strStatus': 'statusLoading'
-			});
-			
 			Youtube.link.call(bindHandle, objectArguments, function(objectArguments) {
-				if (objectArguments === null) {
-					bindHandle.port.emit('youtubeLink', {
-						'strStatus': 'statusError'
-					});
-					
-				} else if (objectArguments !== null) {
-					bindHandle.port.emit('youtubeLink', {
-						'strStatus': 'statusSuccess'
-					});
-					
-				}
+				bindHandle.port.emit('youtubeLink', objectArguments);
 			});
 		});
 		
 		bindHandle.port.on('youtubeUnlink', function(objectArguments) {
-			Youtube.unlink.call(bindHandle, objectArguments);
+			Youtube.unlink.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('youtubeUnlink', objectArguments);
+			});
 		});
 		
 		bindHandle.port.on('youtubeSynchronize', function(objectArguments) {
-			bindHandle.port.emit('youtubeSynchronize', {
-				'strStatus': 'statusLoading'
-			});
-			
 			Youtube.synchronize.call(bindHandle, objectArguments, function(objectArguments) {
-				if (objectArguments === null) {
-					bindHandle.port.emit('youtubeSynchronize', {
-						'strStatus': 'statusError'
-					});
-					
-				} else if (objectArguments !== null) {
-					bindHandle.port.emit('youtubeSynchronize', {
-						'strStatus': 'statusSuccess'
-					});
-					
-				}
+				bindHandle.port.emit('youtubeSynchronize', objectArguments);
 			});
 		});
 		
@@ -132,7 +229,7 @@ var Youtube = {
 		});
 	},
 	
-	authorize: function() {
+	authorize: function(objectArguments, functionCallback) {
 		{
 			var strContent = [];
 			
@@ -146,6 +243,8 @@ var Youtube = {
 				'inBackground': false
 			});
 		}
+		
+		functionCallback({});
 	},
 	
 	link: function(objectArguments, functionCallback) {
@@ -193,12 +292,14 @@ var Youtube = {
 		functionAuth();
 	},
 	
-	unlink: function() {
+	unlink: function(objectArguments, functionCallback) {
 		{
 			requirePreferences.get('extensions.YouRect.Youtube.strAccess', '');
 			
 			requirePreferences.get('extensions.YouRect.Youtube.strRefresh', '');
 		}
+		
+		functionCallback({});
 	},
 	
 	synchronize: function(objectArguments, functionCallback) {
@@ -349,7 +450,7 @@ var Youtube = {
 		
     	var functionBegin = function() {
     		{
-    			Youtube.sqlserviceHistory.beginTransaction();
+    			Database.sqlserviceHandle.beginTransaction();
     		}
     		
 			functionWatchIterator(null);
@@ -406,7 +507,7 @@ var Youtube = {
     	
     	var functionCommit = function() {
     		{
-    			Youtube.sqlserviceHistory.commitTransaction();
+    			Database.sqlserviceHandle.commitTransaction();
     		}
     		
 			functionFinalize();
@@ -445,9 +546,9 @@ var Youtube = {
     	var Select_intCount = 0;
     	
     	var functionSelect = function() {
-	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
+	    	var statementHandle = Database.sqlserviceHandle.createStatement(
 				'SELECT   * ' +
-				'FROM     PreferenceHistory ' +
+				'FROM     Database ' +
 				'WHERE    strIdent = :strIdent '
 			);
 			
@@ -484,8 +585,8 @@ var Youtube = {
     	};
     	
     	var functionInsert = function() {
-	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
-				'INSERT INTO PreferenceHistory ' +
+	    	var statementHandle = Database.sqlserviceHandle.createStatement(
+				'INSERT INTO Database ' +
 				'	( ' + 
 				'		longTimestamp, ' +
 				'		strIdent, ' +
@@ -526,8 +627,8 @@ var Youtube = {
     	};
     	
     	var functionUpdate = function() {
-	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
-				'UPDATE PreferenceHistory ' +
+	    	var statementHandle = Database.sqlserviceHandle.createStatement(
+				'UPDATE Database ' +
 				'SET ' +
 				'	longTimestamp = :longTimestamp, ' +
 				'	strIdent = :strIdent, ' +
@@ -565,23 +666,23 @@ var Youtube = {
 	},
 	
 	lookup: function(objectArguments, functionCallback) {
-		var Select_strIdent = [];
+		var Select_resultHandle = [];
 		
     	var functionSelect = function() {
-	    	var statementHandle = Youtube.sqlserviceHistory.createStatement(
+	    	var statementHandle = Database.sqlserviceHandle.createStatement(
 				'SELECT   * ' +
-				'FROM     PreferenceHistory ' +
+				'FROM     Database ' +
 				'WHERE    strIdent IN (:strIdent) '
 			);
     		
 			statementHandle.bindParameters((function() {
 				var bindingarrayHandle = statementHandle.newBindingParamsArray();
 				
-				for (var intFor1 = 0; intFor1 < objectArguments.strIdent.length; intFor1 += 1) {
+				for (var intFor1 = 0; intFor1 < objectArguments.resultHandle.length; intFor1 += 1) {
 					var bindingHandle = bindingarrayHandle.newBindingParams();
 					
 					{
-						bindingHandle.bindByName('strIdent', objectArguments.strIdent[intFor1]);
+						bindingHandle.bindByName('strIdent', objectArguments.resultHandle[intFor1].strIdent);
 					}
 					
 					{
@@ -602,7 +703,13 @@ var Youtube = {
 						}
 						
 						{
-							Select_strIdent.push(rowHandle.getResultByName('strIdent'));
+							Select_resultHandle.push({
+								'intIdent': rowHandle.getResultByName('intIdent'),
+								'longTimestamp': rowHandle.getResultByName('longTimestamp'),
+								'strIdent': rowHandle.getResultByName('strIdent'),
+								'strTitle': rowHandle.getResultByName('strTitle'),
+								'intCount': rowHandle.getResultByName('intCount')
+							});
 						}
 					} while (true);
 				},
@@ -614,7 +721,7 @@ var Youtube = {
 					}
 					
 					functionCallback({
-						'strIdent': Select_strIdent
+						'resultHandle': Select_resultHandle
 					});
 				}
 			});

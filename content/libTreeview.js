@@ -4,7 +4,19 @@ var Treeview = {
 			jQuery.fn.treeview = function(objectArguments) {
 				{
 					objectArguments = jQuery.extend({
-						'intIdent': 0
+						'intIdent': 0,
+						'functionData': function() {
+							
+						},
+						'functionOpen': function() {
+							
+						},
+						'functionClose': function() {
+							
+						},
+						'functionClick': function() {
+							
+						}
 					}, objectArguments);
 				}
 				
@@ -15,7 +27,15 @@ var Treeview = {
 				}
 				
 				{
-					jQuery(this).closest('.cssTreeview').data('functionClose').call(this, objectArguments.intIdent);
+					jQuery(this)
+						.data(objectArguments)
+					;
+				}
+				
+				{
+					jQuery(this).closest('.cssTreeview').data('functionOpen').call(this, {
+						'intIdent': objectArguments.intIdent
+					});
 				}
 				
 				return this;
@@ -35,7 +55,7 @@ var Treeview = {
 						var objectNode = objectArguments.objectNode[intFor1];
 						
 						{
-							objectArguments.functionData(objectNode);
+							// jQuery(this).closest('.cssTreeview').data('functionData').call(this, objectNode);
 						}
 						
 						{
@@ -87,10 +107,11 @@ var Treeview = {
 									'intIdent': objectArguments.objectNode.intIdent,
 									'strType': objectArguments.objectNode.strType,
 									'strImage': objectArguments.objectNode.strImage,
-									'strTitle': objectArguments.objectNode.strTitle
+									'strTitle': objectArguments.objectNode.strTitle,
+									'strLink': objectArguments.objectNode.strLink
 								})
 								.off('click')
-								.on('click', function() {
+								.on('click', function(eventHandle) {
 									{
 										if (jQuery(this).closest('.cssTreeviewNodeContainer').find('.cssTreeviewNodePlaceholder').children().size() === 0) {
 											{
@@ -102,7 +123,13 @@ var Treeview = {
 											}
 											
 											{
-												jQuery(this).closest('.cssTreeview').data('functionOpen').call(this, jQuery(this).data('intIdent'));
+												jQuery(this).closest('.cssTreeview').data('functionOpen').call(jQuery(this).closest('.cssTreeviewNodeContainer').find('.cssTreeviewNodePlaceholder'), {
+													'intIdent': jQuery(this).data('intIdent'),
+													'strType': jQuery(this).data('strType'),
+													'strImage': jQuery(this).data('strImage'),
+													'strTitle': jQuery(this).data('strTitle'),
+													'strLink': jQuery(this).data('strLink')
+												}, eventHandle);
 											}
 											
 										} else if (jQuery(this).closest('.cssTreeviewNodeContainer').find('.cssTreeviewNodePlaceholder').children().size() !== 0) {
@@ -113,7 +140,13 @@ var Treeview = {
 											}
 											
 											{
-												jQuery(this).closest('.cssTreeview').data('functionClose').call(this, jQuery(this).data('intIdent'));
+												jQuery(this).closest('.cssTreeview').data('functionClose').call(jQuery(this).closest('.cssTreeviewNodeContainer').find('.cssTreeviewNodePlaceholder'), {
+													'intIdent': jQuery(this).data('intIdent'),
+													'strType': jQuery(this).data('strType'),
+													'strImage': jQuery(this).data('strImage'),
+													'strTitle': jQuery(this).data('strTitle'),
+													'strLink': jQuery(this).data('strLink')
+												}, eventHandle);
 											}
 											
 										}
@@ -169,6 +202,13 @@ var Treeview = {
 								'href': objectArguments.objectNode.strLink,
 								'title': objectArguments.objectNode.strTitle
 							})
+							.data({
+								'intIdent': objectArguments.objectNode.intIdent,
+								'strType': objectArguments.objectNode.strType,
+								'strImage': objectArguments.objectNode.strImage,
+								'strTitle': objectArguments.objectNode.strTitle,
+								'strLink': objectArguments.objectNode.strLink
+							})
 							.append(jQuery('<div></div>')
 								.addClass('cssTreeviewNodeImage')
 								.append(jQuery('<img></img>')
@@ -217,6 +257,31 @@ var Treeview = {
 				
 				return this;
 			}
+		}
+		
+		{
+			jQuery(window)
+				.off('click')
+				.on('click', function(eventHandle) {
+					if (jQuery(eventHandle.target).closest('.cssTreeviewNode').size() === 0) {
+						return;
+						
+					} else if (jQuery(eventHandle.target).closest('.cssTreeviewNode').is('a') === false) {
+						return;
+						
+					}
+					
+					{
+						jQuery(eventHandle.target).closest('.cssTreeview').data('functionClick').call(this, {
+							'intIdent': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('intIdent'),
+							'strType': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('strType'),
+							'strImage': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('strImage'),
+							'strTitle': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('strTitle'),
+							'strLink': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('strLink')
+						}, eventHandle);
+					}
+				})
+			;
 		}
 	},
 	

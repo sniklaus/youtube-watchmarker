@@ -1,0 +1,12 @@
+general {
+	strOutput:Firefox
+	strType:Attribute
+	strPackage:'YouRect'
+	strName:'Database'
+}
+
+attribute {
+	strName:'intSize'
+	strType:int
+	strDefault:'0'
+}

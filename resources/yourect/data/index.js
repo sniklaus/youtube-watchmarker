@@ -1,8 +1,182 @@
 'use strict';
 
-self.port.on('youtubeLink', function(objectArguments) {
-	{
-		if (objectArguments.strStatus === 'statusLoading') {
+var Database = {
+	init: function() {
+		{
+			self.port.on('databaseCount', Database.countCallback);
+			
+			self.port.on('databaseSave', Database.saveCallback);
+			
+			self.port.on('databaseLoad', Database.loadCallback);
+			
+			self.port.on('databaseReset', Database.resteCallback);
+		}
+	},
+	
+	dispel: function() {
+		
+	},
+	
+	count: function() {
+		{
+			self.port.emit('databaseCount', {});
+		}
+	},
+	
+	countCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			jQuery('#idIndex_History_Size')
+				.text(objectArguments.intCount)
+			;
+		}
+	},
+	
+	save: function() {
+		{
+			self.port.emit('databaseSave', {});
+		}
+	},
+	
+	saveCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			jQuery('#idIndex_History_Export')
+				.attr({
+					'href': 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(objectArguments.resultHandle)),
+					'target': '_blank',
+					'download': moment(new Date().getTime()).format('YYYY.MM.DD') + '.history'
+				})
+			;
+		}
+	},
+	
+	load: function() {
+		if (jQuery('#idIndex_History_File').get(0).files === undefined) {
+			return;
+			
+		} else if (jQuery('#idIndex_History_File').get(0).files.length !== 1) {
+			return;
+			
+		}
+		
+		{
+			var filereaderHandle = new FileReader();
+			
+			filereaderHandle.onload = function(eventHandle) {
+				self.port.emit('databaseLoad', {
+					'resultHandle': JSON.parse(eventHandle.target.result)
+				});
+			};
+			
+			filereaderHandle.readAsText(jQuery('#idIndex_History_File').get(0).files[0], 'UTF-8');
+		}
+		
+		{/*
+			PreferenceHistory.acquire();
+			
+			PreferenceHistory.transactionOpen();
+			
+				PreferenceHistory.selectOpen(
+					'SELECT   * ' +
+					'FROM     PreferenceHistory ' +
+					'WHERE    strIdent = :PARAM0 ',
+					[ objectHistory[intFor1].strIdent ]
+				);
+				
+				PreferenceHistory.selectNext();
+				
+				if (PreferenceHistory.intIdent === 0) {
+					PreferenceHistory.intIdent = 0;
+					PreferenceHistory.longTimestamp = objectHistory[intFor1].longTimestamp;
+					PreferenceHistory.strIdent = objectHistory[intFor1].strIdent;
+					PreferenceHistory.strTitle = objectHistory[intFor1].strTitle;
+					PreferenceHistory.intCount = objectHistory[intFor1].intCount;
+					
+					PreferenceHistory.create();
+					
+				} else if (PreferenceHistory.intIdent !== 0) {
+					PreferenceHistory.intIdent = PreferenceHistory.intIdent;
+					PreferenceHistory.longTimestamp = Math.max(PreferenceHistory.longTimestamp, objectHistory[intFor1].longTimestamp);
+					PreferenceHistory.strIdent = PreferenceHistory.strIdent;
+					PreferenceHistory.strTitle = PreferenceHistory.strTitle;
+					PreferenceHistory.intCount = Math.max(PreferenceHistory.intCount, objectHistory[intFor1].intCount);
+					
+					PreferenceHistory.save();
+					
+				}
+				
+				PreferenceHistory.selectClose();
+			
+			PreferenceHistory.transactionClose();
+			
+			PreferenceHistory.release();
+		*/}
+	},
+	
+	loadCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			DatabaseObserver.update();
+		}
+	},
+	
+	reset: function() {
+		{
+			self.port.emit('databaseReset', {});
+		}
+	},
+	
+	resetCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			DatabaseObserver.update();
+		}
+	}
+};
+Database.init();
+
+var Youtube = {
+	init: function() {
+		{
+			self.port.on('youtubeAuthorize', Youtube.authorizeCallback);
+			
+			self.port.on('youtubeLink', Youtube.linkCallback);
+			
+			self.port.on('youtubeUnlink', Youtube.unlinkCallback);
+			
+			self.port.on('youtubeSynchronize', Youtube.synchronizeCallback);
+		}
+	},
+	
+	dispel: function() {
+		
+	},
+	
+	authorize: function() {
+		{
+			self.port.emit('youtubeAuthorize', {});
+		}
+	},
+	
+	authorizeCallback: function(objectArguments) {
+		
+	},
+	
+	link: function() {
+		{
 			jQuery('#idIndex_ModalLogin')
 				.modalShow({
 					'boolDim': true,
@@ -10,103 +184,120 @@ self.port.on('youtubeLink', function(objectArguments) {
 				})
 			;
 		}
-	}
-	
-	{
-		if (objectArguments.strStatus === 'statusLoading') {
-			{
-				jQuery('#idIndex_ModalLogin_Loading')
-					.css({
-						'display': 'block'
-					})
-				;
-				
-				jQuery('#idIndex_ModalLogin_Error')
-					.css({
-						'display': 'none'
-					})
-				;
-				
-				jQuery('#idIndex_ModalLogin_Success')
-					.css({
-						'display': 'none'
-					})
-				;
-			}
-			
-			{
-				jQuery('#idIndex_ModalLogin_Close')
-					.addClass('disabled')
-				;
-			}
-			
-		} else if (objectArguments.strStatus === 'statusError') {
-			{
-				jQuery('#idIndex_ModalLogin_Loading')
-					.css({
-						'display': 'none'
-					})
-				;
-				
-				jQuery('#idIndex_ModalLogin_Error')
-					.css({
-						'display': 'block'
-					})
-				;
-				
-				jQuery('#idIndex_ModalLogin_Success')
-					.css({
-						'display': 'none'
-					})
-				;
-			}
-			
-			{
-				jQuery('#idIndex_ModalLogin_Close')
-					.removeClass('disabled')
-				;
-			}
-			
-		} else if (objectArguments.strStatus === 'statusSuccess') {
-			{
-				jQuery('#idIndex_ModalLogin_Loading')
-					.css({
-						'display': 'none'
-					})
-				;
-				
-				jQuery('#idIndex_ModalLogin_Error')
-					.css({
-						'display': 'none'
-					})
-				;
-				
-				jQuery('#idIndex_ModalLogin_Success')
-					.css({
-						'display': 'block'
-					})
-				;
-			}
-			
-			{
-				jQuery('#idIndex_ModalLogin_Close')
-					.removeClass('disabled')
-				;
-			}
-			
-		}
-	}
-	
-	{
-		PreferenceHistoryObserver.update();
 		
-		PreferenceYoutubeObserver.update();
-	}
-});
-
-self.port.on('youtubeSynchronize', function(objectArguments) {
-	{
-		if (objectArguments.strStatus === 'statusLoading') {
+		{
+			jQuery('#idIndex_ModalLogin_Loading')
+				.css({
+					'display': 'block'
+				})
+			;
+			
+			jQuery('#idIndex_ModalLogin_Error')
+				.css({
+					'display': 'none'
+				})
+			;
+			
+			jQuery('#idIndex_ModalLogin_Success')
+				.css({
+					'display': 'none'
+				})
+			;
+		}
+		
+		{
+			jQuery('#idIndex_ModalLogin_Close')
+				.addClass('disabled')
+			;
+		}
+		
+		{
+			self.port.emit('youtubeLink', {
+				'strKey': jQuery('#idIndex_Youlogin_Key').val()
+			});
+		}
+	},
+	
+	linkCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			{
+				jQuery('#idIndex_ModalLogin_Loading')
+					.css({
+						'display': 'none'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Error')
+					.css({
+						'display': 'block'
+					})
+				;
+				
+				jQuery('#idIndex_ModalLogin_Success')
+					.css({
+						'display': 'none'
+					})
+				;
+			}
+			
+			{
+				jQuery('#idIndex_ModalLogin_Close')
+					.removeClass('disabled')
+				;
+			}
+			
+			return;
+		}
+		
+		{
+			jQuery('#idIndex_ModalLogin_Loading')
+				.css({
+					'display': 'none'
+				})
+			;
+			
+			jQuery('#idIndex_ModalLogin_Error')
+				.css({
+					'display': 'none'
+				})
+			;
+			
+			jQuery('#idIndex_ModalLogin_Success')
+				.css({
+					'display': 'block'
+				})
+			;
+		}
+		
+		{
+			jQuery('#idIndex_ModalLogin_Close')
+				.removeClass('disabled')
+			;
+		}
+		
+		{
+			PreferenceYoutubeObserver.update();
+		}
+	},
+	
+	unlink: function() {
+		{
+			self.port.emit('youtubeUnlink', {});
+		}
+	},
+	
+	unlinkCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			PreferenceYoutubeObserver.update();
+		}
+	},
+	
+	synchronize: function() {
+		{
 			jQuery('#idIndex_ModalSynchronize')
 				.modalShow({
 					'boolDim': true,
@@ -114,37 +305,42 @@ self.port.on('youtubeSynchronize', function(objectArguments) {
 				})
 			;
 		}
-	}
+		
+		{
+			jQuery('#idIndex_ModalSynchronize_Loading')
+				.css({
+					'display': 'block'
+				})
+			;
+			
+			jQuery('#idIndex_ModalSynchronize_Error')
+				.css({
+					'display': 'none'
+				})
+			;
+			
+			jQuery('#idIndex_ModalSynchronize_Success')
+				.css({
+					'display': 'none'
+				})
+			;
+		}
+		
+		{
+			jQuery('#idIndex_ModalSynchronize_Close')
+				.addClass('disabled')
+			;
+		}
+		
+		{
+			self.port.emit('youtubeSynchronize', {
+				'intThreshold': 256
+			});
+		}
+	},
 	
-	{
-		if (objectArguments.strStatus === 'statusLoading') {
-			{
-				jQuery('#idIndex_ModalSynchronize_Loading')
-					.css({
-						'display': 'block'
-					})
-				;
-				
-				jQuery('#idIndex_ModalSynchronize_Error')
-					.css({
-						'display': 'none'
-					})
-				;
-				
-				jQuery('#idIndex_ModalSynchronize_Success')
-					.css({
-						'display': 'none'
-					})
-				;
-			}
-			
-			{
-				jQuery('#idIndex_ModalSynchronize_Close')
-					.addClass('disabled')
-				;
-			}
-			
-		} else if (objectArguments.strStatus === 'statusError') {
+	synchronizeCallback: function(objectArguments) {
+		if (objectArguments === null) {
 			{
 				jQuery('#idIndex_ModalSynchronize_Loading')
 					.css({
@@ -171,44 +367,43 @@ self.port.on('youtubeSynchronize', function(objectArguments) {
 				;
 			}
 			
-		} else if (objectArguments.strStatus === 'statusSuccess') {
-			{
-				jQuery('#idIndex_ModalSynchronize_Loading')
-					.css({
-						'display': 'none'
-					})
-				;
-				
-				jQuery('#idIndex_ModalSynchronize_Error')
-					.css({
-						'display': 'none'
-					})
-				;
-				
-				jQuery('#idIndex_ModalSynchronize_Success')
-					.css({
-						'display': 'block'
-					})
-				;
-			}
+			return;
+		}
+		
+		{
+			jQuery('#idIndex_ModalSynchronize_Loading')
+				.css({
+					'display': 'none'
+				})
+			;
 			
-			{
-				jQuery('#idIndex_ModalSynchronize_Close')
-					.removeClass('disabled')
-				;
-			}
+			jQuery('#idIndex_ModalSynchronize_Error')
+				.css({
+					'display': 'none'
+				})
+			;
 			
+			jQuery('#idIndex_ModalSynchronize_Success')
+				.css({
+					'display': 'block'
+				})
+			;
+		}
+		
+		{
+			jQuery('#idIndex_ModalSynchronize_Close')
+				.removeClass('disabled')
+			;
+		}
+		
+		{
+			DatabaseObserver.update();
 		}
 	}
+};
+Youtube.init();
 
-	{
-		PreferenceHistoryObserver.update();
-		
-		PreferenceYoutubeObserver.update();
-	}
-});
-
-PreferenceHistoryObserver.addObserver(function() {
+DatabaseObserver.addObserver(function() {
 	jQuery('#idIndex_History_Size')
 		.trigger('update')
 	;
@@ -277,67 +472,8 @@ PreferenceYoutubeObserver.addObserver(function() {
 	jQuery('#idIndex_History_File')
 		.off('change')
 		.on('change', function() {
-			if (jQuery(this).get(0).files === undefined) {
-				return;
-				
-			} else if (jQuery(this).get(0).files.length !== 1) {
-				return;
-				
-			}
-			
 			{
-				var filereaderHandle = new FileReader();
-				
-				filereaderHandle.onload = function(eventHandle) {
-					var objectHistory = JSON.parse(eventHandle.target.result);
-					
-					{
-						PreferenceHistory.acquire();
-						
-						PreferenceHistory.transactionOpen();
-						
-						for (var intFor1 = 0; intFor1 < objectHistory.length; intFor1 += 1) {
-							{
-								PreferenceHistory.selectOpen(
-									'SELECT   * ' +
-									'FROM     PreferenceHistory ' +
-									'WHERE    strIdent = :PARAM0 ',
-									[ objectHistory[intFor1].strIdent ]
-								);
-								
-								PreferenceHistory.selectNext();
-								
-								if (PreferenceHistory.intIdent === 0) {
-									PreferenceHistory.intIdent = 0;
-									PreferenceHistory.longTimestamp = objectHistory[intFor1].longTimestamp;
-									PreferenceHistory.strIdent = objectHistory[intFor1].strIdent;
-									PreferenceHistory.strTitle = objectHistory[intFor1].strTitle;
-									PreferenceHistory.intCount = objectHistory[intFor1].intCount;
-									
-									PreferenceHistory.create();
-									
-								} else if (PreferenceHistory.intIdent !== 0) {
-									PreferenceHistory.intIdent = PreferenceHistory.intIdent;
-									PreferenceHistory.longTimestamp = Math.max(PreferenceHistory.longTimestamp, objectHistory[intFor1].longTimestamp);
-									PreferenceHistory.strIdent = PreferenceHistory.strIdent;
-									PreferenceHistory.strTitle = PreferenceHistory.strTitle;
-									PreferenceHistory.intCount = Math.max(PreferenceHistory.intCount, objectHistory[intFor1].intCount);
-									
-									PreferenceHistory.save();
-									
-								}
-								
-								PreferenceHistory.selectClose();
-							}
-						}
-						
-						PreferenceHistory.transactionClose();
-						
-						PreferenceHistory.release();
-					}
-				};
-				
-				filereaderHandle.readAsText(jQuery(this).get(0).files[0], 'UTF-8');
+				Database.load();
 			}
 		})
 	;
@@ -347,46 +483,8 @@ PreferenceYoutubeObserver.addObserver(function() {
 	jQuery('#idIndex_History_Export')
 		.off('click')
 		.on('click', function() {
-			var objectHistory = [];
-			
 			{
-				PreferenceHistory.acquire();
-				
-				PreferenceHistory.selectOpen(
-					'SELECT   * ' +
-					'FROM     PreferenceHistory ' +
-					'ORDER BY longTimestamp DESC ',
-					[]
-				);
-				
-				do {
-					PreferenceHistory.selectNext();
-					
-					if (PreferenceHistory.intIdent === 0) {
-						break;
-					}
-					
-					objectHistory.push({
-						'longTimestamp': PreferenceHistory.longTimestamp,
-						'strIdent': PreferenceHistory.strIdent,
-						'strTitle': PreferenceHistory.strTitle,
-						'intCount': PreferenceHistory.intCount
-					});
-				} while (true);
-				
-				PreferenceHistory.selectClose();
-				
-				PreferenceHistory.release();
-			}
-			
-			{
-				jQuery('#idIndex_History_Export')
-					.attr({
-						'href': 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(objectHistory)),
-						'target': '_blank',
-						'download': moment(new Date().getTime()).format('YYYY.MM.DD') + '.history'
-					})
-				;
+				Database.save();
 			}
 		})
 	;
@@ -422,19 +520,9 @@ PreferenceYoutubeObserver.addObserver(function() {
 	jQuery('#idIndex_History_Size')
 		.off('update')
 		.on('update', function() {
-			var intCount = 0;
-			
 			{
-				PreferenceHistory.acquire();
-				
-				intCount = PreferenceHistory.count();
-				
-				PreferenceHistory.release();
+				Database.count();
 			}
-			
-			jQuery(this)
-				.text(intCount)
-			;
 		})
 	;
 	
@@ -454,11 +542,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 			}
 			
 			{
-				PreferenceHistory.acquire();
-				
-				PreferenceHistory.clear();
-				
-				PreferenceHistory.release();
+				Database.clear();
 			}
 		})
 	;
@@ -482,7 +566,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.off('click')
 		.on('click', function() {
 			{
-				self.port.emit('youtubeAuthorize', {});
+				Youtube.authorize();
 			}
 		})
 	;
@@ -493,9 +577,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.off('click')
 		.on('click', function() {
 			{
-				self.port.emit('youtubeLink', {
-					'strKey': jQuery('#idIndex_Youlogin_Key').val()
-				});
+				Youtube.link();
 			}
 		})
 	;
@@ -519,7 +601,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.off('click')
 		.on('click', function() {
 			{
-				self.port.emit('youtubeUnlink', {});
+				Youtube.unlink();
 			}
 		})
 	;
@@ -530,9 +612,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.off('click')
 		.on('click', function() {
 			{
-				self.port.emit('youtubeSynchronize', {
-					'intThreshold': 256
-				});
+				Youtube.synchronize();
 			}
 		})
 	;
@@ -555,9 +635,11 @@ PreferenceYoutubeObserver.addObserver(function() {
 	jQuery('#idIndex_Youauth_Timestamp')
 		.off('update')
 		.on('update', function() {
-			jQuery(this)
-				.text(moment(PreferenceYoutube.getLongTimestamp()).format('HH:mm:ss'))
-			;
+			{
+				jQuery(this)
+					.text(moment(PreferenceYoutube.getLongTimestamp()).format('HH:mm:ss'))
+				;
+			}
 		})
 	;
 	

@@ -1,67 +1,26 @@
 'use strict';
 
-self.port.on('youtubeWatch', function(objectArguments) {
-	
-});
-
-self.port.on('youtubeLookup', function(objectArguments) {
-	{
-		objectArguments.intIdent = {};
-		
-		for (var intFor1 = 0; intFor1 < objectArguments.strIdent.length; intFor1 += 1) {
-			objectArguments.intIdent[objectArguments.strIdent[intFor1]] = 1;
-		}
-	}
-	
-	{
-		var elementHandle = window.document.querySelectorAll('a[href]');
-		
-		for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
-			var strIdent = '';
-			
-			{
-				if (elementHandle[intFor1].getAttribute('href') !== null) {
-					if (elementHandle[intFor1].getAttribute('href').substr(0, 9) === '/watch?v=') {
-						strIdent = elementHandle[intFor1].getAttribute('href').substr(9).split('&')[0]; 
-					}
-				}
-			}
-			
-			if (strIdent === '') {
-				continue;
-				
-			} else if (elementHandle[intFor1].querySelector('img') === null) {
-				continue;
-				
-			} else if (elementHandle[intFor1].classList.contains('watched') === true) {
-				continue;
-				
-			}
-			
-			{
-				if (objectArguments.intIdent.hasOwnProperty(strIdent) === true) {
-					Youtube.updateMark(elementHandle[intFor1]);
-					
-				} else if (objectArguments.intIdent.hasOwnProperty(strIdent) === false) {
-					elementHandle[intFor1].onmousedown = function(eventHandle) {
-						if (eventHandle.button !== 0) {
-							if (eventHandle.button !== 1) {
-								return;
-							}
-						}
-						
-						Youtube.updateMark(this);
-					};
-					
-				}
-			}
-		}
-	}
-});
-
 var Youtube = {
+	init: function() {
+		{
+			self.port.on('youtubeWatch', Youtube.watchCallback);
+			
+			self.port.on('youtubeLookup', Youtube.lookupCallback);
+		}
+		
+		{
+			Youtube.watch();
+			
+			Youtube.lookup();
+		}
+	},
+	
+	dispel: function() {
+		
+	},
+	
 	watch: function() {
-	   	var objectArguments = {
+		var objectArguments = {
 			'longTimestamp': new Date().getTime(),
 			'strIdent': '',
 			'strTitle': '',
@@ -109,10 +68,14 @@ var Youtube = {
 		}
 	},
 	
+	watchCallback: function(objectArguments) {
+		
+	},
+	
 	lookup: function() {
-	   	var objectArguments = {
-	   		'strIdent': []
-	   	};
+		var objectArguments = {
+			'resultHandle': []
+		};
 		
 		{
 			var elementHandle = window.document.querySelectorAll('a[href]');
@@ -140,12 +103,18 @@ var Youtube = {
 				}
 				
 				{
-					objectArguments.strIdent.push(strIdent);
+					objectArguments.resultHandle.push({
+						'intIdent': 0,
+						'longTimestamp': 0,
+						'strIdent': strIdent,
+						'strTitle': '',
+						'intCount': 0
+					});
 				}
 			}
 		}
 		
-		if (objectArguments.strIdent.length === 0) {
+		if (objectArguments.resultHandle.length === 0) {
 			return;
 		}
 		
@@ -154,35 +123,87 @@ var Youtube = {
 		}
 	},
 	
-	updateMark: function(elementHandle) {
-		if (elementHandle.querySelector('img') === null) {
+	lookupCallback: function(objectArguments) {
+		if (objectArguments === null) {
 			return;
-			
-		} else if (elementHandle.classList.contains('watched') === true) {
-			return;
-			
+		}
+		
+		var intLookup = {};
+		
+		{
+			for (var intFor1 = 0; intFor1 < objectArguments.resultHandle.length; intFor1 += 1) {
+				intLookup[objectArguments.resultHandle[intFor1].strIdent] = 1;
+			}
 		}
 		
 		{
-			elementHandle.classList.add('watched');
-		}
-		
-		{
-			var elementBadge = window.document.createElement('div')
+			var elementHandle = window.document.querySelectorAll('a[href]');
 			
-			elementBadge.classList.add('watched-badge');
-			elementBadge.innerHTML = 'WATCHED';
-			
-			elementHandle.appendChild(elementBadge);
+			for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
+				var strIdent = '';
+				
+				{
+					if (elementHandle[intFor1].getAttribute('href') !== null) {
+						if (elementHandle[intFor1].getAttribute('href').substr(0, 9) === '/watch?v=') {
+							strIdent = elementHandle[intFor1].getAttribute('href').substr(9).split('&')[0]; 
+						}
+					}
+				}
+				
+				if (strIdent === '') {
+					continue;
+					
+				} else if (elementHandle[intFor1].querySelector('img') === null) {
+					continue;
+					
+				} else if (elementHandle[intFor1].classList.contains('watched') === true) {
+					continue;
+					
+				}
+				
+				{
+					elementHandle[intFor1].onmousedown = function(eventHandle) {
+						if (eventHandle.button !== 0) {
+							if (eventHandle.button !== 1) {
+								return;
+							}
+						}
+						
+						if (this.querySelector('img') === null) {
+							return;
+							
+						} else if (this.classList.contains('watched') === true) {
+							return;
+							
+						}
+						
+						{
+							this.classList.add('watched');
+						}
+						
+						{
+							var elementBadge = window.document.createElement('div')
+							
+							elementBadge.classList.add('watched-badge');
+							elementBadge.innerHTML = 'WATCHED';
+							
+							this.appendChild(elementBadge);
+						}
+					};
+				}
+				
+				{
+					if (intLookup.hasOwnProperty(strIdent) === true) {
+						elementHandle[intFor1].onmousedown({
+							'button': 0
+						});
+					}
+				}
+			}
 		}
 	}
 };
-
-{
-	Youtube.watch();
-	
-   	Youtube.lookup();
-}
+Youtube.init();
 
 {
 	var observerHandle = new MutationObserver(function() {
@@ -229,12 +250,6 @@ var Youtube = {
 		
 		{
 			observerHandle.strHref = window.location.href;
-		}
-		
-		{
-			Youtube.watch();
-			
-		   	Youtube.lookup();
 		}
 		
 		{
