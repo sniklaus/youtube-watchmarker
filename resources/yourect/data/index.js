@@ -3,8 +3,6 @@
 var Database = {
 	init: function() {
 		{
-			self.port.on('databaseCount', Database.countCallback);
-			
 			self.port.on('databaseSave', Database.saveCallback);
 			
 			self.port.on('databaseLoad', Database.loadCallback);
@@ -17,25 +15,16 @@ var Database = {
 		
 	},
 	
-	count: function() {
+	save: function() {
 		{
-			self.port.emit('databaseCount', {});
-		}
-	},
-	
-	countCallback: function(objectArguments) {
-		if (objectArguments === null) {
-			return;
-		}
-		
-		{
-			jQuery('#idIndex_History_Size')
-				.text(objectArguments.intCount)
+			jQuery('#idGeneral_ModalLoading')
+				.modalShow({
+					'boolDim': true,
+					'boolModal': true
+				})
 			;
 		}
-	},
-	
-	save: function() {
+		
 		{
 			self.port.emit('databaseSave', {});
 		}
@@ -47,23 +36,26 @@ var Database = {
 		}
 		
 		{
-			jQuery('#idIndex_History_Export')
-				.attr({
-					'href': 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(objectArguments.resultHandle)),
-					'target': '_blank',
-					'download': moment(new Date().getTime()).format('YYYY.MM.DD') + '.history'
-				})
+			jQuery('#idGeneral_ModalLoading')
+				.modalHide()
 			;
+		}
+		
+		{
+			window.saveAs(new Blob([ btoa(unescape(encodeURIComponent(JSON.stringify(objectArguments.resultHandle)))) ], {
+				'type': 'text/plain'
+			}), moment(new Date().getTime()).format('YYYY.MM.DD') + '.history');
 		}
 	},
 	
 	load: function() {
-		if (jQuery('#idIndex_History_File').get(0).files === undefined) {
-			return;
-			
-		} else if (jQuery('#idIndex_History_File').get(0).files.length !== 1) {
-			return;
-			
+		{
+			jQuery('#idGeneral_ModalLoading')
+				.modalShow({
+					'boolDim': true,
+					'boolModal': true
+				})
+			;
 		}
 		
 		{
@@ -71,53 +63,16 @@ var Database = {
 			
 			filereaderHandle.onload = function(eventHandle) {
 				self.port.emit('databaseLoad', {
-					'resultHandle': JSON.parse(eventHandle.target.result)
+					'resultHandle': JSON.parse(decodeURIComponent(escape(atob(eventHandle.target.result))))
 				});
 			};
 			
-			filereaderHandle.readAsText(jQuery('#idIndex_History_File').get(0).files[0], 'UTF-8');
-		}
-		
-		{/*
-			PreferenceHistory.acquire();
-			
-			PreferenceHistory.transactionOpen();
-			
-				PreferenceHistory.selectOpen(
-					'SELECT   * ' +
-					'FROM     PreferenceHistory ' +
-					'WHERE    strIdent = :PARAM0 ',
-					[ objectHistory[intFor1].strIdent ]
-				);
-				
-				PreferenceHistory.selectNext();
-				
-				if (PreferenceHistory.intIdent === 0) {
-					PreferenceHistory.intIdent = 0;
-					PreferenceHistory.longTimestamp = objectHistory[intFor1].longTimestamp;
-					PreferenceHistory.strIdent = objectHistory[intFor1].strIdent;
-					PreferenceHistory.strTitle = objectHistory[intFor1].strTitle;
-					PreferenceHistory.intCount = objectHistory[intFor1].intCount;
-					
-					PreferenceHistory.create();
-					
-				} else if (PreferenceHistory.intIdent !== 0) {
-					PreferenceHistory.intIdent = PreferenceHistory.intIdent;
-					PreferenceHistory.longTimestamp = Math.max(PreferenceHistory.longTimestamp, objectHistory[intFor1].longTimestamp);
-					PreferenceHistory.strIdent = PreferenceHistory.strIdent;
-					PreferenceHistory.strTitle = PreferenceHistory.strTitle;
-					PreferenceHistory.intCount = Math.max(PreferenceHistory.intCount, objectHistory[intFor1].intCount);
-					
-					PreferenceHistory.save();
-					
+			if (jQuery('#idDatabase_File').get(0).files !== undefined) {
+				if (jQuery('#idDatabase_File').get(0).files.length === 1) {
+					filereaderHandle.readAsText(jQuery('#idDatabase_File').get(0).files[0], 'UTF-8');
 				}
-				
-				PreferenceHistory.selectClose();
-			
-			PreferenceHistory.transactionClose();
-			
-			PreferenceHistory.release();
-		*/}
+			}
+		}
 	},
 	
 	loadCallback: function(objectArguments) {
@@ -126,7 +81,13 @@ var Database = {
 		}
 		
 		{
-			DatabaseObserver.update();
+			jQuery('#idGeneral_ModalLoading')
+				.modalHide()
+			;
+		}
+		
+		{
+			PreferenceDatabaseObserver.update();
 		}
 	},
 	
@@ -142,11 +103,55 @@ var Database = {
 		}
 		
 		{
-			DatabaseObserver.update();
+			PreferenceDatabaseObserver.update();
 		}
 	}
 };
 Database.init();
+
+var History = {
+	init: function() {
+		{
+			self.port.on('historySynchronize', History.synchronizeCallback);
+		}
+	},
+	
+	dispel: function() {
+		
+	},
+	
+	synchronize: function() {
+		{
+			jQuery('#idGeneral_ModalLoading')
+				.modalShow({
+					'boolDim': true,
+					'boolModal': true
+				})
+			;
+		}
+		
+		{
+			self.port.emit('historySynchronize', {});
+		}
+	},
+	
+	synchronizeCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			jQuery('#idGeneral_ModalLoading')
+				.modalHide()
+			;
+		}
+		
+		{
+			PreferenceDatabaseObserver.update();
+		}
+	}
+};
+History.init();
 
 var Youtube = {
 	init: function() {
@@ -177,7 +182,7 @@ var Youtube = {
 	
 	link: function() {
 		{
-			jQuery('#idIndex_ModalLogin')
+			jQuery('#idYouin_ModalLogin')
 				.modalShow({
 					'boolDim': true,
 					'boolModal': true
@@ -186,19 +191,19 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalLogin_Loading')
+			jQuery('#idYouin_ModalLogin_Loading')
 				.css({
 					'display': 'block'
 				})
 			;
 			
-			jQuery('#idIndex_ModalLogin_Error')
+			jQuery('#idYouin_ModalLogin_Error')
 				.css({
 					'display': 'none'
 				})
 			;
 			
-			jQuery('#idIndex_ModalLogin_Success')
+			jQuery('#idYouin_ModalLogin_Success')
 				.css({
 					'display': 'none'
 				})
@@ -206,14 +211,14 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalLogin_Close')
+			jQuery('#idYouin_ModalLogin_Close')
 				.addClass('disabled')
 			;
 		}
 		
 		{
 			self.port.emit('youtubeLink', {
-				'strKey': jQuery('#idIndex_Youlogin_Key').val()
+				'strKey': jQuery('#idYouin_Key').val()
 			});
 		}
 	},
@@ -221,19 +226,19 @@ var Youtube = {
 	linkCallback: function(objectArguments) {
 		if (objectArguments === null) {
 			{
-				jQuery('#idIndex_ModalLogin_Loading')
+				jQuery('#idYouin_ModalLogin_Loading')
 					.css({
 						'display': 'none'
 					})
 				;
 				
-				jQuery('#idIndex_ModalLogin_Error')
+				jQuery('#idYouin_ModalLogin_Error')
 					.css({
 						'display': 'block'
 					})
 				;
 				
-				jQuery('#idIndex_ModalLogin_Success')
+				jQuery('#idYouin_ModalLogin_Success')
 					.css({
 						'display': 'none'
 					})
@@ -241,7 +246,7 @@ var Youtube = {
 			}
 			
 			{
-				jQuery('#idIndex_ModalLogin_Close')
+				jQuery('#idYouin_ModalLogin_Close')
 					.removeClass('disabled')
 				;
 			}
@@ -250,19 +255,19 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalLogin_Loading')
+			jQuery('#idYouin_ModalLogin_Loading')
 				.css({
 					'display': 'none'
 				})
 			;
 			
-			jQuery('#idIndex_ModalLogin_Error')
+			jQuery('#idYouin_ModalLogin_Error')
 				.css({
 					'display': 'none'
 				})
 			;
 			
-			jQuery('#idIndex_ModalLogin_Success')
+			jQuery('#idYouin_ModalLogin_Success')
 				.css({
 					'display': 'block'
 				})
@@ -270,7 +275,7 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalLogin_Close')
+			jQuery('#idYouin_ModalLogin_Close')
 				.removeClass('disabled')
 			;
 		}
@@ -298,7 +303,7 @@ var Youtube = {
 	
 	synchronize: function() {
 		{
-			jQuery('#idIndex_ModalSynchronize')
+			jQuery('#idYouauth_ModalSynchronize')
 				.modalShow({
 					'boolDim': true,
 					'boolModal': true
@@ -307,19 +312,19 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalSynchronize_Loading')
+			jQuery('#idYouauth_ModalSynchronize_Loading')
 				.css({
 					'display': 'block'
 				})
 			;
 			
-			jQuery('#idIndex_ModalSynchronize_Error')
+			jQuery('#idYouauth_ModalSynchronize_Error')
 				.css({
 					'display': 'none'
 				})
 			;
 			
-			jQuery('#idIndex_ModalSynchronize_Success')
+			jQuery('#idYouauth_ModalSynchronize_Success')
 				.css({
 					'display': 'none'
 				})
@@ -327,7 +332,7 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalSynchronize_Close')
+			jQuery('#idYouauth_ModalSynchronize_Close')
 				.addClass('disabled')
 			;
 		}
@@ -342,19 +347,19 @@ var Youtube = {
 	synchronizeCallback: function(objectArguments) {
 		if (objectArguments === null) {
 			{
-				jQuery('#idIndex_ModalSynchronize_Loading')
+				jQuery('#idYouauth_ModalSynchronize_Loading')
 					.css({
 						'display': 'none'
 					})
 				;
 				
-				jQuery('#idIndex_ModalSynchronize_Error')
+				jQuery('#idYouauth_ModalSynchronize_Error')
 					.css({
 						'display': 'block'
 					})
 				;
 				
-				jQuery('#idIndex_ModalSynchronize_Success')
+				jQuery('#idYouauth_ModalSynchronize_Success')
 					.css({
 						'display': 'none'
 					})
@@ -362,7 +367,7 @@ var Youtube = {
 			}
 			
 			{
-				jQuery('#idIndex_ModalSynchronize_Close')
+				jQuery('#idYouauth_ModalSynchronize_Close')
 					.removeClass('disabled')
 				;
 			}
@@ -371,19 +376,19 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalSynchronize_Loading')
+			jQuery('#idYouauth_ModalSynchronize_Loading')
 				.css({
 					'display': 'none'
 				})
 			;
 			
-			jQuery('#idIndex_ModalSynchronize_Error')
+			jQuery('#idYouauth_ModalSynchronize_Error')
 				.css({
 					'display': 'none'
 				})
 			;
 			
-			jQuery('#idIndex_ModalSynchronize_Success')
+			jQuery('#idYouauth_ModalSynchronize_Success')
 				.css({
 					'display': 'block'
 				})
@@ -391,20 +396,20 @@ var Youtube = {
 		}
 		
 		{
-			jQuery('#idIndex_ModalSynchronize_Close')
+			jQuery('#idYouauth_ModalSynchronize_Close')
 				.removeClass('disabled')
 			;
 		}
 		
 		{
-			DatabaseObserver.update();
+			PreferenceDatabaseObserver.update();
 		}
 	}
 };
 Youtube.init();
 
-DatabaseObserver.addObserver(function() {
-	jQuery('#idIndex_History_Size')
+PreferenceDatabaseObserver.addObserver(function() {
+	jQuery('#idDatabase_Size')
 		.trigger('update')
 	;
 });
@@ -414,7 +419,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.trigger('update')
 	;
 	
-	jQuery('#idIndex_Youauth_Timestamp')
+	jQuery('#idYouauth_Timestamp')
 		.trigger('update')
 	;
 });
@@ -434,26 +439,26 @@ PreferenceYoutubeObserver.addObserver(function() {
 			}
 			
 			if (boolLinked === true) {
-				jQuery('.panel:eq(2)')
+				jQuery('.panel:eq(4)')
 					.css({
 						'display': 'none'
 					})
 				;
 				
-				jQuery('.panel:eq(4)')
+				jQuery('.panel:eq(6)')
 					.css({
 						'display': 'block'
 					})
 				;
 				
 			} else if (boolLinked === false) {
-				jQuery('.panel:eq(2)')
+				jQuery('.panel:eq(4)')
 					.css({
 						'display': 'block'
 					})
 				;
 				
-				jQuery('.panel:eq(4)')
+				jQuery('.panel:eq(6)')
 					.css({
 						'display': 'none'
 					})
@@ -469,7 +474,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_History_File')
+	jQuery('#idDatabase_File')
 		.off('change')
 		.on('change', function() {
 			{
@@ -480,7 +485,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_History_Export')
+	jQuery('#idDatabase_Export')
 		.off('click')
 		.on('click', function() {
 			{
@@ -491,11 +496,11 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_History_Import')
+	jQuery('#idDatabase_Import')
 		.off('click')
 		.on('click', function() {
 			{
-				jQuery('#idIndex_History_File')
+				jQuery('#idDatabase_File')
 					.click()
 				;
 			}
@@ -504,11 +509,11 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_History_Reset')
+	jQuery('#idDatabase_Reset')
 		.off('click')
 		.on('click', function() {
 			{
-				jQuery('#idIndex_ModalReset')
+				jQuery('#idDatabase_ModalReset')
 					.modalShow()
 				;
 			}
@@ -517,43 +522,45 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_History_Size')
+	jQuery('#idDatabase_Size')
 		.off('update')
 		.on('update', function() {
 			{
-				Database.count();
+				jQuery(this)
+					.text(PreferenceDatabase.getIntSize())
+				;
 			}
 		})
 	;
 	
-	jQuery('#idIndex_History_Size')
+	jQuery('#idDatabase_Size')
 		.trigger('update')
 	;
 }
 
 {
-	jQuery('#idIndex_ModalReset_Yes')
+	jQuery('#idDatabase_ModalReset_Yes')
 		.off('click')
 		.on('click', function() {
 			{
-				jQuery('#idIndex_ModalReset')
+				jQuery('#idDatabase_ModalReset')
 					.modalHide()
 				;
 			}
 			
 			{
-				Database.clear();
+				Database.reset();
 			}
 		})
 	;
 }
 
 {
-	jQuery('#idIndex_ModalReset_No')
+	jQuery('#idDatabase_ModalReset_No')
 		.off('click')
 		.on('click', function() {
 			{
-				jQuery('#idIndex_ModalReset')
+				jQuery('#idDatabase_ModalReset')
 					.modalHide()
 				;
 			}
@@ -562,7 +569,18 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_Youlogin_Authorize')
+	jQuery('#idHistory_Synchronize')
+		.off('click')
+		.on('click', function() {
+			{
+				History.synchronize();
+			}
+		})
+	;
+}
+
+{
+	jQuery('#idYouin_Authorize')
 		.off('click')
 		.on('click', function() {
 			{
@@ -573,7 +591,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_Youlogin_Login')
+	jQuery('#idYouin_Login')
 		.off('click')
 		.on('click', function() {
 			{
@@ -584,11 +602,11 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_ModalLogin_Close')
+	jQuery('#idYouin_ModalLogin_Close')
 		.off('click')
 		.on('click', function() {
 			{
-				jQuery('#idIndex_ModalLogin')
+				jQuery('#idYouin_ModalLogin')
 					.modalHide()
 				;
 			}
@@ -597,7 +615,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_Youauth_Logout')
+	jQuery('#idYouauth_Logout')
 		.off('click')
 		.on('click', function() {
 			{
@@ -608,7 +626,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_Youauth_Synchronize')
+	jQuery('#idYouauth_Synchronize')
 		.off('click')
 		.on('click', function() {
 			{
@@ -619,11 +637,11 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_ModalSynchronize_Close')
+	jQuery('#idYouauth_ModalSynchronize_Close')
 		.off('click')
 		.on('click', function() {
 			{
-				jQuery('#idIndex_ModalSynchronize')
+				jQuery('#idYouauth_ModalSynchronize')
 					.modalHide()
 				;
 			}
@@ -632,7 +650,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 }
 
 {
-	jQuery('#idIndex_Youauth_Timestamp')
+	jQuery('#idYouauth_Timestamp')
 		.off('update')
 		.on('update', function() {
 			{
@@ -643,7 +661,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		})
 	;
 	
-	jQuery('#idIndex_Youauth_Timestamp')
+	jQuery('#idYouauth_Timestamp')
 		.trigger('update')
 	;
 }

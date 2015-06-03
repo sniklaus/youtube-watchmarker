@@ -45,6 +45,8 @@
 			}
 		</style>
 		
+		<script type="text/javascript" src="chrome://yourect/content/filesaver.js"></script>
+		
 		<script type="text/javascript">
 			Components.utils.import('resource://gre/modules/Services.jsm');
 			
@@ -87,59 +89,70 @@
 	</head>
 	<body style="background-color:#EEEEEE;">
 		<div style="max-width:700px; margin:0px auto 0px auto; padding:20px 20px 0px 20px;">
+			<div class="modal-overlay"></div>
+			<div class="modal-dialog" id="idGeneral_ModalLoading" style="width:100px;">
+				<div class="panel panel-default modal-content">
+					<div class="panel-body">
+						<center>
+							<img width="31" height="31" border="0" src="data:image/gif;base64,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">
+						</center>
+					</div>
+				</div>
+			</div>
+			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/Index_History_Caption
+					@string/Database_Caption
 				</div>
 				<div class="panel-body">
 					<div style="position:absolute; left:-1024px; top:-1024px;">
-						<input id="idIndex_History_File" type="file" accept=".history" />
+						<input id="idDatabase_File" type="file" accept=".history" />
 					</div>
 					
 					<div style="text-align:justify;">
-						@string/Index_History_Description
+						@string/Database_Description
 					</div>
 					
 					<div style="height:15px;"></div>
 					
-					<a class="btn btn-primary" id="idIndex_History_Export">
-						@string/Index_History_Export
+					<a class="btn btn-primary" id="idDatabase_Export">
+						@string/Database_Export
 					</a>
 					
-					<a class="btn btn-primary" id="idIndex_History_Import">
-						@string/Index_History_Import
+					<a class="btn btn-primary" id="idDatabase_Import">
+						@string/Database_Import
 					</a>
 					
-					<a class="btn btn-primary" id="idIndex_History_Reset">
-						@string/Index_History_Reset
+					<a class="btn btn-primary" id="idDatabase_Reset">
+						@string/Database_Reset
 					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
 						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">@string/Index_History_Size</div>
-							<div class="form-control" id="idIndex_History_Size" style="width:auto;"></div>
+							<div class="input-group-addon" style="text-align:right;">@string/Database_Size</div>
+							<div class="form-control" id="idDatabase_Size" style="width:auto;"></div>
 						</div>
 					</div>
 				</div>
 			</div>
 			
 			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idIndex_ModalReset" style="max-width:500px;">
+			<div class="modal-dialog" id="idDatabase_ModalReset" style="max-width:500px;">
 				<div class="panel panel-default modal-content">
 					<div class="panel-body">
 						<div style="text-align:justify;">
-							@string/Index_ModalReset_Description
+							@string/Database_ModalReset_Description
 						</div>
 						
 						<hr></hr>
 						
 						<div class="pull-right">
-							<a class="btn btn-primary" id="idIndex_ModalReset_Yes">
-								@string/Index_ModalReset_Yes
+							<a class="btn btn-primary" id="idDatabase_ModalReset_Yes">
+								@string/Database_ModalReset_Yes
 							</a>
 							
-							<a class="btn btn-primary" id="idIndex_ModalReset_No">
-								@string/Index_ModalReset_No
+							<a class="btn btn-primary" id="idDatabase_ModalReset_No">
+								@string/Database_ModalReset_No
 							</a>
 						</div>
 					</div>
@@ -148,50 +161,67 @@
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/Index_Youlogin_Caption
+					@string/History_Caption
 				</div>
 				<div class="panel-body">
 					<div style="text-align:justify;">
-						@string/Index_Youlogin_Description
+						@string/History_Description
 					</div>
 					
 					<div style="height:15px;"></div>
 					
-					<a class="btn btn-primary" id="idIndex_Youlogin_Authorize">
-						@string/Index_Youlogin_Authorize
+					<a class="btn btn-primary" id="idHistory_Synchronize">
+						@string/History_Synchronize
+					</a>
+				</div>
+			</div>
+			
+			<div class="panel panel-default modal-content">
+				<div class="panel-heading">
+					@string/Youin_Caption
+				</div>
+				<div class="panel-body">
+					<div style="text-align:justify;">
+						@string/Youin_Description
+					</div>
+					
+					<div style="height:15px;"></div>
+					
+					<a class="btn btn-primary" id="idYouin_Authorize">
+						@string/Youin_Authorize
 					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
-						<input class="form-control" id="idIndex_Youlogin_Key" type="text" placeholder="@string/Index_Youlogin_Key" />
+						<input class="form-control" id="idYouin_Key" type="text" placeholder="@string/Youin_Key" />
 					</div>
 					
-					<a class="btn btn-primary" id="idIndex_Youlogin_Login">
-						@string/Index_Youlogin_Login
+					<a class="btn btn-primary" id="idYouin_Login">
+						@string/Youin_Login
 					</a>
 				</div>
 			</div>
 			
 			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idIndex_ModalLogin" style="width:400px;">
+			<div class="modal-dialog" id="idYouin_ModalLogin" style="width:400px;">
 				<div class="panel panel-default modal-content">
 					<div class="panel-body">
-						<div class="alert alert-info" id="idIndex_ModalLogin_Loading" style="text-align:justify;">
-							@string/Index_ModalLogin_Loading
+						<div class="alert alert-info" id="idYouin_ModalLogin_Loading" style="text-align:justify;">
+							@string/Youin_ModalLogin_Loading
 						</div>
 						
-						<div class="alert alert-danger" id="idIndex_ModalLogin_Error" style="text-align:justify;">
-							@string/Index_ModalLogin_Error
+						<div class="alert alert-danger" id="idYouin_ModalLogin_Error" style="text-align:justify;">
+							@string/Youin_ModalLogin_Error
 						</div>
 						
-						<div class="alert alert-success" id="idIndex_ModalLogin_Success" style="text-align:justify;">
-							@string/Index_ModalLogin_Success
+						<div class="alert alert-success" id="idYouin_ModalLogin_Success" style="text-align:justify;">
+							@string/Youin_ModalLogin_Success
 						</div>
 						
 						<hr></hr>
 						
 						<div class="pull-right">
-							<a class="btn btn-primary" id="idIndex_ModalLogin_Close">
-								@string/Index_ModalLogin_Close
+							<a class="btn btn-primary" id="idYouin_ModalLogin_Close">
+								@string/Youin_ModalLogin_Close
 							</a>
 						</div>
 					</div>
@@ -200,53 +230,53 @@
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/Index_Youauth_Caption
+					@string/Youauth_Caption
 				</div>
 				<div class="panel-body">
 					<div style="text-align:justify;">
-						@string/Index_Youauth_Description
+						@string/Youauth_Description
 					</div>
 					
 					<div style="height:15px;"></div>
 					
-					<a class="btn btn-primary" id="idIndex_Youauth_Logout">
-						@string/Index_Youauth_Logout
+					<a class="btn btn-primary" id="idYouauth_Logout">
+						@string/Youauth_Logout
 					</a>
 					
-					<a class="btn btn-primary" id="idIndex_Youauth_Synchronize">
-						@string/Index_Youauth_Synchronize
+					<a class="btn btn-primary" id="idYouauth_Synchronize">
+						@string/Youauth_Synchronize
 					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
 						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">@string/Index_Youauth_Timestamp</div>
-							<div class="form-control" id="idIndex_Youauth_Timestamp" style="width:auto;"></div>
+							<div class="input-group-addon" style="text-align:right;">@string/Youauth_Timestamp</div>
+							<div class="form-control" id="idYouauth_Timestamp" style="width:auto;"></div>
 						</div>
 					</div>
 				</div>
 			</div>
 			
 			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idIndex_ModalSynchronize" style="width:400px;">
+			<div class="modal-dialog" id="idYouauth_ModalSynchronize" style="width:400px;">
 				<div class="panel panel-default modal-content">
 					<div class="panel-body">
-						<div class="alert alert-info" id="idIndex_ModalSynchronize_Loading" style="text-align:justify;">
-							@string/Index_ModalSynchronize_Loading
+						<div class="alert alert-info" id="idYouauth_ModalSynchronize_Loading" style="text-align:justify;">
+							@string/Youauth_ModalSynchronize_Loading
 						</div>
 						
-						<div class="alert alert-danger" id="idIndex_ModalSynchronize_Error" style="text-align:justify;">
-							@string/Index_ModalSynchronize_Error
+						<div class="alert alert-danger" id="idYouauth_ModalSynchronize_Error" style="text-align:justify;">
+							@string/Youauth_ModalSynchronize_Error
 						</div>
 						
-						<div class="alert alert-success" id="idIndex_ModalSynchronize_Success" style="text-align:justify;">
-							@string/Index_ModalSynchronize_Success
+						<div class="alert alert-success" id="idYouauth_ModalSynchronize_Success" style="text-align:justify;">
+							@string/Youauth_ModalSynchronize_Success
 						</div>
 						
 						<hr></hr>
 						
 						<div class="pull-right">
-							<a class="btn btn-primary" id="idIndex_ModalSynchronize_Close">
-								@string/Index_ModalSynchronize_Close
+							<a class="btn btn-primary" id="idYouauth_ModalSynchronize_Close">
+								@string/Youauth_ModalSynchronize_Close
 							</a>
 						</div>
 					</div>

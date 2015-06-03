@@ -20,17 +20,13 @@ var Youtube = {
 	},
 	
 	watch: function() {
-		var objectArguments = {
-			'longTimestamp': new Date().getTime(),
-			'strIdent': '',
-			'strTitle': '',
-			'intCount': 1
-		};
+		var strIdent = '';
+		var strTitle = '';
 		
 		{
 			if (window.location !== null) {
 				if (window.location.href.split('/watch?v=').length === 2) {
-					objectArguments.strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
+					strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
 				}
 			}
 		}
@@ -38,33 +34,38 @@ var Youtube = {
 		{
 			if (window.document.querySelector('#eow-title') !== null) {
 				if (window.document.querySelector('#eow-title').getAttribute('title') !== null) {
-					objectArguments.strTitle = window.document.querySelector('#eow-title').getAttribute('title');
+					strTitle = window.document.querySelector('#eow-title').getAttribute('title');
 				}
 			}
 		}
 		
-		if (objectArguments.strIdent === '') {
+		if (strIdent === '') {
 			return;
 			
-		} else if (objectArguments.strTitle === '') {
+		} else if (strTitle === '') {
 			return;
 			
-		} else if (objectArguments.strIdent === Youtube.watch.strIdent) {
+		} else if (strIdent === Youtube.watch.strIdent) {
 			return;
 			
-		} else if (objectArguments.strTitle === Youtube.watch.strTitle) {
+		} else if (strTitle === Youtube.watch.strTitle) {
 			return;
 			
 		}
 		
 		{
-			Youtube.watch.strIdent = objectArguments.strIdent;
+			Youtube.watch.strIdent = strIdent;
 			
-			Youtube.watch.strTitle = objectArguments.strTitle;
+			Youtube.watch.strTitle = strTitle;
 		}
 		
 		{
-			self.port.emit('eventWatch', objectArguments);
+			self.port.emit('youtubeWatch', {
+				'longTimestamp': new Date().getTime(),
+				'strIdent': strIdent,
+				'strTitle': strTitle,
+				'intCount': 1
+			});
 		}
 	},
 	
@@ -73,10 +74,6 @@ var Youtube = {
 	},
 	
 	lookup: function() {
-		var objectArguments = {
-			'resultHandle': []
-		};
-		
 		{
 			var elementHandle = window.document.querySelectorAll('a[href]');
 			
@@ -103,62 +100,7 @@ var Youtube = {
 				}
 				
 				{
-					objectArguments.resultHandle.push({
-						'intIdent': 0,
-						'longTimestamp': 0,
-						'strIdent': strIdent,
-						'strTitle': '',
-						'intCount': 0
-					});
-				}
-			}
-		}
-		
-		if (objectArguments.resultHandle.length === 0) {
-			return;
-		}
-		
-		{
-			self.port.emit('youtubeLookup', objectArguments);
-		}
-	},
-	
-	lookupCallback: function(objectArguments) {
-		if (objectArguments === null) {
-			return;
-		}
-		
-		var intLookup = {};
-		
-		{
-			for (var intFor1 = 0; intFor1 < objectArguments.resultHandle.length; intFor1 += 1) {
-				intLookup[objectArguments.resultHandle[intFor1].strIdent] = 1;
-			}
-		}
-		
-		{
-			var elementHandle = window.document.querySelectorAll('a[href]');
-			
-			for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
-				var strIdent = '';
-				
-				{
-					if (elementHandle[intFor1].getAttribute('href') !== null) {
-						if (elementHandle[intFor1].getAttribute('href').substr(0, 9) === '/watch?v=') {
-							strIdent = elementHandle[intFor1].getAttribute('href').substr(9).split('&')[0]; 
-						}
-					}
-				}
-				
-				if (strIdent === '') {
-					continue;
-					
-				} else if (elementHandle[intFor1].querySelector('img') === null) {
-					continue;
-					
-				} else if (elementHandle[intFor1].classList.contains('watched') === true) {
-					continue;
-					
+					elementHandle[intFor1].id = 'YouRect' + '-' + strIdent;
 				}
 				
 				{
@@ -193,12 +135,28 @@ var Youtube = {
 				}
 				
 				{
-					if (intLookup.hasOwnProperty(strIdent) === true) {
-						elementHandle[intFor1].onmousedown({
-							'button': 0
-						});
-					}
+					self.port.emit('youtubeLookup', {
+						'intIdent': 0,
+						'longTimestamp': 0,
+						'strIdent': strIdent,
+						'strTitle': '',
+						'intCount': 0
+					});
 				}
+			}
+		}
+	},
+	
+	lookupCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			if (window.document.querySelector('#' + 'YouRect' + '-' + objectArguments.strIdent) !== null) {
+				window.document.querySelector('#' + 'YouRect' + '-' + objectArguments.strIdent).onmousedown({
+					'button': 0
+				});
 			}
 		}
 	}

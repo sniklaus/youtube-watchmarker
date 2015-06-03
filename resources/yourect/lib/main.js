@@ -2,7 +2,8 @@
 
 var requireChrome = require('chrome');
 var requireHeritage = require('sdk/core/heritage');
-var requireIndexedb = require('sdk/indexed-db');
+var requireHistory = require('sdk/places/history');
+var requireIndexbase = require('sdk/indexed-db');
 var requirePagemod = require('sdk/page-mod');
 var requirePanel = require('sdk/panel');
 var requirePreferences = require('sdk/preferences/service');
@@ -13,41 +14,42 @@ var requireTimers = require('sdk/timers');
 var requireToggle = require('sdk/ui/button/toggle');
 var requireXpcom = require('sdk/platform/xpcom');
 
-requireChrome.Cu.import('resource://gre/modules/FileUtils.jsm');
 requireChrome.Cu.import('resource://gre/modules/Services.jsm');
 
 var Database = {
-	sqlserviceHandle: null,
+	indexbaseHandle: null,
 	
 	init: function() {
 		{
-			Database.sqlserviceHandle = Services.storage.openDatabase(FileUtils.getFile('ProfD', [ 'YouRect.Database.sqlite' ]));
-		}
-		
-		{
-			Database.sqlserviceHandle.createStatement(
-				'CREATE INDEX IF NOT EXISTS Index_longTimestamp ON Database (longTimestamp) '
-			).executeAsync();
+			var requestHandle = requireIndexbase.indexedDB.open('Database', 1);
 			
-			Database.sqlserviceHandle.createStatement(
-				'CREATE INDEX IF NOT EXISTS Index_strIdent ON Database (strIdent) '
-			).executeAsync();
+			requestHandle.onupgradeneeded = function() {
+				if (requestHandle.result.objectStoreNames.contains('storeDatabase') === true) {
+					return;
+				}
+				
+				var objectstoreHandle = requestHandle.result.createObjectStore('storeDatabase', {
+					'keyPath': 'strIdent'
+				})
+				
+				objectstoreHandle.createIndex('strIdent', 'strIdent', {
+					'unique': true
+				});
+			};
+			
+			requestHandle.onsuccess = function() {
+				Database.indexbaseHandle = requestHandle.result;
+			};
 		}
 	},
 	
 	dispel: function() {
 		{
-			Database.sqlserviceHandle = null;
+			Database.indexbaseHandle = null;
 		}
 	},
 	
 	bind: function(bindHandle) {
-		bindHandle.port.on('databaseCount', function(objectArguments) {
-			Database.count.call(bindHandle, objectArguments, function(objectArguments) {
-				bindHandle.port.emit('databaseCount', objectArguments);
-			});
-		});
-		
 		bindHandle.port.on('databaseSave', function(objectArguments) {
 			Database.save.call(bindHandle, objectArguments, function(objectArguments) {
 				bindHandle.port.emit('databaseSave', objectArguments);
@@ -59,92 +61,360 @@ var Database = {
 				bindHandle.port.emit('databaseLoad', objectArguments);
 			});
 		});
-	},
-	
-	count: function(objectArguments, functionCallback) {
-    	var Select_intCount = 0;
 		
-    	var functionSelect = function() {
-	    	var statementHandle = Database.sqlserviceHandle.createStatement(
-				'SELECT COUNT(*) AS intCount FROM Database '
-			);
-			
-			statementHandle.executeAsync({
-				'handleResult': function(resultHandle) {
-					var rowHandle = resultHandle.getNextRow();
-					
-					if (rowHandle !== null) {
-						Select_intCount = rowHandle.getResultByName('intCount');
-					}
-				},
-				'handleCompletion': function(intReason) {
-					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
-						functionCallback(null);
-						
-						return;
-					}
-					
-					functionCallback({
-						'intCount': Select_intCount
-					});
-				}
+		bindHandle.port.on('databaseReset', function(objectArguments) {
+			Database.reset.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('databaseReset', objectArguments);
 			});
-    	};
-		
-		functionSelect();
+		});
 	},
 	
 	save: function(objectArguments, functionCallback) {
+		var Transaction_requestHandle = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readonly')
+					.objectStore('storeDatabase')
+				;
+				
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionSelect();
+		};
+		
 		var Select_resultHandle = [];
 		
     	var functionSelect = function() {
-	    	var statementHandle = Database.sqlserviceHandle.createStatement(
-				'SELECT   * ' +
-				'FROM     Database '
-			);
-    		
-			statementHandle.executeAsync({
-				'handleResult': function(resultHandle) {
-					do {
-						var rowHandle = resultHandle.getNextRow();
-						
-						if (rowHandle === null) {
-							break;
-						}
-						
-						{
-							Select_resultHandle.push({
-								'intIdent': rowHandle.getResultByName('intIdent'),
-								'longTimestamp': rowHandle.getResultByName('longTimestamp'),
-								'strIdent': rowHandle.getResultByName('strIdent'),
-								'strTitle': rowHandle.getResultByName('strTitle'),
-								'intCount': rowHandle.getResultByName('intCount')
-							});
-						}
-					} while (true);
-				},
-				'handleCompletion': function(intReason) {
-					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
-						functionCallback(null);
-						
-						return;
-					}
-					
+			var requestHandle = Transaction_requestHandle
+				.openCursor()
+			;
+			
+			requestHandle.onsuccess = function() {
+				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
 					functionCallback({
 						'resultHandle': Select_resultHandle
 					});
+					
+				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					Select_resultHandle.push({
+						'strIdent': requestHandle.result.value.strIdent,
+						'longTimestamp': requestHandle.result.value.longTimestamp,
+						'strTitle': requestHandle.result.value.strTitle,
+						'intCount': requestHandle.result.value.intCount
+					});
+					
+					requestHandle.result.continue();
+					
 				}
-			});
+			};
 		};
 		
-		functionSelect();
+		functionTransaction();
 	},
 	
 	load: function(objectArguments, functionCallback) {
+		var Transaction_requestHandle = null;
 		
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readwrite')
+					.objectStore('storeDatabase')
+				;
+				
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionSelectIterator(null);
+		};
+		
+    	var SelectIterator_intIndex = 0;
+		
+		var functionSelectIterator = function(intIncrement) {
+			{
+				if (intIncrement === null) {
+					SelectIterator_intIndex = 0;
+					
+				} else if (intIncrement !== null) {
+					SelectIterator_intIndex += intIncrement;
+					
+				}
+			}
+			
+			{
+				if (SelectIterator_intIndex < objectArguments.resultHandle.length) {
+					functionSelect();
+					
+				} else if (SelectIterator_intIndex >= objectArguments.resultHandle.length) {
+					functionCount();
+					
+				}
+			}
+		};
+		
+    	var Select_strIdent = '';
+    	var Select_longTimestamp = 0;
+    	var Select_strTitle = '';
+    	var Select_intCount = 0;
+		
+    	var functionSelect = function() {
+			var requestHandle = Transaction_requestHandle
+				.index('strIdent')
+				.get(objectArguments.resultHandle[SelectIterator_intIndex].strIdent)
+			;
+			
+			requestHandle.onsuccess = function() {
+				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
+					Select_strIdent = objectArguments.resultHandle[SelectIterator_intIndex].strIdent;
+					Select_longTimestamp = objectArguments.resultHandle[SelectIterator_intIndex].longTimestamp;
+					Select_strTitle = objectArguments.resultHandle[SelectIterator_intIndex].strTitle;
+					Select_intCount = objectArguments.resultHandle[SelectIterator_intIndex].intCount;
+					
+					functionPut();
+					
+				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					Select_strIdent = requestHandle.result.strIdent;
+					Select_longTimestamp = Math.max(requestHandle.result.longTimestamp, objectArguments.resultHandle[SelectIterator_intIndex].longTimestamp);
+					Select_strTitle = requestHandle.result.strTitle;
+					Select_intCount = Math.max(requestHandle.result.intCount, objectArguments.resultHandle[SelectIterator_intIndex].intCount);
+					
+					functionPut();
+					
+				}
+			};
+		};
+		
+		var functionPut = function() {
+			var requestHandle = Transaction_requestHandle
+				.put({
+					'strIdent': Select_strIdent,
+					'longTimestamp': Select_longTimestamp,
+					'strTitle': Select_strTitle,
+					'intCount': Select_intCount
+				})
+			;
+			
+			requestHandle.onsuccess = function() {
+				functionSelectIterator(1);
+			};
+		};
+		
+		var functionCount = function() {
+			var requestHandle = Transaction_requestHandle
+				.count()
+			;
+			
+			requestHandle.onsuccess = function() {
+				{
+					requirePreferences.set('extensions.YouRect.Database.intSize', requestHandle.result);
+				}
+				
+				functionCallback({});
+			};
+		};
+		
+		functionTransaction();
+	},
+	
+	reset: function(objectArguments, functionCallback) {
+		var Transaction_requestHandle = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readwrite')
+					.objectStore('storeDatabase')
+				;
+				
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionReset();
+		};
+		
+		var functionReset = function() {
+			var requestHandle = Transaction_requestHandle
+				.clear()
+			;
+			
+			requestHandle.onsuccess = function() {
+				functionCount();
+			};
+		};
+		
+		var functionCount = function() {
+			var requestHandle = Transaction_requestHandle
+				.count()
+			;
+			
+			requestHandle.onsuccess = function() {
+				{
+					requirePreferences.set('extensions.YouRect.Database.intSize', requestHandle.result);
+				}
+				
+				functionCallback({});
+			};
+		};
+		
+		functionTransaction();
 	}
 };
 Database.init();
+
+var History = {
+	init: function() {
+		
+	},
+	
+	dispel: function() {
+		
+	},
+	
+	bind: function(bindHandle) {
+		bindHandle.port.on('historySynchronize', function(objectArguments) {
+			History.synchronize.call(bindHandle, objectArguments, function(objectArguments) {
+				bindHandle.port.emit('historySynchronize', objectArguments);
+			});
+		});
+	},
+	
+	synchronize: function(objectArguments, functionCallback) {
+		var Transaction_requestHandle = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readwrite')
+					.objectStore('storeDatabase')
+				;
+				
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionSearch();
+		};
+		
+		var Search_resultHandle = [];
+		
+		var functionSearch = function() {
+			requireHistory.search({
+				'url': 'https://www.youtube.com/watch?v=*'
+			}).on('end', function(resultHandle) {
+				{
+					for (var intFor1 = 0; intFor1 < resultHandle.length; intFor1 += 1) {
+						Search_resultHandle.push({
+							'strIdent': resultHandle[intFor1].url.split('/watch?v=')[1].split('&')[0],
+							'longTimestamp': resultHandle[intFor1].time,
+							'strTitle': resultHandle[intFor1].title,
+							'intCount': resultHandle[intFor1].accessCount
+						});
+					}
+				}
+				
+				functionSelectIterator(null);
+			});
+		};
+		
+		var SelectIterator_intIndex = 0;
+		
+		var functionSelectIterator = function(intIncrement) {
+			{
+				if (intIncrement === null) {
+					SelectIterator_intIndex = 0;
+					
+				} else if (intIncrement !== null) {
+					SelectIterator_intIndex += intIncrement;
+					
+				}
+			}
+			
+			{
+				if (SelectIterator_intIndex < Search_resultHandle.length) {
+					functionSelect();
+					
+				} else if (SelectIterator_intIndex >= Search_resultHandle.length) {
+					functionCount();
+					
+				}
+			}
+		};
+		
+    	var Select_strIdent = '';
+    	var Select_longTimestamp = 0;
+    	var Select_strTitle = '';
+    	var Select_intCount = 0;
+		
+    	var functionSelect = function() {
+			var requestHandle = Transaction_requestHandle
+				.index('strIdent')
+				.get(Search_resultHandle[SelectIterator_intIndex].strIdent)
+			;
+			
+			requestHandle.onsuccess = function() {
+				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
+					Select_strIdent = Search_resultHandle[SelectIterator_intIndex].strIdent;
+					Select_longTimestamp = Search_resultHandle[SelectIterator_intIndex].longTimestamp;
+					Select_strTitle = Search_resultHandle[SelectIterator_intIndex].strTitle;
+					Select_intCount = Search_resultHandle[SelectIterator_intIndex].intCount;
+					
+					functionPut();
+					
+				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					Select_strIdent = requestHandle.result.strIdent;
+					Select_longTimestamp = Math.max(requestHandle.result.longTimestamp, Search_resultHandle[SelectIterator_intIndex].longTimestamp);
+					Select_strTitle = requestHandle.result.strTitle;
+					Select_intCount = Math.max(requestHandle.result.intCount, Search_resultHandle[SelectIterator_intIndex].intCount);
+					
+					functionPut();
+					
+				}
+			};
+		};
+		
+		var functionPut = function() {
+			var requestHandle = Transaction_requestHandle
+				.put({
+					'strIdent': Select_strIdent,
+					'longTimestamp': Select_longTimestamp,
+					'strTitle': Select_strTitle,
+					'intCount': Select_intCount
+				})
+			;
+			
+			requestHandle.onsuccess = function() {
+				functionSelectIterator(1);
+			};
+		};
+		
+		var functionCount = function() {
+			var requestHandle = Transaction_requestHandle
+				.count()
+			;
+			
+			requestHandle.onsuccess = function() {
+				{
+					requirePreferences.set('extensions.YouRect.Database.intSize', requestHandle.result);
+				}
+				
+				functionCallback({});
+			};
+		};
+		
+		functionTransaction();
+	}
+};
+History.init();
 
 var Youtube = {
 	strApi: '',
@@ -436,25 +706,17 @@ var Youtube = {
 					{
 						for (var intFor1 = 0; intFor1 < responseHandle.json.items.length; intFor1 += 1) {
 							Playlistitems_resultHandle.push({
-								'longTimestamp': Date.parse(responseHandle.json.items[intFor1].snippet.publishedAt),
 								'strIdent': responseHandle.json.items[intFor1].snippet.resourceId.videoId,
+								'longTimestamp': Date.parse(responseHandle.json.items[intFor1].snippet.publishedAt),
 								'strTitle': responseHandle.json.items[intFor1].snippet.title
 							});
 						}
 					}
 					
-					functionBegin();
+					functionWatchIterator(null);
 				}
 			}).get();
 		};
-		
-    	var functionBegin = function() {
-    		{
-    			Database.sqlserviceHandle.beginTransaction();
-    		}
-    		
-			functionWatchIterator(null);
-    	};
     	
     	var WatchIterator_intIndex = 0;
 		
@@ -474,7 +736,7 @@ var Youtube = {
 					functionWatch();
 					
 				} else if (WatchIterator_intIndex >= Playlistitems_resultHandle.length) {
-					functionCommit();
+					functionFinalize();
 					
 				}
 			}
@@ -483,8 +745,8 @@ var Youtube = {
 		var functionWatch = function() {
 			{
 				Youtube.watch({
-					'longTimestamp': Playlistitems_resultHandle[WatchIterator_intIndex].longTimestamp,
 					'strIdent': Playlistitems_resultHandle[WatchIterator_intIndex].strIdent,
+					'longTimestamp': Playlistitems_resultHandle[WatchIterator_intIndex].longTimestamp,
 					'strTitle': Playlistitems_resultHandle[WatchIterator_intIndex].strTitle,
 					'intCount': 1
 				}, function(objectArguments) {
@@ -495,7 +757,7 @@ var Youtube = {
 					}
 					
 					{
-						if (objectArguments.intIdent !== 0) {
+						if (objectArguments.intCount !== 1) {
 							Playlistitems_intThreshold -= 1;
 						}
 					}
@@ -504,14 +766,6 @@ var Youtube = {
 				});
 			}
 		};
-    	
-    	var functionCommit = function() {
-    		{
-    			Database.sqlserviceHandle.commitTransaction();
-    		}
-    		
-			functionFinalize();
-    	};
 		
 		var functionFinalize = function() {
 			{
@@ -539,195 +793,133 @@ var Youtube = {
 	},
 	
 	watch: function(objectArguments, functionCallback) {
-    	var Select_intIdent = 0;
-    	var Select_longTimestamp = 0;
+		var Transaction_requestHandle = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readwrite')
+					.objectStore('storeDatabase')
+				;
+				
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionSelect();
+		};
+		
     	var Select_strIdent = '';
+    	var Select_longTimestamp = 0;
     	var Select_strTitle = '';
     	var Select_intCount = 0;
-    	
+		
     	var functionSelect = function() {
-	    	var statementHandle = Database.sqlserviceHandle.createStatement(
-				'SELECT   * ' +
-				'FROM     Database ' +
-				'WHERE    strIdent = :strIdent '
-			);
+			var requestHandle = Transaction_requestHandle
+				.index('strIdent')
+				.get(objectArguments.strIdent)
+			;
 			
-			statementHandle.params.strIdent = objectArguments.strIdent;
-			
-			statementHandle.executeAsync({
-				'handleResult': function(resultHandle) {
-					var rowHandle = resultHandle.getNextRow();
+			requestHandle.onsuccess = function() {
+				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
+					Select_strIdent = objectArguments.strIdent;
+					Select_longTimestamp = objectArguments.longTimestamp;
+					Select_strTitle = objectArguments.strTitle;
+					Select_intCount = 1;
+				
+					functionPut();
 					
-					if (rowHandle !== null) {
-						Select_intIdent = rowHandle.getResultByName('intIdent');
-						Select_longTimestamp = rowHandle.getResultByName('longTimestamp');
-						Select_strIdent = rowHandle.getResultByName('strIdent');
-						Select_strTitle = rowHandle.getResultByName('strTitle');
-						Select_intCount = rowHandle.getResultByName('intCount');
-					}
-				},
-				'handleCompletion': function(intReason) {
-					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
-						functionCallback(null);
-						
-						return;
-					}
+				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					Select_strIdent = requestHandle.result.strIdent;
+					Select_longTimestamp = Math.max(requestHandle.result.longTimestamp, objectArguments.longTimestamp);
+					Select_strTitle = objectArguments.strTitle;
+					Select_intCount = requestHandle.result.intCount + objectArguments.intCount;
 					
-					if (Select_intIdent === 0) {
-						functionInsert();
-						
-					} else if (Select_intIdent !== 0) {
-						functionUpdate();
-						
-					}
+					functionPut();
+					
 				}
-			});
-    	};
-    	
-    	var functionInsert = function() {
-	    	var statementHandle = Database.sqlserviceHandle.createStatement(
-				'INSERT INTO Database ' +
-				'	( ' + 
-				'		longTimestamp, ' +
-				'		strIdent, ' +
-				'		strTitle, ' +
-				'		intCount ' +
-				'	) ' +
-				'VALUES ' +
-				'	( ' +
-				'		:longTimestamp, ' +
-				'		:strIdent, ' +
-				'		:strTitle, ' +
-				'		:intCount ' +
-				'	) '
-			);
+			};
+		};
+		
+		var functionPut = function() {
+			var requestHandle = Transaction_requestHandle
+				.put({
+					'strIdent': Select_strIdent,
+					'longTimestamp': Select_longTimestamp,
+					'strTitle': Select_strTitle,
+					'intCount': Select_intCount
+				})
+			;
 			
-			statementHandle.params.longTimestamp = objectArguments.longTimestamp;
-			statementHandle.params.strIdent = objectArguments.strIdent;
-			statementHandle.params.strTitle = objectArguments.strTitle;
-			statementHandle.params.intCount = 1;
+			requestHandle.onsuccess = function() {
+				functionCount();
+			};
+		};
+		
+		var functionCount = function() {
+			var requestHandle = Transaction_requestHandle
+				.count()
+			;
 			
-			statementHandle.executeAsync({
-				'handleCompletion': function(intReason) {
-					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
-						functionCallback(null);
-						
-						return;
-					}
-					
-					functionCallback({
-						'intIdent': Select_intIdent,
-						'longTimestamp': Select_longTimestamp,
-						'strIdent': Select_strIdent,
-						'strTitle': Select_strTitle,
-						'intCount': Select_intCount
-					});
+			requestHandle.onsuccess = function() {
+				{
+					requirePreferences.set('extensions.YouRect.Database.intSize', requestHandle.result);
 				}
-			});
-    	};
-    	
-    	var functionUpdate = function() {
-	    	var statementHandle = Database.sqlserviceHandle.createStatement(
-				'UPDATE Database ' +
-				'SET ' +
-				'	longTimestamp = :longTimestamp, ' +
-				'	strIdent = :strIdent, ' +
-				'	strTitle = :strTitle, ' +
-				'	intCount = :intCount ' +
-				'WHERE intIdent = :intIdent '
-			);
-			
-			statementHandle.params.intIdent = Select_intIdent;
-			statementHandle.params.longTimestamp = objectArguments.longTimestamp;
-			statementHandle.params.strIdent = objectArguments.strIdent;
-			statementHandle.params.strTitle = objectArguments.strTitle;
-			statementHandle.params.intCount = Select_intCount + objectArguments.intCount;
-			
-			statementHandle.executeAsync({
-				'handleCompletion': function(intReason) {
-					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
-						functionCallback(null);
-						
-						return;
-					}
-					
-					functionCallback({
-						'intIdent': Select_intIdent,
-						'longTimestamp': Select_longTimestamp,
-						'strIdent': Select_strIdent,
-						'strTitle': Select_strTitle,
-						'intCount': Select_intCount
-					});
-				}
-			});
-    	};
-    	
-    	functionSelect();
+				
+				functionCallback({
+					'strIdent': Select_strIdent,
+					'longTimestamp': Select_longTimestamp,
+					'strTitle': Select_strTitle,
+					'intCount': Select_intCount
+				});
+			};
+		};
+		
+		functionTransaction();
 	},
 	
 	lookup: function(objectArguments, functionCallback) {
-		var Select_resultHandle = [];
+		var Transaction_requestHandle = null;
 		
-    	var functionSelect = function() {
-	    	var statementHandle = Database.sqlserviceHandle.createStatement(
-				'SELECT   * ' +
-				'FROM     Database ' +
-				'WHERE    strIdent IN (:strIdent) '
-			);
-    		
-			statementHandle.bindParameters((function() {
-				var bindingarrayHandle = statementHandle.newBindingParamsArray();
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readwrite')
+					.objectStore('storeDatabase')
+				;
 				
-				for (var intFor1 = 0; intFor1 < objectArguments.resultHandle.length; intFor1 += 1) {
-					var bindingHandle = bindingarrayHandle.newBindingParams();
-					
-					{
-						bindingHandle.bindByName('strIdent', objectArguments.resultHandle[intFor1].strIdent);
-					}
-					
-					{
-				  		bindingarrayHandle.addParams(bindingHandle);
-					}
-				}
-				
-				return bindingarrayHandle;
-			})());
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
 			
-			statementHandle.executeAsync({
-				'handleResult': function(resultHandle) {
-					do {
-						var rowHandle = resultHandle.getNextRow();
-						
-						if (rowHandle === null) {
-							break;
-						}
-						
-						{
-							Select_resultHandle.push({
-								'intIdent': rowHandle.getResultByName('intIdent'),
-								'longTimestamp': rowHandle.getResultByName('longTimestamp'),
-								'strIdent': rowHandle.getResultByName('strIdent'),
-								'strTitle': rowHandle.getResultByName('strTitle'),
-								'intCount': rowHandle.getResultByName('intCount')
-							});
-						}
-					} while (true);
-				},
-				'handleCompletion': function(intReason) {
-					if (intReason === requireChrome.Ci.mozIStorageStatementCallback.REASON_ERROR) {
-						functionCallback(null);
-						
-						return;
-					}
-					
-					functionCallback({
-						'resultHandle': Select_resultHandle
-					});
-				}
-			});
+			functionSelect();
 		};
 		
-		functionSelect();
+    	var functionSelect = function() {
+			var requestHandle = Transaction_requestHandle
+				.index('strIdent')
+				.get(objectArguments.strIdent)
+			;
+			
+			requestHandle.onsuccess = function(responseHandle) {
+				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
+					functionCallback(null);
+					
+				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					functionCallback({
+						'strIdent': requestHandle.result.strIdent,
+						'longTimestamp': requestHandle.result.longTimestamp,
+						'strTitle': requestHandle.result.strTitle,
+						'intCount': requestHandle.result.intCount
+					});
+					
+				}
+			};
+		};
+		
+		functionTransaction();
 	}
 };
 Youtube.init();
@@ -761,6 +953,10 @@ exports.main = function(optionsHandle) {
 			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
 		    'onAttach': function(workerHandle) {
 				{
+					Database.bind(workerHandle);
+					
+					History.bind(workerHandle);
+					
 					Youtube.bind(workerHandle);
 				}
 		    }
@@ -824,6 +1020,10 @@ exports.main = function(optionsHandle) {
 		}
 		
 		{
+			Database.bind(toolbarpanelHandle);
+			
+			History.bind(toolbarpanelHandle);
+			
 			Youtube.bind(toolbarpanelHandle);
 		}
 	}

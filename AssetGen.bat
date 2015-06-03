@@ -21,9 +21,8 @@ IF /I "%1" == "RELEASE" (
 	xcopy "%~dp0\..\GenRect\AssetGen\jquery.js" "%~dp0\content\" /F /R /Y
 	xcopy "%~dp0\..\GenRect\AssetGen\moment.js" "%~dp0\content\" /F /R /Y
 	xcopy "%~dp0\..\GenRect\AssetGen\bootstrap.css" "%~dp0\content\" /F /R /Y
-	xcopy "%~dp0\..\GenRect\AssetGen\sortable.css" "%~dp0\content\" /F /R /Y
+	xcopy "%~dp0\..\GenRect\AssetGen\filesaver.js" "%~dp0\content\" /F /R /Y
 	xcopy "%~dp0\..\GenRect\AssetGen\sortable.js" "%~dp0\content\" /F /R /Y
 )
 
-del "%~dp0\content\sortable.css"
 del "%~dp0\content\sortable.js"
