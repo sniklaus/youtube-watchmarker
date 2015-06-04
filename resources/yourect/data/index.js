@@ -1,5 +1,34 @@
 'use strict';
 
+var Panel = {
+	init: function() {
+		{
+			self.port.on('panelShow', Panel.showCallback);
+			
+			self.port.on('panelHide', Panel.hideCallback);
+		}
+	},
+	
+	dispel: function() {
+		
+	},
+	
+	showCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+		
+		{
+			window.location.reload();
+		}
+	},
+	
+	hideCallback: function(objectArguments) {
+		
+	}
+};
+Panel.init();
+
 var Database = {
 	init: function() {
 		{
@@ -7,7 +36,7 @@ var Database = {
 			
 			self.port.on('databaseLoad', Database.loadCallback);
 			
-			self.port.on('databaseReset', Database.resteCallback);
+			self.port.on('databaseReset', Database.resetCallback);
 		}
 	},
 	
@@ -44,7 +73,7 @@ var Database = {
 		{
 			window.saveAs(new Blob([ btoa(unescape(encodeURIComponent(JSON.stringify(objectArguments.resultHandle)))) ], {
 				'type': 'text/plain'
-			}), moment(new Date().getTime()).format('YYYY.MM.DD') + '.history');
+			}), moment(new Date().getTime()).format('YYYY.MM.DD') + '.database');
 		}
 	},
 	
@@ -403,6 +432,8 @@ var Youtube = {
 		
 		{
 			PreferenceDatabaseObserver.update();
+			
+			PreferenceYoutubeObserver.update();
 		}
 	}
 };

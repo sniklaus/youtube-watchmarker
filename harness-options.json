@@ -10,7 +10,7 @@
  "manifest": {
   "yourect/main": {
    "docsSHA256": null, 
-   "jsSHA256": "3e1e87478ca86e54585e94fbb566c5cf10527dc96f1bdf09e074947acf144092", 
+   "jsSHA256": "3b6a7cfebfdb6234e92a2b1107a9904ed4541e06603ac283e4155fc0e9a9761a", 
    "moduleName": "main", 
    "packageName": "yourect", 
    "requirements": {

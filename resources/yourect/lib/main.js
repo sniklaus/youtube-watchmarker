@@ -23,6 +23,10 @@ var Database = {
 		{
 			var requestHandle = requireIndexbase.indexedDB.open('Database', 1);
 			
+			requestHandle.onerror = function() {
+				console.log(requestHandle.error.name);
+			};
+			
 			requestHandle.onupgradeneeded = function() {
 				if (requestHandle.result.objectStoreNames.contains('storeDatabase') === true) {
 					return;
@@ -288,23 +292,6 @@ var History = {
 	},
 	
 	synchronize: function(objectArguments, functionCallback) {
-		var Transaction_requestHandle = null;
-		
-		var functionTransaction = function() {
-			{
-				Transaction_requestHandle = Database.indexbaseHandle
-					.transaction([ 'storeDatabase' ], 'readwrite')
-					.objectStore('storeDatabase')
-				;
-				
-				Transaction_requestHandle.onerror = function() {
-					functionCallback(null);
-				};
-			}
-			
-			functionSearch();
-		};
-		
 		var Search_resultHandle = [];
 		
 		var functionSearch = function() {
@@ -322,8 +309,25 @@ var History = {
 					}
 				}
 				
-				functionSelectIterator(null);
+				functionTransaction();
 			});
+		};
+		
+		var Transaction_requestHandle = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readwrite')
+					.objectStore('storeDatabase')
+				;
+				
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionSelectIterator(null);
 		};
 		
 		var SelectIterator_intIndex = 0;
@@ -411,7 +415,7 @@ var History = {
 			};
 		};
 		
-		functionTransaction();
+		functionSearch();
 	}
 };
 History.init();
@@ -695,6 +699,12 @@ var Youtube = {
 					
 					{
 						if (responseHandle.json.nextPageToken === undefined) {
+							Playlistitems_intThreshold = 0;
+						}
+					}
+					
+					{
+						if (responseHandle.json.nextPageToken === undefined) {
 							Playlistitems_strNext = '';
 							
 						} else if (responseHandle.json.nextPageToken !== undefined) {
@@ -704,6 +714,8 @@ var Youtube = {
 					}
 					
 					{
+						Playlistitems_resultHandle = [];
+						
 						for (var intFor1 = 0; intFor1 < responseHandle.json.items.length; intFor1 += 1) {
 							Playlistitems_resultHandle.push({
 								'strIdent': responseHandle.json.items[intFor1].snippet.resourceId.videoId,
@@ -713,73 +725,122 @@ var Youtube = {
 						}
 					}
 					
-					functionWatchIterator(null);
+					functionTransaction();
 				}
 			}).get();
 		};
-    	
-    	var WatchIterator_intIndex = 0;
 		
-		var functionWatchIterator = function(intIncrement) {
+		var Transaction_requestHandle = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_requestHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readwrite')
+					.objectStore('storeDatabase')
+				;
+				
+				Transaction_requestHandle.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionSelectIterator(null);
+		};
+    	
+    	var SelectIterator_intIndex = 0;
+		
+		var functionSelectIterator = function(intIncrement) {
 			{
 				if (intIncrement === null) {
-					WatchIterator_intIndex = 0;
+					SelectIterator_intIndex = 0;
 					
 				} else if (intIncrement !== null) {
-					WatchIterator_intIndex += intIncrement;
+					SelectIterator_intIndex += intIncrement;
 					
 				}
 			}
 			
 			{
-				if (WatchIterator_intIndex < Playlistitems_resultHandle.length) {
-					functionWatch();
+				if (SelectIterator_intIndex < Playlistitems_resultHandle.length) {
+					functionSelect();
 					
-				} else if (WatchIterator_intIndex >= Playlistitems_resultHandle.length) {
-					functionFinalize();
+				} else if (SelectIterator_intIndex >= Playlistitems_resultHandle.length) {
+					functionCount();
 					
 				}
 			}
 		};
 		
-		var functionWatch = function() {
-			{
-				Youtube.watch({
-					'strIdent': Playlistitems_resultHandle[WatchIterator_intIndex].strIdent,
-					'longTimestamp': Playlistitems_resultHandle[WatchIterator_intIndex].longTimestamp,
-					'strTitle': Playlistitems_resultHandle[WatchIterator_intIndex].strTitle,
-					'intCount': 1
-				}, function(objectArguments) {
-					if (objectArguments === null) {
-						functionCallback(null);
-						
-						return;
-					}
+    	var Select_strIdent = '';
+    	var Select_longTimestamp = 0;
+    	var Select_strTitle = '';
+    	var Select_intCount = 0;
+		
+    	var functionSelect = function() {
+			var requestHandle = Transaction_requestHandle
+				.index('strIdent')
+				.get(Playlistitems_resultHandle[SelectIterator_intIndex].strIdent)
+			;
+			
+			requestHandle.onsuccess = function() {
+				if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					Playlistitems_intThreshold -= 1;
+				}
+				
+				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
+					Select_strIdent = Playlistitems_resultHandle[SelectIterator_intIndex].strIdent;
+					Select_longTimestamp = Playlistitems_resultHandle[SelectIterator_intIndex].longTimestamp;
+					Select_strTitle = Playlistitems_resultHandle[SelectIterator_intIndex].strTitle;
+					Select_intCount = 1;
 					
-					{
-						if (objectArguments.intCount !== 1) {
-							Playlistitems_intThreshold -= 1;
-						}
-					}
+					functionPut();
 					
-					functionWatchIterator(1);
-				});
-			}
+				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					Select_strIdent = requestHandle.result.strIdent;
+					Select_longTimestamp = Playlistitems_resultHandle[SelectIterator_intIndex].longTimestamp;
+					Select_strTitle = Playlistitems_resultHandle[SelectIterator_intIndex].strTitle;
+					Select_intCount = requestHandle.result.intCount;
+					
+					functionPut();
+					
+				}
+			};
+		};
+		
+		var functionPut = function() {
+			var requestHandle = Transaction_requestHandle
+				.put({
+					'strIdent': Select_strIdent,
+					'longTimestamp': Select_longTimestamp,
+					'strTitle': Select_strTitle,
+					'intCount': Select_intCount
+				})
+			;
+			
+			requestHandle.onsuccess = function() {
+				functionSelectIterator(1);
+			};
+		};
+		
+		var functionCount = function() {
+			var requestHandle = Transaction_requestHandle
+				.count()
+			;
+			
+			requestHandle.onsuccess = function() {
+				{
+					requirePreferences.set('extensions.YouRect.Database.intSize', requestHandle.result);
+				}
+				
+				functionFinalize();
+			};
 		};
 		
 		var functionFinalize = function() {
-			{
-				Playlistitems_resultHandle = [];
-			}
-			
-			{
-				if (Playlistitems_intThreshold > 0) {
-					if (Playlistitems_strNext !== '') {
-						functionPlaylistitems();
-						
-						return;
-					}
-				}
+			if (Playlistitems_intThreshold > 0) {
+				functionPlaylistitems();
+				
+				return;
 			}
 			
 			{
@@ -832,9 +893,9 @@ var Youtube = {
 					
 				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
 					Select_strIdent = requestHandle.result.strIdent;
-					Select_longTimestamp = Math.max(requestHandle.result.longTimestamp, objectArguments.longTimestamp);
+					Select_longTimestamp = objectArguments.longTimestamp;
 					Select_strTitle = objectArguments.strTitle;
-					Select_intCount = requestHandle.result.intCount + objectArguments.intCount;
+					Select_intCount = requestHandle.result.intCount + 1;
 					
 					functionPut();
 					
@@ -1010,12 +1071,16 @@ exports.main = function(optionsHandle) {
 				toolbarbuttonHandle.state('window', {
 					'checked': true
 				});
+				
+				toolbarpanelHandle.port.emit('panelShow', {});
 			});
 			
 			toolbarpanelHandle.on('hide', function() {
 				toolbarbuttonHandle.state('window', {
 					'checked': false
 				});
+				
+				toolbarpanelHandle.port.emit('panelHide', {});
 			});
 		}
 		
