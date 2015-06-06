@@ -32,9 +32,9 @@ var Youtube = {
 		}
 		
 		{
-			if (window.document.querySelector('#eow-title') !== null) {
-				if (window.document.querySelector('#eow-title').getAttribute('title') !== null) {
-					strTitle = window.document.querySelector('#eow-title').getAttribute('title');
+			if (window.document.getElementById('eow-title') !== null) {
+				if (window.document.getElementById('eow-title').getAttribute('title') !== null) {
+					strTitle = window.document.getElementById('eow-title').getAttribute('title');
 				}
 			}
 		}
@@ -75,7 +75,7 @@ var Youtube = {
 	
 	lookup: function() {
 		{
-			var elementHandle = window.document.querySelectorAll('a[href]');
+			var elementHandle = window.document.getElementsByTagName('a');
 			
 			for (var intFor1 = 0; intFor1 < elementHandle.length; intFor1 += 1) {
 				var strIdent = '';
@@ -91,7 +91,7 @@ var Youtube = {
 				if (strIdent === '') {
 					continue;
 					
-				} else if (elementHandle[intFor1].querySelector('img') === null) {
+				} else if (elementHandle[intFor1].getElementsByTagName('img').length === 0) {
 					continue;
 					
 				} else if (elementHandle[intFor1].classList.contains('watched') === true) {
@@ -111,7 +111,7 @@ var Youtube = {
 							}
 						}
 						
-						if (this.querySelector('img') === null) {
+						if (this.getElementsByTagName('img').length === 0) {
 							return;
 							
 						} else if (this.classList.contains('watched') === true) {
@@ -153,8 +153,8 @@ var Youtube = {
 		}
 		
 		{
-			if (window.document.querySelector('#' + 'YouRect' + '-' + objectArguments.strIdent) !== null) {
-				window.document.querySelector('#' + 'YouRect' + '-' + objectArguments.strIdent).onmousedown({
+			if (window.document.getElementById('YouRect' + '-' + objectArguments.strIdent) !== null) {
+				window.document.getElementById('YouRect' + '-' + objectArguments.strIdent).onmousedown({
 					'button': 0
 				});
 			}

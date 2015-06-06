@@ -19,12 +19,18 @@ var Panel = {
 		}
 		
 		{
-			window.location.reload();
+			PreferenceDatabaseObserver.update();
+			
+			PreferenceYoutubeObserver.update();
 		}
 	},
 	
 	hideCallback: function(objectArguments) {
-		
+		{
+			PreferenceDatabaseObserver.update();
+			
+			PreferenceYoutubeObserver.update();
+		}
 	}
 };
 Panel.init();
@@ -441,17 +447,17 @@ Youtube.init();
 
 PreferenceDatabaseObserver.addObserver(function() {
 	jQuery('#idDatabase_Size')
-		.trigger('update')
+		.triggerHandler('update')
 	;
 });
 
 PreferenceYoutubeObserver.addObserver(function() {
 	jQuery(window.document.body)
-		.trigger('update')
+		.triggerHandler('update')
 	;
 	
 	jQuery('#idYouauth_Timestamp')
-		.trigger('update')
+		.triggerHandler('update')
 	;
 });
 
@@ -470,26 +476,26 @@ PreferenceYoutubeObserver.addObserver(function() {
 			}
 			
 			if (boolLinked === true) {
-				jQuery('.panel:eq(4)')
+				jQuery('.panel').eq(4)
 					.css({
 						'display': 'none'
 					})
 				;
 				
-				jQuery('.panel:eq(6)')
+				jQuery('.panel').eq(6)
 					.css({
 						'display': 'block'
 					})
 				;
 				
 			} else if (boolLinked === false) {
-				jQuery('.panel:eq(4)')
+				jQuery('.panel').eq(4)
 					.css({
 						'display': 'block'
 					})
 				;
 				
-				jQuery('.panel:eq(6)')
+				jQuery('.panel').eq(6)
 					.css({
 						'display': 'none'
 					})
@@ -500,7 +506,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 	;
 	
 	jQuery(window.document.body)
-		.trigger('update')
+		.triggerHandler('update')
 	;
 }
 
@@ -532,7 +538,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.on('click', function() {
 			{
 				jQuery('#idDatabase_File')
-					.click()
+					.trigger('click')
 				;
 			}
 		})
@@ -565,7 +571,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 	;
 	
 	jQuery('#idDatabase_Size')
-		.trigger('update')
+		.triggerHandler('update')
 	;
 }
 
@@ -693,6 +699,6 @@ PreferenceYoutubeObserver.addObserver(function() {
 	;
 	
 	jQuery('#idYouauth_Timestamp')
-		.trigger('update')
+		.triggerHandler('update')
 	;
 }
