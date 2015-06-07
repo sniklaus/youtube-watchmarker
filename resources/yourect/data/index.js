@@ -446,19 +446,13 @@ var Youtube = {
 Youtube.init();
 
 PreferenceDatabaseObserver.addObserver(function() {
-	jQuery('#idDatabase_Size')
-		.triggerHandler('update')
-	;
+	jQuery('#idDatabase_Size').triggerHandler('update');
 });
 
 PreferenceYoutubeObserver.addObserver(function() {
-	jQuery(window.document.body)
-		.triggerHandler('update')
-	;
+	jQuery(window.document.body).triggerHandler('update');
 	
-	jQuery('#idYouauth_Timestamp')
-		.triggerHandler('update')
-	;
+	jQuery('#idYouauth_Timestamp').triggerHandler('update');
 });
 
 {
@@ -505,9 +499,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		})
 	;
 	
-	jQuery(window.document.body)
-		.triggerHandler('update')
-	;
+	jQuery(window.document.body).triggerHandler('update');
 }
 
 {
@@ -570,9 +562,7 @@ PreferenceYoutubeObserver.addObserver(function() {
 		})
 	;
 	
-	jQuery('#idDatabase_Size')
-		.triggerHandler('update')
-	;
+	jQuery('#idDatabase_Size').triggerHandler('update');
 }
 
 {
@@ -698,7 +688,5 @@ PreferenceYoutubeObserver.addObserver(function() {
 		})
 	;
 	
-	jQuery('#idYouauth_Timestamp')
-		.triggerHandler('update')
-	;
+	jQuery('#idYouauth_Timestamp').triggerHandler('update');
 }
