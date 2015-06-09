@@ -266,7 +266,7 @@ var Treeview = {
 					if (jQuery(eventHandle.target).closest('.cssTreeviewNode').size() === 0) {
 						return;
 						
-					} else if (jQuery(eventHandle.target).closest('.cssTreeviewNode').is('a') === false) {
+					} else if (jQuery(eventHandle.target).closest('.cssTreeviewNode').get(0).tagName.toLowerCase() === 'a') {
 						return;
 						
 					}
