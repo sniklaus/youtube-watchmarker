@@ -60,17 +60,41 @@ var Youtube = {
 		}
 		
 		{
+			if (window.document.getElementById('player') !== null) {
+				if (window.document.getElementById('player-watched-badge') !== null) {
+					window.document.getElementById('player').removeChild(window.document.getElementById('player-watched-badge'));
+				}
+			}
+		}
+		
+		{
 			self.port.emit('youtubeWatch', {
 				'longTimestamp': new Date().getTime(),
 				'strIdent': strIdent,
-				'strTitle': strTitle,
-				'intCount': 1
+				'strTitle': strTitle
 			});
 		}
 	},
 	
 	watchCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
 		
+		{
+			if (objectArguments.intCount > 1) {
+				if (window.document.getElementById('player') !== null) {
+					var elementBadge = window.document.createElement('div')
+					
+					elementBadge.classList.add('watched-badge');
+					elementBadge.id = 'player-watched-badge';
+					elementBadge.style.zIndex = 10000;
+					elementBadge.innerHTML = 'WATCHED';
+					
+					window.document.getElementById('player').appendChild(elementBadge);
+				}
+			}
+		}
 	},
 	
 	lookup: function() {
@@ -136,11 +160,7 @@ var Youtube = {
 				
 				{
 					self.port.emit('youtubeLookup', {
-						'intIdent': 0,
-						'longTimestamp': 0,
-						'strIdent': strIdent,
-						'strTitle': '',
-						'intCount': 0
+						'strIdent': strIdent
 					});
 				}
 			}
