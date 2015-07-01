@@ -1,4 +1,5 @@
-set PREFGEN="%~dp0\..\GenRect\PrefGen.jar"
+call "%~dp0\..\GenRect\GenRect.bat"
+
 set INPUT="%~dp0\content"
 set OUTPUT="%~dp0\content"
 

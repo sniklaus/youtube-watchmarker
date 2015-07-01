@@ -1,11 +1,10 @@
-set HTMLCOMPRESSOR="%~dp0\..\GenRect\htmlcompressor.jar"
-set YUICOMPRESSOR="%~dp0\..\GenRect\yuicompressor.jar"
+call "%~dp0\..\GenRect\GenRect.bat"
 
 :: https://github.com/yui/yuicompressor/issues/78
 
 xcopy "%~dp0\..\GenRect\AssetGen\*" "%~dp0\content\" /E /I /F /R /Y
 
-IF /I "%1" == "RELEASE" (
+IF /I %BUILD% == "RELEASE" (
 	FOR %%f IN ("%~dp0\..\GenRect\AssetGen\*.html") DO (
 		java -jar %HTMLCOMPRESSOR% --type html -o "content\%%~nf%%~xf" "%~dp0\..\GenRect\AssetGen\%%~nf%%~xf"
 	)

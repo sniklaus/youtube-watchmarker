@@ -1027,6 +1027,10 @@ exports.main = function(optionsHandle) {
 	{
 		requirePagemod.PageMod({
 			'include': [ '*.youtube.com' ],
+			'contentStyle': [
+				'.watched .video-thumb { opacity: 0.3; }',
+				'.watched .yt-uix-simple-thumb-related { opacity: 0.3; }'
+			],
 			'contentScriptFile': [ requireSelf.data.url('./youtube.js') ],
 		    'onAttach': function(workerHandle) {
 				{
