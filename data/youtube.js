@@ -173,11 +173,17 @@ var Youtube = {
 		}
 		
 		{
-			if (window.document.getElementById('YouRect' + '-' + objectArguments.strIdent) !== null) {
+			do {
+				if (window.document.getElementById('YouRect' + '-' + objectArguments.strIdent) === null) {
+					break;
+				}
+				
 				window.document.getElementById('YouRect' + '-' + objectArguments.strIdent).onmousedown({
 					'button': 0
 				});
-			}
+				
+				window.document.getElementById('YouRect' + '-' + objectArguments.strIdent).id = null;
+			} while (true);
 		}
 	}
 };
