@@ -5,16 +5,16 @@ var Treeview = {
 				{
 					objectArguments = jQuery.extend({
 						'intIdent': 0,
-						'functionData': function() {
+						'functionOpen': function(objectNode) {
 							
 						},
-						'functionOpen': function() {
+						'functionData': function(objectNode) {
 							
 						},
-						'functionClose': function() {
+						'functionClose': function(objectNode) {
 							
 						},
-						'functionClick': function() {
+						'functionClick': function(objectNode, eventHandle) {
 							
 						}
 					}, objectArguments);
@@ -33,7 +33,7 @@ var Treeview = {
 				}
 				
 				{
-					jQuery(this).closest('.cssTreeview').data('functionOpen').call(this, {
+					jQuery(this).closest('.cssTreeview').data('functionOpen').call(jQuery(this), {
 						'intIdent': objectArguments.intIdent
 					});
 				}
@@ -51,12 +51,14 @@ var Treeview = {
 				}
 				
 				{
+					jQuery(this)
+						.empty()
+					;
+				}
+				
+				{
 					for (var intFor1 = 0; intFor1 < objectArguments.objectNode.length; intFor1 += 1) {
 						var objectNode = objectArguments.objectNode[intFor1];
-						
-						{
-							// jQuery(this).closest('.cssTreeview').data('functionData').call(this, objectNode);
-						}
 						
 						{
 							if (objectNode.strType === 'typeFolder') {
@@ -82,6 +84,14 @@ var Treeview = {
 								
 							}
 						}
+						
+						{
+							jQuery(this).find('.cssTreeviewNode').last()
+								.each(function() {
+									jQuery(this).closest('.cssTreeview').data('functionData').call(jQuery(this), objectNode);
+								})
+							;
+						}
 					}
 				}
 				
@@ -101,15 +111,15 @@ var Treeview = {
 					jQuery(this)
 						.append(jQuery('<div></div>')
 							.addClass('cssTreeviewNodeContainer')
+							.data({
+								'intIdent': objectArguments.objectNode.intIdent,
+								'strType': objectArguments.objectNode.strType,
+								'strImage': objectArguments.objectNode.strImage,
+								'strTitle': objectArguments.objectNode.strTitle,
+								'strLink': objectArguments.objectNode.strLink
+							})
 							.append(jQuery('<div></div>')
 								.addClass('cssTreeviewNode')
-								.data({
-									'intIdent': objectArguments.objectNode.intIdent,
-									'strType': objectArguments.objectNode.strType,
-									'strImage': objectArguments.objectNode.strImage,
-									'strTitle': objectArguments.objectNode.strTitle,
-									'strLink': objectArguments.objectNode.strLink
-								})
 								.off('click')
 								.on('click', function(eventHandle) {
 									{
@@ -117,18 +127,18 @@ var Treeview = {
 											{
 												jQuery(this).closest('.cssTreeviewNodeContainer').find('.cssTreeviewNodePlaceholder')
 													.treeview({
-														'intIdent': jQuery(this).data('intIdent')
+														'intIdent': jQuery(this).closest('.cssTreeviewNodeContainer').data('intIdent')
 													})
 												;
 											}
 											
 											{
 												jQuery(this).closest('.cssTreeview').data('functionOpen').call(jQuery(this).closest('.cssTreeviewNodeContainer').find('.cssTreeviewNodePlaceholder'), {
-													'intIdent': jQuery(this).data('intIdent'),
-													'strType': jQuery(this).data('strType'),
-													'strImage': jQuery(this).data('strImage'),
-													'strTitle': jQuery(this).data('strTitle'),
-													'strLink': jQuery(this).data('strLink')
+													'intIdent': jQuery(this).closest('.cssTreeviewNodeContainer').data('intIdent'),
+													'strType': jQuery(this).closest('.cssTreeviewNodeContainer').data('strType'),
+													'strImage': jQuery(this).closest('.cssTreeviewNodeContainer').data('strImage'),
+													'strTitle': jQuery(this).closest('.cssTreeviewNodeContainer').data('strTitle'),
+													'strLink': jQuery(this).closest('.cssTreeviewNodeContainer').data('strLink')
 												}, eventHandle);
 											}
 											
@@ -141,11 +151,11 @@ var Treeview = {
 											
 											{
 												jQuery(this).closest('.cssTreeview').data('functionClose').call(jQuery(this).closest('.cssTreeviewNodeContainer').find('.cssTreeviewNodePlaceholder'), {
-													'intIdent': jQuery(this).data('intIdent'),
-													'strType': jQuery(this).data('strType'),
-													'strImage': jQuery(this).data('strImage'),
-													'strTitle': jQuery(this).data('strTitle'),
-													'strLink': jQuery(this).data('strLink')
+													'intIdent': jQuery(this).closest('.cssTreeviewNodeContainer').data('intIdent'),
+													'strType': jQuery(this).closest('.cssTreeviewNodeContainer').data('strType'),
+													'strImage': jQuery(this).closest('.cssTreeviewNodeContainer').data('strImage'),
+													'strTitle': jQuery(this).closest('.cssTreeviewNodeContainer').data('strTitle'),
+													'strLink': jQuery(this).closest('.cssTreeviewNodeContainer').data('strLink')
 												}, eventHandle);
 											}
 											
@@ -164,16 +174,6 @@ var Treeview = {
 									.addClass('cssTreeviewNodeTitle')
 									.text(objectArguments.objectNode.strTitle)
 								)
-								.each(function() {
-									if (objectArguments.objectNode.objectExtension !== undefined) {
-										jQuery(this)
-											.append(jQuery('<div></div>')
-												.addClass('cssTreeviewNodeExtension')
-												.append(objectArguments.objectNode.objectExtension)
-											)
-										;
-									}
-								})
 							)
 							.append(jQuery('<div></div>')
 								.addClass('cssTreeviewNodePlaceholder')
@@ -196,12 +196,8 @@ var Treeview = {
 				
 				{
 					jQuery(this)
-						.append(jQuery('<a></a>')
-							.addClass('cssTreeviewNode')
-							.attr({
-								'href': objectArguments.objectNode.strLink,
-								'title': objectArguments.objectNode.strTitle
-							})
+						.append(jQuery('<div></div>')
+							.addClass('cssTreeviewNodeContainer')
 							.data({
 								'intIdent': objectArguments.objectNode.intIdent,
 								'strType': objectArguments.objectNode.strType,
@@ -209,28 +205,25 @@ var Treeview = {
 								'strTitle': objectArguments.objectNode.strTitle,
 								'strLink': objectArguments.objectNode.strLink
 							})
-							.append(jQuery('<div></div>')
-								.addClass('cssTreeviewNodeImage')
-								.append(jQuery('<img></img>')
-									.attr({
-										'src': objectArguments.objectNode.strImage
-									})
+							.append(jQuery('<a></a>')
+								.addClass('cssTreeviewNode')
+								.attr({
+									'href': objectArguments.objectNode.strLink,
+									'title': objectArguments.objectNode.strTitle
+								})
+								.append(jQuery('<div></div>')
+									.addClass('cssTreeviewNodeImage')
+									.append(jQuery('<img></img>')
+										.attr({
+											'src': objectArguments.objectNode.strImage
+										})
+									)
+								)
+								.append(jQuery('<div></div>')
+									.addClass('cssTreeviewNodeTitle')
+									.text(objectArguments.objectNode.strTitle)
 								)
 							)
-							.append(jQuery('<div></div>')
-								.addClass('cssTreeviewNodeTitle')
-								.text(objectArguments.objectNode.strTitle)
-							)
-							.each(function() {
-								if (objectArguments.objectNode.objectExtension !== undefined) {
-									jQuery(this)
-										.append(jQuery('<div></div>')
-											.addClass('cssTreeviewNodeExtension')
-											.append(objectArguments.objectNode.objectExtension)
-										)
-									;
-								}
-							})
 						)
 					;
 				}
@@ -260,6 +253,7 @@ var Treeview = {
 		}
 		
 		{
+			/*
 			jQuery(window)
 				.off('click')
 				.on('click', function(eventHandle) {
@@ -272,7 +266,7 @@ var Treeview = {
 					}
 					
 					{
-						jQuery(eventHandle.target).closest('.cssTreeview').data('functionClick').call(this, {
+						jQuery(eventHandle.target).closest('.cssTreeview').data('functionClick').call(jQuery(this), {
 							'intIdent': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('intIdent'),
 							'strType': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('strType'),
 							'strImage': jQuery(eventHandle.target).closest('.cssTreeviewNode').data('strImage'),
@@ -282,6 +276,7 @@ var Treeview = {
 					}
 				})
 			;
+			*/
 		}
 	},
 	

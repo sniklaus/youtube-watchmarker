@@ -20,6 +20,7 @@ IF /I %BUILD% == "RELEASE" (
 	xcopy "%~dp0\..\GenRect\AssetGen\jquery.js" "%~dp0\content\" /F /R /Y
 	xcopy "%~dp0\..\GenRect\AssetGen\moment.js" "%~dp0\content\" /F /R /Y
 	xcopy "%~dp0\..\GenRect\AssetGen\bootstrap.css" "%~dp0\content\" /F /R /Y
+	xcopy "%~dp0\..\GenRect\AssetGen\fontawesome.css" "%~dp0\content\" /F /R /Y
 	xcopy "%~dp0\..\GenRect\AssetGen\filesaver.js" "%~dp0\content\" /F /R /Y
 	xcopy "%~dp0\..\GenRect\AssetGen\sortable.js" "%~dp0\content\" /F /R /Y
 )

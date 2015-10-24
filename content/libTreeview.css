@@ -13,7 +13,8 @@
 	position:relative;
 	
 	margin:0px;
-	border:none;
+	border:1px solid #FFFFFF;
+	border-radius:4px;
 	border-spacing:0px;
 	padding:7px;
 	
@@ -22,7 +23,7 @@
 	color:#000000;
 	font-size:12px;
 	font-weight:normal;
-	font-family:Tahoma;
+	font-family:Helvetica;
 	text-decoration:none;
 	text-align:left;
 	line-height:1;
@@ -30,12 +31,18 @@
 }
 
 .cssTreeviewNode:hover {
-	background-color:#CCCCCC;
+	margin:0px;
+	border:1px solid #DDDDDD;
+	border-radius:4px;
+	border-spacing:0px;
+	padding:7px;
+	
+	background-color:#F5F5F5;
 	
 	color:#000000;
 	font-size:12px;
 	font-weight:normal;
-	font-family:Tahoma;
+	font-family:Helvetica;
 	text-decoration:none;
 	text-align:left;
 	line-height:1;
@@ -50,7 +57,7 @@
 	top:7px;
 }
 
-.cssTreeviewNodeImage img {
+.cssTreeviewNodeImage > img {
 	width:16px;
 	height:16px;
 }
@@ -64,15 +71,11 @@
 	color:#000000;
 	font-size:12px;
 	font-weight:normal;
-	font-family:Tahoma;
+	font-family:Helvetica;
 	text-decoration:none;
 	text-align:left;
 	line-height:1;
 	white-space:normal;
-}
-
-.cssTreeviewNodeExtension {
-
 }
 
 .cssTreeviewNodePlaceholder {
