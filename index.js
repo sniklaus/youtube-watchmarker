@@ -1067,7 +1067,8 @@ exports.main = function(optionsHandle) {
 			'width': 640,
 			'height': 480,
 			'contentURL': 'chrome://yourect/content/index.html',
-			'contentScriptFile': [ requireSelf.data.url('./index.js') ]
+			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
+			'contentScriptOptions': {}
 		});
 		
 		{

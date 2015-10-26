@@ -26,11 +26,7 @@ var Panel = {
 	},
 	
 	hideCallback: function(objectArguments) {
-		{
-			PreferenceDatabaseObserver.update();
-			
-			PreferenceYoutubeObserver.update();
-		}
+		
 	}
 };
 Panel.init();
