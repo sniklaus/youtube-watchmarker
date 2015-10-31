@@ -1032,6 +1032,9 @@ exports.main = function(optionsHandle) {
 				'.watched .yt-uix-simple-thumb-related { opacity: 0.3; }'
 			],
 			'contentScriptFile': [ requireSelf.data.url('./youtube.js') ],
+			'contentScriptOptions': {
+				'strType': 'typePagemod'
+			},
 		    'onAttach': function(workerHandle) {
 				{
 					Youtube.bind(workerHandle);
@@ -1068,7 +1071,9 @@ exports.main = function(optionsHandle) {
 			'height': 480,
 			'contentURL': 'chrome://yourect/content/index.html',
 			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
-			'contentScriptOptions': {}
+			'contentScriptOptions': {
+				'strType': 'typePanel'
+			}
 		});
 		
 		{
