@@ -457,10 +457,10 @@ PreferenceYoutubeObserver.addObserver(function() {
 		.on('update', function() {
 			var boolLinked = true;
 			
-			if (PreferenceYoutube.getStrAccess() === '') {
+			if (String(PreferenceYoutube.getStrAccess()) === '') {
 				boolLinked = false;
 				
-			} else if (PreferenceYoutube.getStrRefresh() === '') {
+			} else if (String(PreferenceYoutube.getStrRefresh()) === '') {
 				boolLinked = false;
 				
 			}
