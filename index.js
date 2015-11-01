@@ -577,12 +577,12 @@ var Youtube = {
 	},
 	
 	synchronize: function(objectArguments, functionCallback) {
-		if (requirePreferences.get('extensions.YouRect.Youtube.strAccess') === '') {
+		if (requirePreferences.get('extensions.YouRect.Youtube.strAccess', '') === '') {
 			functionCallback(null);
 			
 			return;
 			
-		} else if (requirePreferences.get('extensions.YouRect.Youtube.strRefresh') === '') {
+		} else if (requirePreferences.get('extensions.YouRect.Youtube.strRefresh', '') === '') {
 			functionCallback(null);
 			
 			return;
@@ -594,7 +594,7 @@ var Youtube = {
 				'url': 'https://www.googleapis.com/oauth2/v3/token',
 				'content': {
 					'grant_type': 'refresh_token',
-					'refresh_token': requirePreferences.get('extensions.YouRect.Youtube.strRefresh'),
+					'refresh_token': requirePreferences.get('extensions.YouRect.Youtube.strRefresh', ''),
 					'client_id': Youtube.strClient,
 					'client_secret': Youtube.strSecret,
 					'redirect_uri': Youtube.strRedirect
@@ -642,7 +642,7 @@ var Youtube = {
 				},
 				'headers': {
 					'Content-Type': 'application/x-www-form-urlencoded',
-					'Authorization': 'Bearer ' + requirePreferences.get('extensions.YouRect.Youtube.strAccess')
+					'Authorization': 'Bearer ' + requirePreferences.get('extensions.YouRect.Youtube.strAccess', '')
 				},
 				'onComplete': function(responseHandle) {
 					if (responseHandle.status !== 200) {
@@ -682,7 +682,7 @@ var Youtube = {
 				},
 				'headers': {
 					'Content-Type': 'application/x-www-form-urlencoded',
-					'Authorization': 'Bearer ' + requirePreferences.get('extensions.YouRect.Youtube.strAccess')
+					'Authorization': 'Bearer ' + requirePreferences.get('extensions.YouRect.Youtube.strAccess', '')
 				},
 				'onComplete': function(responseHandle) {
 					if (responseHandle.status !== 200) {
