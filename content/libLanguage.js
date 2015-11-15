@@ -1,17 +1,17 @@
 'use strict';
 
 var Language = {
-	jsonStrings: [],
+	objectStrings: [],
 	
 	init: function() {
 		{
-			Language.jsonStrings = JSON.parse(String(jsLanguage.getStrStrings()));
+			Language.objectStrings = JSON.parse(String(jsLanguage.getStrStrings()));
 		}
 	},
 	
 	dispel: function() {
 		{
-			Language.jsonStrings = [];
+			Language.objectStrings = [];
 		}
 	},
 	
@@ -19,8 +19,8 @@ var Language = {
 		var strUpdated = strContent;
 		
 		{
-			for (var intFor1 = 0; intFor1 < Language.jsonStrings.length; intFor1 += 1) {
-				strUpdated = strUpdated.replace(new RegExp('@string/' + Language.jsonStrings[intFor1].strName, 'g'), Language.jsonStrings[intFor1].strValue);
+			for (var intFor1 = 0; intFor1 < Language.objectStrings.length; intFor1 += 1) {
+				strUpdated = strUpdated.replace(new RegExp('@string/' + Language.objectStrings[intFor1].strName, 'g'), Language.objectStrings[intFor1].strValue);
 			}
 		}
 		
