@@ -1010,7 +1010,7 @@ exports.main = function(optionsHandle) {
 	
 	{
 		requirePagemod.PageMod({
-			'include': [ 'about:yourect', 'chrome://yourect/content/index.html' ],
+			'include': [ 'about:yourect', 'about:yourect#*', 'chrome://yourect/content/index.html', 'chrome://yourect/content/index.html#*' ],
 			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
 		    'onAttach': function(workerHandle) {
 				{
