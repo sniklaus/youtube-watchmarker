@@ -6,6 +6,7 @@
 		<em:type>2</em:type>
 		<em:bootstrap>true</em:bootstrap>
 		<em:unpack>false</em:unpack>
+		<em:multiprocessCompatible>true</em:multiprocessCompatible>
 		
 		<em:targetApplication>
 			<Description>
