@@ -26,3 +26,5 @@ IF /I %BUILD% == "RELEASE" (
 )
 
 del "%~dp0\content\sortable.js"
+
+java -jar %REPLACE% "%~dp0\content\fontawesome.css" "\.\./fonts/" "chrome://yourect/content/fonts/"
