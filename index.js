@@ -93,7 +93,7 @@ var Database = {
 		
 		var Select_resultHandle = [];
 		
-    	var functionSelect = function() {
+		var functionSelect = function() {
 			var requestHandle = Transaction_requestHandle
 				.openCursor()
 			;
@@ -139,7 +139,7 @@ var Database = {
 			functionSelectIterator(null);
 		};
 		
-    	var SelectIterator_intIndex = 0;
+		var SelectIterator_intIndex = 0;
 		
 		var functionSelectIterator = function(intIncrement) {
 			{
@@ -163,12 +163,12 @@ var Database = {
 			}
 		};
 		
-    	var Select_strIdent = '';
-    	var Select_longTimestamp = 0;
-    	var Select_strTitle = '';
-    	var Select_intCount = 0;
+		var Select_strIdent = '';
+		var Select_longTimestamp = 0;
+		var Select_strTitle = '';
+		var Select_intCount = 0;
 		
-    	var functionSelect = function() {
+		var functionSelect = function() {
 			var requestHandle = Transaction_requestHandle
 				.index('strIdent')
 				.get(objectArguments.resultHandle[SelectIterator_intIndex].strIdent)
@@ -354,12 +354,12 @@ var History = {
 			}
 		};
 		
-    	var Select_strIdent = '';
-    	var Select_longTimestamp = 0;
-    	var Select_strTitle = '';
-    	var Select_intCount = 0;
+		var Select_strIdent = '';
+		var Select_longTimestamp = 0;
+		var Select_strTitle = '';
+		var Select_intCount = 0;
 		
-    	var functionSelect = function() {
+		var functionSelect = function() {
 			var requestHandle = Transaction_requestHandle
 				.index('strIdent')
 				.get(Search_resultHandle[SelectIterator_intIndex].strIdent)
@@ -429,6 +429,8 @@ var Youtube = {
 	
 	strScope: '',
 	
+	bindHandle: null,
+	
 	init: function() {
 		{
 			Youtube.strApi = 'AIzaSyAqgO1S-h65tnJvWGpJnGu5xt5qSokFcNo';
@@ -444,6 +446,10 @@ var Youtube = {
 		
 		{
 			Youtube.strScope = 'https://www.googleapis.com/auth/youtube.readonly';
+		}
+		
+		{
+			Youtube.bindHandle = [];
 		}
 	},
 	
@@ -463,9 +469,21 @@ var Youtube = {
 		{
 			Youtube.strScope = '';
 		}
+		
+		{
+			Youtube.bindHandle = [];
+		}
 	},
 	
 	bind: function(bindHandle) {
+		Youtube.bindHandle.push(bindHandle);
+		
+		bindHandle.on('detach', function () {
+			if (Youtube.bindHandle.indexOf(this) !== -1) {
+				Youtube.bindHandle.splice(Youtube.bindHandle.indexOf(this), 1);
+			}
+		});
+		
 		bindHandle.port.on('youtubeAuthorize', function(objectArguments) {
 			Youtube.authorize.call(bindHandle, objectArguments, function(objectArguments) {
 				bindHandle.port.emit('youtubeAuthorize', objectArguments);
@@ -746,8 +764,8 @@ var Youtube = {
 			
 			functionSelectIterator(null);
 		};
-    	
-    	var SelectIterator_intIndex = 0;
+		
+		var SelectIterator_intIndex = 0;
 		
 		var functionSelectIterator = function(intIncrement) {
 			{
@@ -771,12 +789,12 @@ var Youtube = {
 			}
 		};
 		
-    	var Select_strIdent = '';
-    	var Select_longTimestamp = 0;
-    	var Select_strTitle = '';
-    	var Select_intCount = 0;
+		var Select_strIdent = '';
+		var Select_longTimestamp = 0;
+		var Select_strTitle = '';
+		var Select_intCount = 0;
 		
-    	var functionSelect = function() {
+		var functionSelect = function() {
 			var requestHandle = Transaction_requestHandle
 				.index('strIdent')
 				.get(Playlistitems_resultHandle[SelectIterator_intIndex].strIdent)
@@ -849,7 +867,7 @@ var Youtube = {
 			
 			functionCallback({});
 		};
-    	
+		
 		functionAuth();
 	},
 	
@@ -871,12 +889,12 @@ var Youtube = {
 			functionSelect();
 		};
 		
-    	var Select_strIdent = '';
-    	var Select_longTimestamp = 0;
-    	var Select_strTitle = '';
-    	var Select_intCount = 0;
+		var Select_strIdent = '';
+		var Select_longTimestamp = 0;
+		var Select_strTitle = '';
+		var Select_intCount = 0;
 		
-    	var functionSelect = function() {
+		var functionSelect = function() {
 			var requestHandle = Transaction_requestHandle
 				.index('strIdent')
 				.get(objectArguments.strIdent)
@@ -928,6 +946,17 @@ var Youtube = {
 					requirePreferences.set('extensions.YouRect.Database.intSize', requestHandle.result);
 				}
 				
+				{
+					for (var intFor1 = 0; intFor1 < Youtube.bindHandle.length; intFor1 += 1) {
+						Youtube.bindHandle[intFor1].port.emit('youtubeLookup', {
+							'strIdent': Select_strIdent,
+							'longTimestamp': Select_longTimestamp,
+							'strTitle': Select_strTitle,
+							'intCount': Select_intCount
+						});
+					}
+				}
+				
 				functionCallback({
 					'strIdent': Select_strIdent,
 					'longTimestamp': Select_longTimestamp,
@@ -958,7 +987,7 @@ var Youtube = {
 			functionSelect();
 		};
 		
-    	var functionSelect = function() {
+		var functionSelect = function() {
 			var requestHandle = Transaction_requestHandle
 				.index('strIdent')
 				.get(objectArguments.strIdent)
@@ -1012,7 +1041,7 @@ exports.main = function(optionsHandle) {
 		requirePagemod.PageMod({
 			'include': [ 'about:yourect', 'about:yourect#*', 'chrome://yourect/content/index.html', 'chrome://yourect/content/index.html#*' ],
 			'contentScriptFile': [ requireSelf.data.url('./index.js') ],
-		    'onAttach': function(workerHandle) {
+			'onAttach': function(workerHandle) {
 				{
 					Database.bind(workerHandle);
 					
@@ -1020,7 +1049,7 @@ exports.main = function(optionsHandle) {
 					
 					Youtube.bind(workerHandle);
 				}
-		    }
+			}
 		});
 	}
 	
@@ -1035,11 +1064,11 @@ exports.main = function(optionsHandle) {
 			'contentScriptOptions': {
 				'strType': 'typePagemod'
 			},
-		    'onAttach': function(workerHandle) {
+			'onAttach': function(workerHandle) {
 				{
 					Youtube.bind(workerHandle);
 				}
-		    }
+			}
 		});
 	}
 	

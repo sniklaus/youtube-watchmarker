@@ -95,6 +95,10 @@ var Youtube = {
 				}
 			}
 		}
+		
+		{
+			// TODO: extensions.YouRect.Youtube.boolPlayerbadge
+		}
 	},
 	
 	lookup: function() {
@@ -128,37 +132,6 @@ var Youtube = {
 				}
 				
 				{
-					elementHandle[intFor1].onmousedown = function(eventHandle) {
-						if (eventHandle.button !== 0) {
-							if (eventHandle.button !== 1) {
-								return;
-							}
-						}
-						
-						if (this.getElementsByTagName('img').length === 0) {
-							return;
-							
-						} else if (this.classList.contains('watched') === true) {
-							return;
-							
-						}
-						
-						{
-							this.classList.add('watched');
-						}
-						
-						{
-							var elementBadge = window.document.createElement('div')
-							
-							elementBadge.classList.add('watched-badge');
-							elementBadge.innerHTML = 'WATCHED';
-							
-							this.appendChild(elementBadge);
-						}
-					};
-				}
-				
-				{
 					self.port.emit('youtubeLookup', {
 						'strIdent': strIdent
 					});
@@ -174,15 +147,36 @@ var Youtube = {
 		
 		{
 			do {
-				if (window.document.getElementById('YouRect' + '-' + objectArguments.strIdent) === null) {
+				var elementHandle = window.document.getElementById('YouRect' + '-' + objectArguments.strIdent);
+				
+				if (elementHandle === null) {
 					break;
 				}
 				
-				window.document.getElementById('YouRect' + '-' + objectArguments.strIdent).onmousedown({
-					'button': 0
-				});
+				{
+					elementHandle.id = null;
+				}
 				
-				window.document.getElementById('YouRect' + '-' + objectArguments.strIdent).id = null;
+				if (elementHandle.getElementsByTagName('img').length === 0) {
+					continue;
+					
+				} else if (elementHandle.classList.contains('watched') === true) {
+					continue;
+					
+				}
+				
+				{
+					elementHandle.classList.add('watched');
+				}
+				
+				{
+					var elementBadge = window.document.createElement('div')
+					
+					elementBadge.classList.add('watched-badge');
+					elementBadge.innerHTML = 'WATCHED';
+					
+					elementHandle.appendChild(elementBadge);
+				}
 			} while (true);
 		}
 	}
