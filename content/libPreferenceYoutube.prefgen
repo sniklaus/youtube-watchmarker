@@ -22,9 +22,3 @@ attribute {
 	strType:long
 	strDefault:'0'
 }
-
-attribute {
-	strName:'boolPlayerbadge'
-	strType:bool
-	strDefault:'true'
-}

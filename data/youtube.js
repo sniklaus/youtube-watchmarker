@@ -60,9 +60,9 @@ var Youtube = {
 		}
 		
 		{
-			if (window.document.getElementById('player') !== null) {
-				if (window.document.getElementById('player-watched-badge') !== null) {
-					window.document.getElementById('player').removeChild(window.document.getElementById('player-watched-badge'));
+			if (window.document.getElementById('watch-header') !== null) {
+				if (window.document.getElementById('watch-header-badge') !== null) {
+					window.document.getElementById('watch-header').removeChild(window.document.getElementById('watch-header-badge'));
 				}
 			}
 		}
@@ -83,21 +83,20 @@ var Youtube = {
 		
 		{
 			if (objectArguments.intCount > 1) {
-				if (window.document.getElementById('player') !== null) {
+				if (window.document.getElementById('watch-header') !== null) {
 					var elementBadge = window.document.createElement('div')
 					
 					elementBadge.classList.add('watched-badge');
 					elementBadge.id = 'player-watched-badge';
+					elementBadge.style.left = 'auto';
+					elementBadge.style.right = '10px';
 					elementBadge.style.zIndex = 10000;
 					elementBadge.innerHTML = 'WATCHED';
 					
-					window.document.getElementById('player').appendChild(elementBadge);
+					window.document.getElementById('watch-header').style.position = 'relative';
+					window.document.getElementById('watch-header').appendChild(elementBadge);
 				}
 			}
-		}
-		
-		{
-			// TODO: extensions.YouRect.Youtube.boolPlayerbadge
 		}
 	},
 	

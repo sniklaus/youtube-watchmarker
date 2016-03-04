@@ -95,34 +95,6 @@ var PreferenceYoutube = {
 		}
 	},
 	
-	getBoolPlayerbadge: function() {
-		if (Services.prefs.prefHasUserValue('extensions.YouRect.Youtube.boolPlayerbadge') === true) {
-			return Services.prefs.getBoolPref('extensions.YouRect.Youtube.boolPlayerbadge');
-		}
-		
-		return true;
-	},
-	
-	setBoolPlayerbadge: function(boolPlayerbadge) {
-		{
-			Services.prefs.setBoolPref('extensions.YouRect.Youtube.boolPlayerbadge', boolPlayerbadge);
-		}
-		
-		{
-			PreferenceYoutubeObserver.update();
-		}
-	},
-	
-	clearBoolPlayerbadge: function() {
-		{
-			Services.prefs.clearUserPref('extensions.YouRect.Youtube.boolPlayerbadge');
-		}
-		
-		{
-			PreferenceYoutubeObserver.update();
-		}
-	},
-	
 	clear: function() {
 		{
 			PreferenceYoutubeObserver.boolEnabled = false;
@@ -134,8 +106,6 @@ var PreferenceYoutube = {
 			PreferenceYoutube.clearStrRefresh();
 			
 			PreferenceYoutube.clearLongTimestamp();
-			
-			PreferenceYoutube.clearBoolPlayerbadge();
 		}
 		
 		{
