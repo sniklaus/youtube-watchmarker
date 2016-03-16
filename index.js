@@ -74,16 +74,16 @@ var Database = {
 	},
 	
 	save: function(objectArguments, functionCallback) {
-		var Transaction_requestHandle = null;
+		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
 			{
-				Transaction_requestHandle = Database.indexbaseHandle
+				Transaction_objectstoreHandle = Database.indexbaseHandle
 					.transaction([ 'storeDatabase' ], 'readonly')
 					.objectStore('storeDatabase')
 				;
 				
-				Transaction_requestHandle.onerror = function() {
+				Transaction_objectstoreHandle.onerror = function() {
 					functionCallback(null);
 				};
 			}
@@ -94,7 +94,7 @@ var Database = {
 		var Select_resultHandle = [];
 		
 		var functionSelect = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.openCursor()
 			;
 			
@@ -122,16 +122,16 @@ var Database = {
 	},
 	
 	load: function(objectArguments, functionCallback) {
-		var Transaction_requestHandle = null;
+		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
 			{
-				Transaction_requestHandle = Database.indexbaseHandle
+				Transaction_objectstoreHandle = Database.indexbaseHandle
 					.transaction([ 'storeDatabase' ], 'readwrite')
 					.objectStore('storeDatabase')
 				;
 				
-				Transaction_requestHandle.onerror = function() {
+				Transaction_objectstoreHandle.onerror = function() {
 					functionCallback(null);
 				};
 			}
@@ -169,7 +169,7 @@ var Database = {
 		var Select_intCount = 0;
 		
 		var functionSelect = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.index('strIdent')
 				.get(objectArguments.resultHandle[SelectIterator_intIndex].strIdent)
 			;
@@ -196,7 +196,7 @@ var Database = {
 		};
 		
 		var functionPut = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.put({
 					'strIdent': Select_strIdent,
 					'longTimestamp': Select_longTimestamp,
@@ -211,7 +211,7 @@ var Database = {
 		};
 		
 		var functionCount = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.count()
 			;
 			
@@ -228,16 +228,16 @@ var Database = {
 	},
 	
 	reset: function(objectArguments, functionCallback) {
-		var Transaction_requestHandle = null;
+		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
 			{
-				Transaction_requestHandle = Database.indexbaseHandle
+				Transaction_objectstoreHandle = Database.indexbaseHandle
 					.transaction([ 'storeDatabase' ], 'readwrite')
 					.objectStore('storeDatabase')
 				;
 				
-				Transaction_requestHandle.onerror = function() {
+				Transaction_objectstoreHandle.onerror = function() {
 					functionCallback(null);
 				};
 			}
@@ -246,7 +246,7 @@ var Database = {
 		};
 		
 		var functionReset = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.clear()
 			;
 			
@@ -256,7 +256,7 @@ var Database = {
 		};
 		
 		var functionCount = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.count()
 			;
 			
@@ -313,16 +313,16 @@ var History = {
 			});
 		};
 		
-		var Transaction_requestHandle = null;
+		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
 			{
-				Transaction_requestHandle = Database.indexbaseHandle
+				Transaction_objectstoreHandle = Database.indexbaseHandle
 					.transaction([ 'storeDatabase' ], 'readwrite')
 					.objectStore('storeDatabase')
 				;
 				
-				Transaction_requestHandle.onerror = function() {
+				Transaction_objectstoreHandle.onerror = function() {
 					functionCallback(null);
 				};
 			}
@@ -360,7 +360,7 @@ var History = {
 		var Select_intCount = 0;
 		
 		var functionSelect = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.index('strIdent')
 				.get(Search_resultHandle[SelectIterator_intIndex].strIdent)
 			;
@@ -387,7 +387,7 @@ var History = {
 		};
 		
 		var functionPut = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.put({
 					'strIdent': Select_strIdent,
 					'longTimestamp': Select_longTimestamp,
@@ -402,7 +402,7 @@ var History = {
 		};
 		
 		var functionCount = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.count()
 			;
 			
@@ -748,16 +748,16 @@ var Youtube = {
 			}).get();
 		};
 		
-		var Transaction_requestHandle = null;
+		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
 			{
-				Transaction_requestHandle = Database.indexbaseHandle
+				Transaction_objectstoreHandle = Database.indexbaseHandle
 					.transaction([ 'storeDatabase' ], 'readwrite')
 					.objectStore('storeDatabase')
 				;
 				
-				Transaction_requestHandle.onerror = function() {
+				Transaction_objectstoreHandle.onerror = function() {
 					functionCallback(null);
 				};
 			}
@@ -795,7 +795,7 @@ var Youtube = {
 		var Select_intCount = 0;
 		
 		var functionSelect = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.index('strIdent')
 				.get(Playlistitems_resultHandle[SelectIterator_intIndex].strIdent)
 			;
@@ -826,7 +826,7 @@ var Youtube = {
 		};
 		
 		var functionPut = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.put({
 					'strIdent': Select_strIdent,
 					'longTimestamp': Select_longTimestamp,
@@ -841,7 +841,7 @@ var Youtube = {
 		};
 		
 		var functionCount = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.count()
 			;
 			
@@ -872,16 +872,16 @@ var Youtube = {
 	},
 	
 	watch: function(objectArguments, functionCallback) {
-		var Transaction_requestHandle = null;
+		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
 			{
-				Transaction_requestHandle = Database.indexbaseHandle
+				Transaction_objectstoreHandle = Database.indexbaseHandle
 					.transaction([ 'storeDatabase' ], 'readwrite')
 					.objectStore('storeDatabase')
 				;
 				
-				Transaction_requestHandle.onerror = function() {
+				Transaction_objectstoreHandle.onerror = function() {
 					functionCallback(null);
 				};
 			}
@@ -895,7 +895,7 @@ var Youtube = {
 		var Select_intCount = 0;
 		
 		var functionSelect = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.index('strIdent')
 				.get(objectArguments.strIdent)
 			;
@@ -922,7 +922,7 @@ var Youtube = {
 		};
 		
 		var functionPut = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.put({
 					'strIdent': Select_strIdent,
 					'longTimestamp': Select_longTimestamp,
@@ -937,7 +937,7 @@ var Youtube = {
 		};
 		
 		var functionCount = function() {
-			var requestHandle = Transaction_requestHandle
+			var requestHandle = Transaction_objectstoreHandle
 				.count()
 			;
 			
@@ -970,16 +970,16 @@ var Youtube = {
 	},
 	
 	lookup: function(objectArguments, functionCallback) {
-		var Transaction_requestHandle = null;
+		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
 			{
-				Transaction_requestHandle = Database.indexbaseHandle
-					.transaction([ 'storeDatabase' ], 'readwrite')
+				Transaction_objectstoreHandle = Database.indexbaseHandle
+					.transaction([ 'storeDatabase' ], 'readonly')
 					.objectStore('storeDatabase')
 				;
 				
-				Transaction_requestHandle.onerror = function() {
+				Transaction_objectstoreHandle.onerror = function() {
 					functionCallback(null);
 				};
 			}
@@ -987,25 +987,38 @@ var Youtube = {
 			functionSelect();
 		};
 		
+		var Select_objectstoreHandle = null;
+		
 		var functionSelect = function() {
-			var requestHandle = Transaction_requestHandle
-				.index('strIdent')
-				.get(objectArguments.strIdent)
+			{
+				Select_objectstoreHandle = Transaction_objectstoreHandle
+					.index('strIdent')
+				;
+			}
+			
+			objectArguments.strIdentities.forEach(functionParallel);
+		};
+		
+		var functionParallel = function(strIdent) {
+			var requestHandle = Select_objectstoreHandle
+				.get(strIdent)
 			;
 			
 			requestHandle.onsuccess = function(responseHandle) {
-				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
-					functionCallback(null);
+				if (requestHandle.result === undefined) {
+					return;
 					
-				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
-					functionCallback({
-						'strIdent': requestHandle.result.strIdent,
-						'longTimestamp': requestHandle.result.longTimestamp,
-						'strTitle': requestHandle.result.strTitle,
-						'intCount': requestHandle.result.intCount
-					});
+				} else if (requestHandle.result === null) {
+					return;
 					
 				}
+				
+				functionCallback({
+					'strIdent': requestHandle.result.strIdent,
+					'longTimestamp': requestHandle.result.longTimestamp,
+					'strTitle': requestHandle.result.strTitle,
+					'intCount': requestHandle.result.intCount
+				});
 			};
 		};
 		

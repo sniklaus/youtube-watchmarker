@@ -101,6 +101,8 @@ var Youtube = {
 	},
 	
 	lookup: function() {
+		var strIdentities =[];
+		
 		{
 			var elementHandle = window.document.getElementsByTagName('a');
 			
@@ -131,11 +133,15 @@ var Youtube = {
 				}
 				
 				{
-					self.port.emit('youtubeLookup', {
-						'strIdent': strIdent
-					});
+					strIdentities.push(strIdent);
 				}
 			}
+		}
+		
+		{
+			self.port.emit('youtubeLookup', {
+				'strIdentities': strIdentities
+			});
 		}
 	},
 	
