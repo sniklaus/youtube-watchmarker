@@ -35,8 +35,10 @@ var Database = {
 	init: function() {
 		{
 			self.port.on('databaseSave', Database.saveCallback);
+			self.port.on('databaseSave-progress', Database.saveProgress);
 			
 			self.port.on('databaseLoad', Database.loadCallback);
+			self.port.on('databaseLoad-progress', Database.loadProgress);
 			
 			self.port.on('databaseReset', Database.resetCallback);
 		}
@@ -77,6 +79,10 @@ var Database = {
 				'type': 'text/plain'
 			}), moment(new Date().getTime()).format('YYYY.MM.DD') + '.database');
 		}
+	},
+	
+	saveProgress: function(objectArguments) {
+			
 	},
 	
 	load: function() {
@@ -122,6 +128,10 @@ var Database = {
 		}
 	},
 	
+	loadProgress: function(objectArguments) {
+			
+	},
+	
 	reset: function() {
 		{
 			self.port.emit('databaseReset', {});
@@ -144,6 +154,7 @@ var History = {
 	init: function() {
 		{
 			self.port.on('historySynchronize', History.synchronizeCallback);
+			self.port.on('historySynchronize-progress', History.synchronizeProgress);
 		}
 	},
 	
@@ -180,6 +191,10 @@ var History = {
 		{
 			PreferenceDatabaseObserver.update();
 		}
+	},
+	
+	synchronizeProgress: function(objectArguments) {
+			
 	}
 };
 History.init();
@@ -194,6 +209,7 @@ var Youtube = {
 			self.port.on('youtubeUnlink', Youtube.unlinkCallback);
 			
 			self.port.on('youtubeSynchronize', Youtube.synchronizeCallback);
+			self.port.on('youtubeSynchronize-progress', Youtube.synchronizeProgress);
 		}
 	},
 	
@@ -370,7 +386,7 @@ var Youtube = {
 		
 		{
 			self.port.emit('youtubeSynchronize', {
-				'intThreshold': 256
+				'intThreshold': 250
 			});
 		}
 	},
@@ -437,6 +453,10 @@ var Youtube = {
 			
 			PreferenceYoutubeObserver.update();
 		}
+	},
+	
+	synchronizeProgress: function(objectArguments) {
+		
 	}
 };
 Youtube.init();

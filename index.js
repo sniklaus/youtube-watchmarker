@@ -57,12 +57,16 @@ var Database = {
 		bindHandle.port.on('databaseSave', function(objectArguments) {
 			Database.save.call(bindHandle, objectArguments, function(objectArguments) {
 				bindHandle.port.emit('databaseSave', objectArguments);
+			}, function(objectArguments) {
+				bindHandle.port.emit('databaseSave-progress', objectArguments);
 			});
 		});
 		
 		bindHandle.port.on('databaseLoad', function(objectArguments) {
 			Database.load.call(bindHandle, objectArguments, function(objectArguments) {
 				bindHandle.port.emit('databaseLoad', objectArguments);
+			}, function(objectArguments) {
+				bindHandle.port.emit('databaseLoad-progress', objectArguments);
 			});
 		});
 		
@@ -73,7 +77,7 @@ var Database = {
 		});
 	},
 	
-	save: function(objectArguments, functionCallback) {
+	save: function(objectArguments, functionCallback, functionProgress) {
 		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
@@ -99,6 +103,10 @@ var Database = {
 			;
 			
 			requestHandle.onsuccess = function() {
+				functionProgress({
+					'intSize': Select_resultHandle.length
+				});
+				
 				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
 					functionCallback({
 						'resultHandle': Select_resultHandle
@@ -121,7 +129,7 @@ var Database = {
 		functionTransaction();
 	},
 	
-	load: function(objectArguments, functionCallback) {
+	load: function(objectArguments, functionCallback, functionProgress) {
 		var Transaction_objectstoreHandle = null;
 		
 		var functionTransaction = function() {
@@ -175,6 +183,10 @@ var Database = {
 			;
 			
 			requestHandle.onsuccess = function() {
+				functionProgress({
+					'intSize': SelectIterator_intIndex
+				});
+				
 				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
 					Select_strIdent = objectArguments.resultHandle[SelectIterator_intIndex].strIdent;
 					Select_longTimestamp = objectArguments.resultHandle[SelectIterator_intIndex].longTimestamp;
@@ -287,11 +299,13 @@ var History = {
 		bindHandle.port.on('historySynchronize', function(objectArguments) {
 			History.synchronize.call(bindHandle, objectArguments, function(objectArguments) {
 				bindHandle.port.emit('historySynchronize', objectArguments);
+			}, function(objectArguments) {
+				bindHandle.port.emit('historySynchronize-progress', objectArguments);
 			});
 		});
 	},
 	
-	synchronize: function(objectArguments, functionCallback) {
+	synchronize: function(objectArguments, functionCallback, functionProgress) {
 		var Search_resultHandle = [];
 		
 		var functionSearch = function() {
@@ -366,6 +380,10 @@ var History = {
 			;
 			
 			requestHandle.onsuccess = function() {
+				functionProgress({
+					'intSize': SelectIterator_intIndex
+				});
+				
 				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
 					Select_strIdent = Search_resultHandle[SelectIterator_intIndex].strIdent;
 					Select_longTimestamp = Search_resultHandle[SelectIterator_intIndex].longTimestamp;
@@ -505,6 +523,8 @@ var Youtube = {
 		bindHandle.port.on('youtubeSynchronize', function(objectArguments) {
 			Youtube.synchronize.call(bindHandle, objectArguments, function(objectArguments) {
 				bindHandle.port.emit('youtubeSynchronize', objectArguments);
+			}, function(objectArguments) {
+				bindHandle.port.emit('youtubeSynchronize-progress', objectArguments);
 			});
 		});
 		
@@ -594,7 +614,7 @@ var Youtube = {
 		functionCallback({});
 	},
 	
-	synchronize: function(objectArguments, functionCallback) {
+	synchronize: function(objectArguments, functionCallback, functionProgress) {
 		if (requirePreferences.get('extensions.YouRect.Youtube.strAccess', '') === '') {
 			functionCallback(null);
 			
@@ -684,7 +704,8 @@ var Youtube = {
 			}).get();
 		};
 		
-		var Playlistitems_intThreshold = objectArguments.intThreshold;
+		var Playlistitems_intNew = 0;
+		var Playlistitems_intExisting = 0
 		var Playlistitems_strNext = '';
 		var Playlistitems_resultHandle = [];
 		
@@ -713,12 +734,6 @@ var Youtube = {
 						
 						return;
 						
-					}
-					
-					{
-						if (responseHandle.json.nextPageToken === undefined) {
-							Playlistitems_intThreshold = 0;
-						}
 					}
 					
 					{
@@ -801,11 +816,13 @@ var Youtube = {
 			;
 			
 			requestHandle.onsuccess = function() {
-				if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
-					Playlistitems_intThreshold -= 1;
-				}
+				functionProgress({
+					'intSize': Playlistitems_intNew + Playlistitems_intExisting
+				});
 				
 				if ((requestHandle.result === undefined) || (requestHandle.result === null)) {
+					Playlistitems_intNew += 1;
+					
 					Select_strIdent = Playlistitems_resultHandle[SelectIterator_intIndex].strIdent;
 					Select_longTimestamp = Playlistitems_resultHandle[SelectIterator_intIndex].longTimestamp;
 					Select_strTitle = Playlistitems_resultHandle[SelectIterator_intIndex].strTitle;
@@ -814,6 +831,8 @@ var Youtube = {
 					functionPut();
 					
 				} else if ((requestHandle.result !== undefined) && (requestHandle.result !== null)) {
+					Playlistitems_intExisting += 1;
+					
 					Select_strIdent = requestHandle.result.strIdent;
 					Select_longTimestamp = Playlistitems_resultHandle[SelectIterator_intIndex].longTimestamp;
 					Select_strTitle = Playlistitems_resultHandle[SelectIterator_intIndex].strTitle;
@@ -821,6 +840,10 @@ var Youtube = {
 					
 					functionPut();
 					
+				}
+				
+				if (Playlistitems_intExisting > objectArguments.intThreshold) {
+					Playlistitems_strNext = '';
 				}
 			};
 		};
@@ -855,7 +878,7 @@ var Youtube = {
 		};
 		
 		var functionFinalize = function() {
-			if (Playlistitems_intThreshold > 0) {
+			if (Playlistitems_strNext !== '') {
 				functionPlaylistitems();
 				
 				return;
@@ -1149,6 +1172,8 @@ exports.main = function(optionsHandle) {
 		requireTimers.setInterval(function() {
 			Youtube.synchronize({
 				'intThreshold': 128
+			}, function(objectArguments) {
+				
 			}, function(objectArguments) {
 				
 			});
