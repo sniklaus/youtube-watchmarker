@@ -311,6 +311,10 @@ var History = {
 		var functionSearch = function() {
 			requireHistory.search({
 				'url': 'https://www.youtube.com/watch?v=*'
+			}, {
+				'count': objectArguments.intThreshold,
+				'sort': 'date',
+				'descending': true
 			}).on('end', function(resultHandle) {
 				{
 					for (var intFor1 = 0; intFor1 < resultHandle.length; intFor1 += 1) {
@@ -1170,6 +1174,14 @@ exports.main = function(optionsHandle) {
 	
 	{
 		requireTimers.setInterval(function() {
+			History.synchronize({
+				'intThreshold': 128
+			}, function(objectArguments) {
+				
+			}, function(objectArguments) {
+				
+			});
+
 			Youtube.synchronize({
 				'intThreshold': 128
 			}, function(objectArguments) {

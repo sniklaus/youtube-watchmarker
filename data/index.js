@@ -173,7 +173,9 @@ var History = {
 		}
 		
 		{
-			self.port.emit('historySynchronize', {});
+			self.port.emit('historySynchronize', {
+				'intThreshold': 32768
+			});
 		}
 	},
 	
