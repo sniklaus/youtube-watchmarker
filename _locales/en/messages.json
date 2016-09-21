@@ -1,0 +1,89 @@
+{
+	"General_Caption": {
+		"message": "Youtube Watchmarker"
+	},
+
+	"General_Description": {
+		"message": "Automatically mark videos that you have already watched."
+	},
+
+	"General_ModalLoading_Message": {
+		"message": "Message:"
+	},
+
+	"General_ModalLoading_Progress": {
+		"message": "Progress:"
+	},
+
+	"General_ModalLoading_Close": {
+		"message": "Close"
+	},
+
+	"Database_Caption": {
+		"message": "Database"
+	},
+
+	"Database_Description": {
+		"message": "The database is only stored within Firefox, which is why removing the browser or even just this addon would lead to the loss of your timeline. You are therefore highly encouraged to regularly export the database in order to have a backup."
+	},
+
+	"Database_Export": {
+		"message": "Export"
+	},
+
+	"Database_Import": {
+		"message": "Import"
+	},
+
+	"Database_Reset": {
+		"message": "Reset"
+	},
+
+	"Database_Size": {
+		"message": "Size:"
+	},
+
+	"Database_ModalReset_Description": {
+		"message": "Do you really want to reset the database, clearing your entire timeline?"
+	},
+
+	"Database_ModalReset_Yes": {
+		"message": "Yes"
+	},
+
+	"Database_ModalReset_No": {
+		"message": "No"
+	},
+
+	"History_Caption": {
+		"message": "History"
+	},
+
+	"History_Description": {
+		"message": "The history of your browser provides a straightforward way to initialize your timeline, which you can manually initiate. It is usually not necessary to use this feature more than once, as every subsequent activity on Youtube will already be tracked by this addon."
+	},
+
+	"History_Synchronize": {
+		"message": "Synchronize"
+	},
+
+	"History_Timestamp": {
+		"message": "Timestamp:"
+	},
+
+	"Youtube_Caption": {
+		"message": "Youtube"
+	},
+
+	"Youtube_Description": {
+		"message": "In order to synchronize your timeline across multiple devices, this addon fetches your browsing information directly from your Youtube account. It will in this regard automatically fetch the most recent activity every hour, but you can manually initiate a complete fetch of the entire browsing information."
+	},
+
+	"Youtube_Synchronize": {
+		"message": "Synchronize"
+	},
+
+	"Youtube_Timestamp": {
+		"message": "Timestamp:"
+	}
+}

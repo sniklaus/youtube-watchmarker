@@ -2,100 +2,120 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-		
+
 		<meta name="viewport" content="width=1000" />
 		
 		<title>@string/General_Caption</title>
+
+		<link rel="icon" type="image/png" href="images/icon.png" />
+
+		<script type="text/javascript" src="jquery.js"></script>
+
+		<script type="text/javascript" src="moment.js"></script>
 		
-		<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAxlBMVEUAAABOWZ5BTZhCTZhHUpt7g7d5gbZ5grZ5grZ6grZsda9tdq9tdrBtd7Bsdq9ye7Jye7JzfLN0fbNxerJdaKdeaadfaahfaqhha6ldZ6dfaahfaqhjbat/h7mAh7mFjLx8hLh3gLV6grZ6grdfaahgaqlibKpha6ljbapRXKBSXKBUX6JTXqFSXaH///+uuNXEzOHx9Pvb4O+5wtv8/f+zvdi+x97m6vXr7/edqcujrs6/x97V2+vg5fGNmcKXo8jJ0eXQ1ucIdJUyAAAALnRSTlMACR0dI1BRUVJSiIiIiIi8vb29vdbW1tbW4uLi4uzs7Ozs7Ozx8fHx8f39/f39FstVagAAALZJREFUeNptz8cWgkAMBVAYR8Xee1fAnoQBBOz+/0+ZgaVmlXcX7ySG8TumKLV3x6PbsoSZZlkbLq7JlWb9itQiqtMn+vEDIn9cFgzWgBDD8AHB5dazGFqzAHk88PCzbDK45KUZgjuSw3BS4N85A1xQHTRE4PlxCqHaM2yJdyKKAGKydemcQde8AVYdhmKfMsCAugV9WGXCohAVjdLDTFnvremWvDbdssyeEYWmc97bjXzO/PP7F9bvG7XExUxsAAAAAElFTkSuQmCC" />
-		
-		<script type="text/javascript" src="chrome://yourect/content/jquery.js"></script>
-		
-		<script type="text/javascript" src="chrome://yourect/content/moment.js"></script>
-		
-		<link rel="stylesheet" type="text/css" href="chrome://yourect/content/bootstrap.css" />
+		<link rel="stylesheet" type="text/css" href="bootstrap.css" />
 		<style type="text/css">
 			.modal-overlay {
 				display:none;
-			    position:fixed;
-			    
-			    left:0px;
-			    right:0px;
-			    top:0px;
-			    bottom:0px;
-			    
-			    z-index:12000;
+				position:fixed;
+
+				left:0px;
+				right:0px;
+				top:0px;
+				bottom:0px;
+
+				z-index:12000;
 			}
-			
+
 			.modal-dialog {
 				display:none;
-			    position:fixed;
-			    
-			    left:50%;
-			    top:50%;
-			    
-			    width:100%;
-			    
-			    z-index:12000;
-			    
+				position:fixed;
+
+				left:50%;
+				top:50%;
+
+				width:100%;
+
+				z-index:12000;
+
 				margin:0px;
-			  	border:none;
+				border:none;
 				border-spacing:0px;
 				padding:15px;
 			}
 		</style>
-		
-		<link rel="stylesheet" type="text/css" href="chrome://yourect/content/fontawesome.css" />
-		
-		<script type="text/javascript" src="chrome://yourect/content/filesaver.js"></script>
+
+		<link rel="stylesheet" type="text/css" href="fontawesome.css" />
+
+		<script type="text/javascript" src="filesaver.js"></script>
 		
 		<script type="text/javascript">
-			Components.utils.import('resource://gre/modules/Services.jsm');
-			
 			var jsLanguage = {
 				getStrStrings: function() {
-					var strStrings = [];
-					
-					{
-						var enumeratorHandle = Services.strings.createBundle('chrome://yourect/locale/strings.properties').getSimpleEnumeration();
-						
-						do {
-							if (enumeratorHandle.hasMoreElements() === false) {
-								break;
-							}
-							
-							var propertyHandle = enumeratorHandle.getNext().QueryInterface(Components.interfaces.nsIPropertyElement);
-							
-							{
-								strStrings.push({
-									'strName': propertyHandle.key,
-									'strValue': propertyHandle.value
-								});
-							}
-						} while (true);
-					}
-					
-					return JSON.stringify(strStrings);
+					return '[]';
 				}
 			};
+
+			jQuery(window.document).ready(function() {
+				var strStrings = window.document.body.innerHTML.match(new RegExp('(@string\\/)([a-zA-Z_]+)', 'g'));
+
+				strStrings.push('@string/General_Caption');
+
+				for (var intFor1 = 0; intFor1 < strStrings.length; intFor1 += 1) {
+					var strString = strStrings[intFor1].substr(8);
+
+					for (var intFor2 = 0; intFor2 < Language.objectStrings.length; intFor2 += 1) {
+						if (Language.objectStrings[intFor2].strName === strString) {
+							strString = null;
+						}
+					}
+
+					if (strString !== null) {
+						Language.objectStrings.push({
+							'strName': strString,
+							'strValue': chrome.i18n.getMessage(strString)
+						});
+					}
+				}
+			});
 		</script>
-		<script type="text/javascript" src="chrome://yourect/content/libLanguage.js"></script>
-		<script type="text/javascript" src="chrome://yourect/content/libModal.js"></script>
-		
-		<script type="text/javascript" src="chrome://yourect/content/libPreferenceDatabase.js"></script>
-		<script type="text/javascript" src="chrome://yourect/content/libPreferenceDatabaseObserver.js"></script>
-		<script type="text/javascript" src="chrome://yourect/content/libPreferenceYoutube.js"></script>
-		<script type="text/javascript" src="chrome://yourect/content/libPreferenceYoutubeObserver.js"></script>
+		<script type="text/javascript" src="libLanguage.js"></script>
+		<script type="text/javascript" src="libModal.js"></script>
+
+		<script type="text/javascript" src="index.js"></script>
 	</head>
 	<body style="background-color:#EEEEEE;">
 		<div style="max-width:700px; margin:0px auto 0px auto; padding:20px 20px 0px 20px;">
 			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idGeneral_ModalLoading" style="width:100px;">
+			<div class="modal-dialog" id="idGeneral_ModalLoading" style="width:400px;">
 				<div class="panel panel-default modal-content">
 					<div class="panel-body">
-						<center>
-							<img width="31" height="31" border="0" src="data:image/gif;base64,R0lGODlhHwAfAPUAAP///wAAAOjo6NLS0ry8vK6urqKiotzc3Li4uJqamuTk5NjY2KqqqqCgoLCwsMzMzPb29qioqNTU1Obm5jY2NiYmJlBQUMTExHBwcJKSklZWVvr6+mhoaEZGRsbGxvj4+EhISDIyMgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAHwAfAAAG/0CAcEgUDAgFA4BiwSQexKh0eEAkrldAZbvlOD5TqYKALWu5XIwnPFwwymY0GsRgAxrwuJwbCi8aAHlYZ3sVdwtRCm8JgVgODwoQAAIXGRpojQwKRGSDCRESYRsGHYZlBFR5AJt2a3kHQlZlERN2QxMRcAiTeaG2QxJ5RnAOv1EOcEdwUMZDD3BIcKzNq3BJcJLUABBwStrNBtjf3GUGBdLfCtadWMzUz6cDxN/IZQMCvdTBcAIAsli0jOHSJeSAqmlhNr0awo7RJ19TJORqdAXVEEVZyjyKtE3Bg3oZE2iK8oeiKkFZGiCaggelSTiA2LhxiZLBSjZjBL2siNBOFQ84LxHA+mYEiRJzBO7ZCQIAIfkECQoAAAAsAAAAAB8AHwAABv9AgHBIFAwIBQPAUCAMBMSodHhAJK5XAPaKOEynCsIWqx0nCIrvcMEwZ90JxkINaMATZXfju9jf82YAIQxRCm14Ww4PChAAEAoPDlsAFRUgHkRiZAkREmoSEXiVlRgfQgeBaXRpo6MOQlZbERN0Qx4drRUcAAJmnrVDBrkVDwNjr8BDGxq5Z2MPyUQZuRgFY6rRABe5FgZjjdm8uRTh2d5b4NkQY0zX5QpjTc/lD2NOx+WSW0++2RJmUGJhmZVsQqgtCE6lqpXGjBchmt50+hQKEAEiht5gUcTIESR9GhlgE9IH0BiTkxrMmWIHDkose9SwcQlHDsOIk9ygiVbl5JgMLuV4HUmypMkTOkEAACH5BAkKAAAALAAAAAAfAB8AAAb/QIBwSBQMCAUDwFAgDATEqHR4QCSuVwD2ijhMpwrCFqsdJwiK73DBMGfdCcZCDWjAE2V347vY3/NmdXNECm14Ww4PChAAEAoPDltlDGlDYmQJERJqEhGHWARUgZVqaWZeAFZbERN0QxOeWwgAAmabrkMSZkZjDrhRkVtHYw+/RA9jSGOkxgpjSWOMxkIQY0rT0wbR2LQV3t4UBcvcF9/eFpdYxdgZ5hUYA73YGxruCbVjt78G7hXFqlhY/fLQwR0HIQdGuUrTz5eQdIc0cfIEwByGD0MKvcGSaFGjR8GyeAPhIUofQGNQSgrB4IsdOCqx7FHDBiYcOQshYjKDxliVDpRjunCjdSTJkiZP6AQBACH5BAkKAAAALAAAAAAfAB8AAAb/QIBwSBQMCAUDwFAgDATEqHR4QCSuVwD2ijhMpwrCFqsdJwiK73DBMGfdCcZCDWjAE2V347vY3/NmdXNECm14Ww4PChAAEAoPDltlDGlDYmQJERJqEhGHWARUgZVqaWZeAFZbERN0QxOeWwgAAmabrkMSZkZjDrhRkVtHYw+/RA9jSGOkxgpjSWOMxkIQY0rT0wbR2I3WBcvczltNxNzIW0693MFYT7bTumNQqlisv7BjswAHo64egFdQAbj0RtOXDQY6VAAUakihN1gSLaJ1IYOGChgXXqEUpQ9ASRlDYhT0xQ4cACJDhqDD5mRKjCAYuArjBmVKDP9+VRljMyMHDwcfuBlBooSCBQwJiqkJAgAh+QQJCgAAACwAAAAAHwAfAAAG/0CAcEgUDAgFA8BQIAwExKh0eEAkrlcA9oo4TKcKwharHScIiu9wwTBn3QnGQg1owBNld+O72N/zZnVzRApteFsODwoQABAKDw5bZQxpQ2JkCRESahIRh1gEVIGVamlmXgBWWxETdEMTnlsIAAJmm65DEmZGYw64UZFbR2MPv0QPY0hjpMYKY0ljjMZCEGNK09MG0diN1gXL3M5bTcTcyFtOvdzBWE+207pjUKpYrL+wY7MAB4EerqZjUAG4lKVCBwMbvnT6dCXUkEIFK0jUkOECFEeQJF2hFKUPAIkgQwIaI+hLiJAoR27Zo4YBCJQgVW4cpMYDBpgVZKL59cEBhw+U+QROQ4bBAoUlTZ7QCQIAIfkECQoAAAAsAAAAAB8AHwAABv9AgHBIFAwIBQPAUCAMBMSodHhAJK5XAPaKOEynCsIWqx0nCIrvcMEwZ90JxkINaMATZXfju9jf82Z1c0QKbXhbDg8KEAAQCg8OW2UMaUNiZAkREmoSEYdYBFSBlWppZl4AVlsRE3RDE55bCAACZpuuQxJmRmMOuFGRW0djD79ED2NIY6TGCmNJY4zGQhBjStPTFBXb21DY1VsGFtzbF9gAzlsFGOQVGefIW2LtGhvYwVgDD+0V17+6Y6BwaNfBwy9YY2YBcMAPnStTY1B9YMdNiyZOngCFGuIBxDZAiRY1eoTvE6UoDEIAGrNSUoNBUuzAaYlljxo2M+HIeXiJpRsRNMaq+JSFCpsRJEqYOPH2JQgAIfkECQoAAAAsAAAAAB8AHwAABv9AgHBIFAwIBQPAUCAMBMSodHhAJK5XAPaKOEynCsIWqx0nCIrvcMEwZ90JxkINaMATZXfjywjlzX9jdXNEHiAVFX8ODwoQABAKDw5bZQxpQh8YiIhaERJqEhF4WwRDDpubAJdqaWZeAByoFR0edEMTolsIAA+yFUq2QxJmAgmyGhvBRJNbA5qoGcpED2MEFrIX0kMKYwUUslDaj2PA4soGY47iEOQFY6vS3FtNYw/m1KQDYw7mzFhPZj5JGzYGipUtESYowzVmF4ADgOCBCZTgFQAxZBJ4AiXqT6ltbUZhWdToUSR/Ii1FWbDnDkUyDQhJsQPn5ZU9atjUhCPHVhgTNy/RSKsiqKFFbUaQKGHiJNyXIAAh+QQJCgAAACwAAAAAHwAfAAAG/0CAcEh8JDAWCsBQIAwExKhU+HFwKlgsIMHlIg7TqQeTLW+7XYIiPGSAymY0mrFgA0LwuLzbCC/6eVlnewkADXVECgxcAGUaGRdQEAoPDmhnDGtDBJcVHQYbYRIRhWgEQwd7AB52AGt7YAAIchETrUITpGgIAAJ7ErdDEnsCA3IOwUSWaAOcaA/JQ0amBXKa0QpyBQZyENFCEHIG39HcaN7f4WhM1uTZaE1y0N/TacZoyN/LXU+/0cNyoMxCUytYLjm8AKSS46rVKzmxADhjlCACMFGkBiU4NUQRxS4OHijwNqnSJS6ZovzRyJAQo0NhGrgs5bIPmwWLCLHsQsfhxBWTe9QkOzCwC8sv5Ho127akyRM7QQAAOwAAAAAAAAAAAA==">
-						</center>
+						<table class="table" style="margin:0px;">
+							<tr>
+								<th style="width:1%; border:none; text-align:right; white-space:nowrap;">
+									@string/General_ModalLoading_Message
+								</th>
+								<td style="border:none;">
+									<span id="idGeneral_ModalLoading_Message"></span>
+								</td>
+							</tr>
+							<tr>
+								<th style="text-align:right; white-space:nowrap;">
+									@string/General_ModalLoading_Progress
+								</th>
+								<td>
+									<span id="idGeneral_ModalLoading_Progress"></span>
+								</td>
+							</tr>
+						</table>
+						
+						<hr></hr>
+						
+						<div class="pull-right">
+							<a class="btn btn-primary" id="idGeneral_ModalLoading_Close">
+								@string/General_ModalLoading_Close
+							</a>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -173,111 +193,35 @@
 					<a class="btn btn-primary" id="idHistory_Synchronize">
 						@string/History_Synchronize
 					</a>
-				</div>
-			</div>
-			
-			<div class="panel panel-default modal-content">
-				<div class="panel-heading">
-					@string/Youin_Caption
-				</div>
-				<div class="panel-body">
-					<div style="text-align:justify;">
-						@string/Youin_Description
-					</div>
-					
-					<div style="height:15px;"></div>
-					
-					<a class="btn btn-primary" id="idYouin_Authorize">
-						@string/Youin_Authorize
-					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
-						<input class="form-control" id="idYouin_Key" type="text" placeholder="@string/Youin_Key" />
-					</div>
-					
-					<a class="btn btn-primary" id="idYouin_Login">
-						@string/Youin_Login
-					</a>
-				</div>
-			</div>
-			
-			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idYouin_ModalLogin" style="width:400px;">
-				<div class="panel panel-default modal-content">
-					<div class="panel-body">
-						<div class="alert alert-info" id="idYouin_ModalLogin_Loading" style="text-align:justify;">
-							@string/Youin_ModalLogin_Loading
-						</div>
-						
-						<div class="alert alert-danger" id="idYouin_ModalLogin_Error" style="text-align:justify;">
-							@string/Youin_ModalLogin_Error
-						</div>
-						
-						<div class="alert alert-success" id="idYouin_ModalLogin_Success" style="text-align:justify;">
-							@string/Youin_ModalLogin_Success
-						</div>
-						
-						<hr></hr>
-						
-						<div class="pull-right">
-							<a class="btn btn-primary" id="idYouin_ModalLogin_Close">
-								@string/Youin_ModalLogin_Close
-							</a>
-						</div>
+						<div class="input-group">
+							<div class="input-group-addon" style="text-align:right;">@string/History_Timestamp</div>
+							<div class="form-control" id="idHistory_Timestamp" style="width:auto;"></div>
+						</div>	
 					</div>
 				</div>
 			</div>
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/Youauth_Caption
+					@string/Youtube_Caption
 				</div>
 				<div class="panel-body">
 					<div style="text-align:justify;">
-						@string/Youauth_Description
+						@string/Youtube_Description
 					</div>
 					
 					<div style="height:15px;"></div>
 					
-					<a class="btn btn-primary" id="idYouauth_Logout">
-						@string/Youauth_Logout
-					</a>
-					
-					<a class="btn btn-primary" id="idYouauth_Synchronize">
-						@string/Youauth_Synchronize
+					<a class="btn btn-primary" id="idYoutube_Synchronize">
+						@string/Youtube_Synchronize
 					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
 						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">@string/Youauth_Timestamp</div>
-							<div class="form-control" id="idYouauth_Timestamp" style="width:auto;"></div>
-						</div>
-					</div>
-				</div>
-			</div>
-			
-			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idYouauth_ModalSynchronize" style="width:400px;">
-				<div class="panel panel-default modal-content">
-					<div class="panel-body">
-						<div class="alert alert-info" id="idYouauth_ModalSynchronize_Loading" style="text-align:justify;">
-							@string/Youauth_ModalSynchronize_Loading
-						</div>
-						
-						<div class="alert alert-danger" id="idYouauth_ModalSynchronize_Error" style="text-align:justify;">
-							@string/Youauth_ModalSynchronize_Error
-						</div>
-						
-						<div class="alert alert-success" id="idYouauth_ModalSynchronize_Success" style="text-align:justify;">
-							@string/Youauth_ModalSynchronize_Success
-						</div>
-						
-						<hr></hr>
-						
-						<div class="pull-right">
-							<a class="btn btn-primary" id="idYouauth_ModalSynchronize_Close">
-								@string/Youauth_ModalSynchronize_Close
-							</a>
+							<div class="input-group-addon" style="text-align:right;">@string/Youtube_Timestamp</div>
+							<div class="form-control" id="idYoutube_Timestamp" style="width:auto;"></div>
 						</div>
 					</div>
 				</div>
