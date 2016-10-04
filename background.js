@@ -464,22 +464,10 @@ var History = {
 History.init();
 
 var Youtube = {
-	objectPort: [],
-	
 	init: function() {
 		{
-			Youtube.objectPort = [];
-
 			chrome.runtime.onConnect.addListener(function(objectPort) {
 				if (objectPort.name === 'youtube') {
-					Youtube.objectPort.push(objectPort);
-
-					objectPort.onDisconnect.addListener(function() {
-						if (Youtube.objectPort.indexOf(objectPort) !== -1) {
-							Youtube.objectPort.splice(Youtube.objectPort.indexOf(objectPort), 1);
-						}
-					});
-
 					objectPort.onMessage.addListener(function(objectData) {
 						if (objectData.strMessage === 'youtubeSynchronize') {
 							Youtube.synchronize(objectData.objectArguments, function(objectArguments) {
@@ -528,9 +516,7 @@ var Youtube = {
 	},
 	
 	dispel: function() {
-		{
-			Youtube.objectPort = [];
-		}
+		
 	},
 	
 	synchronize: function(objectArguments, functionCallback, functionProgress) {
@@ -846,17 +832,15 @@ var Youtube = {
 
 		var functionBroadcast = function() {
 			{
-				for (var intFor1 = 0; intFor1 < Youtube.objectPort.length; intFor1 += 1) {
-					Youtube.objectPort[intFor1].postMessage({
-						'strMessage': 'youtubeLookup',
-						'objectArguments': {
-							'strIdent': Select_strIdent,
-							'longTimestamp': Select_longTimestamp,
-							'strTitle': Select_strTitle,
-							'intCount': Select_intCount
-						}
-					});
-				}
+				chrome.tabs.query({
+					'url': '*://*.youtube.com/*'
+				}, function(objectTabs) {
+					for (var intFor1 = 0; intFor1 < objectTabs.length; intFor1 += 1) {
+						chrome.tabs.sendMessage(objectTabs[intFor1].id, {
+							'strMessage': 'youtubeUpdate'
+						});
+					}
+				});
 			}
 			
 			functionCallback({
@@ -920,6 +904,16 @@ Youtube.init();
 		chrome.tabs.create({
 			'url': 'content/index.html'
 		});
+	});
+}
+
+{
+	chrome.webRequest.onCompleted.addListener(function(objectData) {
+		chrome.tabs.sendMessage(objectData.tabId, {
+			'strMessage': 'youtubeUpdate'
+		});
+	}, {
+		'urls': [ '*://*.youtube.com/*' ]
 	});
 }
 

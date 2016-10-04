@@ -103,7 +103,7 @@ var Youtube = {
 				}
 			}
 		}
-		
+
 		if (strIdent === '') {
 			return;
 			
@@ -272,65 +272,15 @@ var Youtube = {
 Youtube.init();
 
 {
-	var objectObserver = new MutationObserver(function() {
-		if (objectObserver.intThreshold === 0) {
-			objectObserver.disconnect();
-			
-			return;
-		}
-		
-		{
-			objectObserver.intThreshold -= 1;
-		}
-		
-		{
-			Youtube.ensure();
+	chrome.runtime.onMessage.addListener(function(objectData) {
+		if (objectData.strMessage === 'youtubeUpdate') {
+			{
+				Youtube.ensure();
 
-			Youtube.watch();
-			
-		   	Youtube.lookup();
+				Youtube.watch();
+
+				Youtube.lookup();
+			}
 		}
 	});
-	
-	window.document.onclick = function(objectEvent) {
-		if (objectEvent.button !== 0) {
-			return;
-		}
-		
-		{
-			objectObserver.intThreshold = 8;
-		}
-		
-		{
-			objectObserver.disconnect();
-			
-			objectObserver.observe(window.document, {
-				'childList': true,
-				'subtree': true
-			});
-		}
-	};
-	
-	window.setInterval(function() {
-		if (objectObserver.strHref === window.location.href) {
-			return;
-		}
-		
-		{
-			objectObserver.strHref = window.location.href;
-		}
-		
-		{
-			objectObserver.intThreshold = 8;
-		}
-		
-		{
-			objectObserver.disconnect();
-			
-			objectObserver.observe(window.document, {
-				'childList': true,
-				'subtree': true
-			});
-		}
-	}, 500);
 }
