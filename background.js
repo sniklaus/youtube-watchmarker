@@ -918,6 +918,16 @@ Youtube.init();
 }
 
 {
+	chrome.webNavigation.onHistoryStateUpdated.addListener(function(objectData) {
+		if (objectData.url.indexOf('youtube.com') !== -1) {
+			chrome.tabs.sendMessage(objectData.tabId, {
+				'strMessage': 'youtubeUpdate'
+			});
+		}
+	});
+}
+
+{
 	chrome.alarms.create('synchronize', {
 		'periodInMinutes': 60
 	});

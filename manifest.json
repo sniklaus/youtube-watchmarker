@@ -5,14 +5,14 @@
 	"description": "__MSG_General_Description__",
 	"homepage_url": "http://www.coderect.com/",
 
-	"version": "2.1.1",
+	"version": "2.3.1",
 
 	"default_locale": "en",
 
-	"permissions": [ "alarms", "history", "tabs", "webRequest", "*://*.youtube.com/*", "*://*.ytimg.com/*" ],
+	"permissions": [ "alarms", "history", "tabs", "webRequest", "webNavigation", "*://*.youtube.com/*" ],
 
 	"icons": {
-		"256": "content/images/icon.png"
+		"192": "content/images/icon.png"
 	},
 
 	"applications": {
@@ -38,7 +38,7 @@
 		"browser_style": false,
 		"default_title": "Youtube Watchmarker",
 		"default_icon": {
-			"256" : "content/images/toolbaricon.png"
+			"192" : "content/images/toolbar.png"
 		}
 	}
 }
