@@ -5,3 +5,23 @@
 .watched .yt-uix-simple-thumb-related {
 	opacity:0.3;
 }
+
+.watched-badge {
+	position:absolute;
+
+	left:10px;
+	top:10px;
+
+	padding:2px 6px 2px 6px;
+
+	background-color:#000000;
+
+	color:#FFFFFF;
+	font-size:11px;
+	font-weight:normal;
+	font-family:inherit;
+	text-decoration:none;
+	text-align:left;
+	line-height:1.42857143;
+	white-space:normal;
+}

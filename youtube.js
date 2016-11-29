@@ -69,6 +69,34 @@ var Youtube = {
 				}
 			}
 		}
+
+		{
+			var objectProgressbars = document.getElementsByClassName('resume-playback-progress-bar');
+
+			for (var intFor1 = 0; intFor1 < objectProgressbars.length; intFor1 += 1) {
+				var strIdent = '';
+				
+				{
+					if (objectProgressbars[intFor1].parentNode.children[0].getAttribute('href') !== null) {
+						if (objectProgressbars[intFor1].parentNode.children[0].getAttribute('href').substr(0, 9) === '/watch?v=') {
+							strIdent = objectProgressbars[intFor1].parentNode.children[0].getAttribute('href').substr(9).split('&')[0]; 
+						}
+					}
+				}
+				
+				if (strIdent === '') {
+					continue;
+					
+				} else if (objectProgressbars[intFor1].parentNode.children[0].getElementsByTagName('img').length === 0) {
+					continue;
+
+				}
+				
+				{
+					strIdentities.push(strIdent);
+				}
+			}
+		}
 		
 		{
 			Youtube.objectPort.postMessage({
@@ -97,7 +125,13 @@ var Youtube = {
 		}
 		
 		{
-			if (window.document.getElementById('eow-title') !== null) {
+			if (window.document.getElementById('info') !== null) { // new
+				if (window.document.getElementById('info').getElementsByClassName('title').length === 1) {
+					strTitle = window.document.getElementById('info').getElementsByClassName('title')[0].innerHTML
+				}
+			}
+
+			if (window.document.getElementById('eow-title') !== null) { // old
 				if (window.document.getElementById('eow-title').getAttribute('title') !== null) {
 					strTitle = window.document.getElementById('eow-title').getAttribute('title');
 				}
@@ -125,7 +159,13 @@ var Youtube = {
 		}
 		
 		{
-			if (window.document.getElementById('watch-header') !== null) {
+			if (window.document.getElementById('info') !== null) { // new
+				if (window.document.getElementById('watch-header-badge') !== null) {
+					window.document.getElementById('watch-header').removeChild(window.document.getElementById('watch-header-badge'));
+				}
+			}
+
+			if (window.document.getElementById('watch-header') !== null) { // old
 				if (window.document.getElementById('watch-header-badge') !== null) {
 					window.document.getElementById('watch-header').removeChild(window.document.getElementById('watch-header-badge'));
 				}
@@ -152,13 +192,35 @@ var Youtube = {
 		
 		{
 			if (objectArguments.intCount > 1) {
-				if (window.document.getElementById('watch-header') !== null) {
+				if (window.document.getElementById('info') !== null) { // new
 					var objectBadge = window.document.createElement('div')
 					
 					{
 						objectBadge.classList.add('watched-badge');
 
-						objectBadge.id = 'player-watched-badge';
+						objectBadge.id = 'watch-header-badge';
+
+						objectBadge.style.left = 'auto';
+						objectBadge.style.right = '0px';
+						objectBadge.style.zIndex = 10000;
+
+						objectBadge.innerHTML = 'WATCHED';
+					}
+
+					{
+						window.document.getElementById('watch-header').style.position = 'relative';
+					}
+					
+					window.document.getElementById('watch-header').appendChild(objectBadge);
+				}
+
+				if (window.document.getElementById('watch-header') !== null) { // old
+					var objectBadge = window.document.createElement('div')
+					
+					{
+						objectBadge.classList.add('watched-badge');
+
+						objectBadge.id = 'watch-header-badge';
 
 						objectBadge.style.left = 'auto';
 						objectBadge.style.right = '10px';
