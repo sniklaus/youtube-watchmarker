@@ -127,7 +127,7 @@ var Youtube = {
 		{
 			if (window.document.getElementById('info') !== null) { // new
 				if (window.document.getElementById('info').getElementsByClassName('title').length === 1) {
-					strTitle = window.document.getElementById('info').getElementsByClassName('title')[0].innerHTML
+					strTitle = window.document.getElementById('info').getElementsByClassName('title')[0].textContent
 				}
 			}
 
@@ -204,7 +204,7 @@ var Youtube = {
 						objectBadge.style.right = '0px';
 						objectBadge.style.zIndex = 10000;
 
-						objectBadge.innerHTML = 'WATCHED';
+						objectBadge.textContent = 'WATCHED';
 					}
 
 					{
@@ -226,7 +226,7 @@ var Youtube = {
 						objectBadge.style.right = '10px';
 						objectBadge.style.zIndex = 10000;
 
-						objectBadge.innerHTML = 'WATCHED';
+						objectBadge.textContent = 'WATCHED';
 					}
 
 					{
@@ -322,7 +322,7 @@ var Youtube = {
 					{
 						objectBadge.classList.add('watched-badge');
 
-						objectBadge.innerHTML = 'WATCHED';
+						objectBadge.textContent = 'WATCHED';
 					}
 					
 					objectVideo.appendChild(objectBadge);
