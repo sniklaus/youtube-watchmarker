@@ -97,13 +97,6 @@ var Database = {
 		{
 			jQuery('#idDatabase_Size').triggerHandler('update');
 		}
-		
-		{
-
-			window.saveAs(new Blob([ btoa(unescape(encodeURIComponent(JSON.stringify(objectArguments.objectResults)))) ], {
-				'type': 'text/plain'
-			}), moment(new Date().getTime()).format('YYYY.MM.DD') + '.database');
-		}
 	},
 	
 	saveProgress: function(objectArguments) {

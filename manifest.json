@@ -5,11 +5,11 @@
 	"description": "__MSG_General_Description__",
 	"homepage_url": "http://www.coderect.com/",
 
-	"version": "2.4.1",
+	"version": "2.5.1",
 
 	"default_locale": "en",
 
-	"permissions": [ "alarms", "history", "tabs", "webRequest", "webNavigation", "*://*.youtube.com/*" ],
+	"permissions": [ "alarms", "downloads", "history", "tabs", "webRequest", "webNavigation", "*://*.youtube.com/*" ],
 
 	"icons": {
 		"72": "content/images/icon.png"

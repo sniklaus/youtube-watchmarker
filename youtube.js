@@ -119,7 +119,7 @@ var Youtube = {
 		{
 			if (window.location !== null) {
 				if (window.location.href.split('/watch?v=').length === 2) {
-					strIdent = window.location.href.split('/watch?v=')[1].split('&')[0]; 
+					strIdent = window.location.href.split('/watch?v=')[1].split('&')[0];
 				}
 			}
 		}
@@ -127,7 +127,7 @@ var Youtube = {
 		{
 			if (window.document.getElementById('info') !== null) { // new
 				if (window.document.getElementById('info').getElementsByClassName('title').length === 1) {
-					strTitle = window.document.getElementById('info').getElementsByClassName('title')[0].textContent
+					strTitle = window.document.getElementById('info').getElementsByClassName('title')[0].textContent;
 				}
 			}
 

@@ -108,9 +108,15 @@ var Database = {
 				});
 				
 				if ((objectRequest.result === undefined) || (objectRequest.result === null)) {
-					functionCallback({
-						'objectResults': Select_objectResults
+					chrome.downloads.download({
+						'url' : URL.createObjectURL(new Blob([ btoa(unescape(encodeURIComponent(JSON.stringify(Select_objectResults)))) ], {
+							'type': 'text/plain'
+						})),
+						'filename': new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.database',
+						'saveAs': true
 					});
+
+					functionCallback({});
 					
 				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
 					Select_objectResults.push({
