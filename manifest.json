@@ -9,7 +9,7 @@
 
 	"default_locale": "en",
 
-	"permissions": [ "alarms", "downloads", "history", "tabs", "webRequest", "webNavigation", "*://*.youtube.com/*" ],
+	"permissions": [ "alarms", "downloads", "history", "tabs", "webRequest", "webNavigation", "*://*.youtube.com/*", "*://*.ytimg.com/*" ],
 
 	"icons": {
 		"72": "content/images/icon.png"

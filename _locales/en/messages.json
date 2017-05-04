@@ -85,5 +85,13 @@
 
 	"Youtube_Timestamp": {
 		"message": "Timestamp:"
+	},
+
+	"Visualization_Caption": {
+		"message": "Visualization"
+	},
+
+	"Visualization_Hideprogress": {
+		"message": "Hide the progressbar that is being shown underneath watched videos."
 	}
 }

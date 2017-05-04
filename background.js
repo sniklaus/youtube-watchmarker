@@ -332,15 +332,18 @@ var History = {
 						if (objectResult[intFor1].url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
 							continue;
 
-						} else if (objectResult[intFor1].url.split('/watch?v=').length !== 2) {
-							continue;
+						} else if (objectResult[intFor1].title === null) {
+							continue
+
+						} else if (objectResult[intFor1].title.indexOf(' - YouTube') !== objectResult[intFor1].title.length - 10) {
+							continue
 
 						}
-						
+
 						Search_objectResults.push({
-							'strIdent': objectResult[intFor1].url.split('/watch?v=')[1].split('&')[0],
+							'strIdent': objectResult[intFor1].url.substr(32).substr(0, 11),
 							'longTimestamp': objectResult[intFor1].lastVisitTime,
-							'strTitle': objectResult[intFor1].title,
+							'strTitle': objectResult[intFor1].title.slice(0, -10),
 							'intCount': objectResult[intFor1].visitCount
 						});
 					}
@@ -526,6 +529,8 @@ var Youtube = {
 	},
 	
 	synchronize: function(objectArguments, functionCallback, functionProgress) {
+		var History_strIdent = '';
+		var History_strPost = '';
 		var History_strContinuation = 'https://www.youtube.com/feed/history';
 		var History_objectResults = [];
 		
@@ -538,37 +543,100 @@ var Youtube = {
 				}
 
 				{
-					History_strContinuation = ''
+					History_strContinuation = '';
 
 					History_objectResults = [];
 				}
 
 				{
-					var strMore = '';
 					var strContent = '';
 
 					try {
-						var objectResponse = JSON.parse(objectAjax.responseText);
+						var objectResponse = JSON.parse(objectAjax.responseText); // old
 
-						strMore = objectResponse.load_more_widget_html;
-						strContent = objectResponse.content_html;
+						if (objectResponse.content_html === undefined) {
+							throw new Error();
+
+						} else if (objectResponse.load_more_widget_html === undefined) {
+							throw new Error();
+
+						}
+
+						strContent += objectResponse.content_html;
+						strContent += objectResponse.load_more_widget_html;
 					} catch (objectError) {
-						strMore = objectAjax.responseText;
 						strContent = objectAjax.responseText;
 					}
 
-					var strContinuation = strMore.split('href="/browse_ajax?action_continuation');
+					{
+						var strExec = new RegExp('("ID_TOKEN")([ ]*)(:)([ ]*)(")([^"]+)(")', 'g').exec(strContent);
 
-					if (strContinuation.length === 2) {
-						History_strContinuation = 'https://www.youtube.com/browse_ajax?action_continuation' + strContinuation[1].split('"')[0];
+						if (strExec !== null) {
+							History_strIdent = strExec[6];
+						}
+
+						var strExec = new RegExp('("XSRF_TOKEN")([ ]*)(:)([ ]*)(")([^"]+)(")', 'g').exec(strContent);
+
+						if (strExec !== null) {
+							History_strPost = 'session_token=' + strExec[6];
+						}
 					}
 
-					var strIdentities = strContent.split('<a href="/watch?v=');
+					{
+						var strExec = new RegExp('("nextContinuationData")(.*?)("continuation")([ ]*)(:)([ ]*)(")([^"]+)(")(.*?)("clickTrackingParams")([ ]*)(:)([ ]*)(")([^"]+)(")', 'g').exec(strContent); // new
+						
+						if (strExec !== null) {
+							History_strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strExec[8] + '&itct=' + strExec[16];
+						}
+					}
 
-					for (var intFor1 = 1; intFor1 < strIdentities.length; intFor1 += 1) {
-						if (strIdentities[intFor1].split('title="').length > 0) {
-							var strIdent = strIdentities[intFor1].split('"')[0].split('&')[0];
-							var strTitle = strIdentities[intFor1].split('title="')[1].split('"')[0];
+					{
+						var strExec = new RegExp('(href="\\/browse_ajax\\?action_continuation)([^"]*)(")', 'g').exec(strContent); // old
+						
+						if (strExec !== null) {
+							History_strContinuation = 'https://www.youtube.com/browse_ajax?action_continuation' + strExec[2];
+						}
+					}
+
+					{
+						var objectRegexp = new RegExp('("videoRenderer")(.*?)("videoId")([ ]*)(:)([ ]*)(")([^"]{11})(")(.*?)("title")(.*?)("simpleText")([ ]*)(:)([ ]*)(")([^"]*)(")', 'g'); // new
+
+						while (true) {
+							var strExec = objectRegexp.exec(strContent);
+
+							if (strExec === null) {
+								break;
+							}
+
+							var strIdent = strExec[8];
+							var strTitle = strExec[18];
+
+							strTitle = strTitle.replace(new RegExp('&amp;', 'g'), '&');
+							strTitle = strTitle.replace(new RegExp('&lt;', 'g'), '<');
+							strTitle = strTitle.replace(new RegExp('&gt;', 'g'), '>');
+							strTitle = strTitle.replace(new RegExp('&quot;', 'g'), '"');
+
+							History_objectResults.push({
+								'strIdent': strIdent,
+								'longTimestamp': null,
+								'strTitle': strTitle,
+								'intCount': null
+							});
+						}
+					}
+
+					{
+						var objectRegexp = new RegExp('(<a)([ ]*)(href="\\/watch\\?v=)([^"]{11})([^"]*)(")([^>]*)(title=")([^"]*)(")', 'g'); // old
+
+						while (true) {
+							var strExec = objectRegexp.exec(strContent);
+
+							if (strExec === null) {
+								break;
+							}
+
+							var strIdent = strExec[4];
+							var strTitle = strExec[9];
 
 							strTitle = strTitle.replace(new RegExp('&amp;', 'g'), '&');
 							strTitle = strTitle.replace(new RegExp('&lt;', 'g'), '<');
@@ -588,9 +656,29 @@ var Youtube = {
 				functionTransaction();
 			};
 
-			objectAjax.open('GET', History_strContinuation);
+			if (History_strPost === '') {
+				objectAjax.open('GET', History_strContinuation);
 
-			objectAjax.send();
+			} else if (History_strPost !== '') {
+				objectAjax.open('POST', History_strContinuation);
+
+				objectAjax.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+			}
+
+			if (History_strIdent !== '') {
+				objectAjax.setRequestHeader('X-YouTube-Client-Name', '1');
+				objectAjax.setRequestHeader('X-YouTube-Client-Version', '2.20170427');
+				objectAjax.setRequestHeader('X-Youtube-Identity-Token', History_strIdent);
+			}
+
+			if (History_strPost === '') {
+				objectAjax.send();
+
+			} else if (History_strPost !== '') {
+				objectAjax.send(History_strPost);
+
+			}
 		};
 		
 		var Transaction_objectStore = null;
@@ -906,10 +994,52 @@ var Youtube = {
 Youtube.init();
 
 {
+	if (window.localStorage.getItem('extensions.YouRect.Database.intSize') === null) {
+		window.localStorage.setItem('extensions.YouRect.Database.intSize', String(0));
+	}
+
+	if (window.localStorage.getItem('extensions.YouRect.History.longTimestamp') === null) {
+		window.localStorage.setItem('extensions.YouRect.History.longTimestamp', String(0));
+	}
+
+	if (window.localStorage.getItem('extensions.YouRect.Youtube.longTimestamp') === null) {
+		window.localStorage.setItem('extensions.YouRect.Youtube.longTimestamp', String(0));
+	}
+
+	if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === null) {
+		window.localStorage.setItem('extensions.YouRect.Visualization.boolHideprogress', String(false));
+	}
+}
+
+{
 	chrome.browserAction.onClicked.addListener(function() {
 		chrome.tabs.create({
 			'url': 'content/index.html'
 		});
+	});
+}
+
+{
+	chrome.tabs.onUpdated.addListener(function(intTab, objectData, objectTab) {
+		if (objectTab.url.indexOf('https://www.youtube.com') === 0) {
+			{
+				chrome.tabs.sendMessage(objectTab.id, {
+					'strMessage': 'youtubeUpdate'
+				});
+			}
+
+			{
+				if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(true)) {
+					chrome.tabs.insertCSS(objectTab.id, {
+						'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }' // new
+					});
+
+					chrome.tabs.insertCSS(objectTab.id, {
+						'code': '.resume-playback-background { display:none; } .resume-playback-progress-bar { display:none; }' // old
+					});
+				}
+			}
+		}
 	});
 }
 
@@ -920,6 +1050,15 @@ Youtube.init();
 		});
 	}, {
 		'urls': [ '*://*.youtube.com/*' ]
+	});
+
+	chrome.webRequest.onCompleted.addListener(function(objectData) {
+		chrome.tabs.sendMessage(objectData.tabId, {
+			'strMessage': 'youtubeImage',
+			'strIdent': new RegExp('(\\/vi\\/)([^ ]*)(\\/)', 'g').exec(objectData.url)[2]
+		});
+	}, {
+		'urls': [ '*://*.ytimg.com/vi/*/*' ]
 	});
 }
 

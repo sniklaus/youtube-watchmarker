@@ -472,7 +472,7 @@ jQuery(window.document).ready(function() {
 			.on('update', function() {
 				{
 					jQuery(this)
-						.text(parseInt(window.localStorage.getItem('extensions.YouRect.Database.intSize'), 10) || 0)
+						.text(parseInt(window.localStorage.getItem('extensions.YouRect.Database.intSize'), 10))
 					;
 				}
 			})
@@ -528,7 +528,7 @@ jQuery(window.document).ready(function() {
 			.on('update', function() {
 				{
 					jQuery(this)
-						.text(moment(parseInt(window.localStorage.getItem('extensions.YouRect.History.longTimestamp'), 10) || 0).format('YYYY.MM.DD - HH:mm:ss'))
+						.text(moment(parseInt(window.localStorage.getItem('extensions.YouRect.History.longTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
 					;
 				}
 			})
@@ -554,12 +554,57 @@ jQuery(window.document).ready(function() {
 			.on('update', function() {
 				{
 					jQuery(this)
-						.text(moment(parseInt(window.localStorage.getItem('extensions.YouRect.Youtube.longTimestamp'), 10) || 0).format('YYYY.MM.DD - HH:mm:ss'))
+						.text(moment(parseInt(window.localStorage.getItem('extensions.YouRect.Youtube.longTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
 					;
 				}
 			})
 		;
 		
 		jQuery('#idYoutube_Timestamp').triggerHandler('update');
+	}
+
+	{
+		jQuery('#idVisualization_Hideprogress')
+			.off('click')
+			.on('click', function() {
+				if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(true)) {
+					window.localStorage.setItem('extensions.YouRect.Visualization.boolHideprogress', String(false));
+					
+				} else if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(false)) {
+					window.localStorage.setItem('extensions.YouRect.Visualization.boolHideprogress', String(true));
+					
+				}
+
+				jQuery(this).triggerHandler('update');
+			})
+			.off('update')
+			.on('update', function() {
+				if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(true)) {
+					jQuery(this)
+						.addClass('btn-primary')
+						.removeClass('btn-default')
+					;
+					
+					jQuery(this).find('span')
+						.addClass('fa-check-square-o')
+						.removeClass('fa-square-o')
+					;
+					
+				} else if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(false)) {
+					jQuery(this)
+						.addClass('btn-default')
+						.removeClass('btn-primary')
+					;
+					
+					jQuery(this).find('span')
+						.addClass('fa-square-o')
+						.removeClass('fa-check-square-o')
+					;
+				
+				}
+			})
+		;
+		
+		jQuery('#idVisualization_Hideprogress').triggerHandler('update');
 	}
 });

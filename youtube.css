@@ -1,12 +1,16 @@
-.watched .video-thumb {
-	opacity:0.3;
-}
+/* native watched bage */
 
-.watched .yt-uix-simple-thumb-related {
-	opacity:0.3;
+ytd-thumbnail-overlay-playback-status-renderer {
+	display:none;
 }
 
 .watched-badge {
+	display:none;
+}
+
+/* yourect watched badge */
+
+.yourect-watched-badge {
 	position:absolute;
 
 	left:10px;
@@ -24,4 +28,30 @@
 	text-align:left;
 	line-height:1.42857143;
 	white-space:normal;
+}
+
+.ytd-playlist-panel-video-renderer .yourect-watched-badge {
+	left:45px;
+}
+
+.playlist-video .yourect-watched-badge {
+	left:37px;
+}
+
+/* yourect watched fadeout */
+
+.yourect-watched-marker yt-img-shadow  {
+	background-color:#FFFFFF;
+}
+
+.yourect-watched-marker yt-img-shadow img  {
+	opacity:0.3;
+}
+
+.yourect-watched-marker .video-thumb {
+	background-color:#FFFFFF;
+}
+
+.yourect-watched-marker .video-thumb img {
+	opacity:0.3;
 }
