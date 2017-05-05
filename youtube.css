@@ -35,7 +35,7 @@ ytd-thumbnail-overlay-playback-status-renderer {
 }
 
 .playlist-video .yourect-watched-badge {
-	left:37px;
+	left:32.5px;
 }
 
 /* yourect watched fadeout */
@@ -48,10 +48,10 @@ ytd-thumbnail-overlay-playback-status-renderer {
 	opacity:0.3;
 }
 
-.yourect-watched-marker .video-thumb {
+.yourect-watched-marker .video-thumb, .yourect-watched-marker .yt-uix-simple-thumb-related {
 	background-color:#FFFFFF;
 }
 
-.yourect-watched-marker .video-thumb img {
+.yourect-watched-marker .video-thumb img, .yourect-watched-marker .yt-uix-simple-thumb-related img {
 	opacity:0.3;
 }
