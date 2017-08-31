@@ -1,13 +1,11 @@
 {
 	"manifest_version": 2,
 
-	"name": "__MSG_General_Caption__",
-	"description": "__MSG_General_Description__",
-	"homepage_url": "http://www.coderect.com/",
+	"name": "Youtube Watchmarker",
+	"description": "Automatically mark videos that you have already watched.",
+	"homepage_url": "http://sniklaus.com/",
 
-	"version": "2.7.1",
-
-	"default_locale": "en",
+	"version": "3.0.1",
 
 	"permissions": [ "alarms", "downloads", "history", "tabs", "webRequest", "webNavigation", "*://*.youtube.com/*", "*://*.ytimg.com/*" ],
 
@@ -31,8 +29,6 @@
 		"css": [ "youtube.css" ],
 		"js": [ "youtube.js" ]
 	}],
-
-	"content_security_policy": "script-src 'self' 'sha256-dyYnPoxt+OnVS8FgBlN/u+jViqFq5X5LccD86gDpX+w='; object-src 'self'; img-src 'self';",
 
 	"browser_action": {
 		"browser_style": false,

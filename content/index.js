@@ -1,7 +1,5 @@
 'use strict';
 
-console.log(window.document.location);
-
 var Database = {
 	objectPort: null,
 
@@ -404,6 +402,242 @@ var Youtube = {
 };
 Youtube.init();
 
+var Search = {
+	objectPort: null,
+
+	init: function() {
+		{
+			Search.objectPort = chrome.runtime.connect({
+				'name': 'search'
+			});
+
+			Search.objectPort.onMessage.addListener(function(objectData) {
+				if (objectData.strMessage === 'searchLookup') {
+					Search.lookupCallback(objectData.objectArguments);
+
+				} else if (objectData.strMessage === 'searchDelete') {
+					Search.deleteCallback(objectData.objectArguments);
+
+				}
+			});
+		}
+	},
+	
+	dispel: function() {
+		{
+			Search.objectPort = null;
+		}
+	},
+	
+	lookup: function(strQuery) {
+		{
+			jQuery('#idSearch_Lookup')
+				.css({
+					'display': 'none'
+				})
+			;
+
+			jQuery('#idSearch_Loading')
+				.css({
+					'display': 'block'
+				})
+			;
+		}
+
+		{
+			Search.objectPort.postMessage({
+				'strMessage': 'searchLookup',
+				'objectArguments' : {
+					'strQuery': strQuery.toLowerCase()
+				}
+			});
+		}
+	},
+	
+	lookupCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+
+		{
+			jQuery('#idSearch_Lookup')
+				.css({
+					'display': 'block'
+				})
+			;
+
+			jQuery('#idSearch_Loading')
+				.css({
+					'display': 'none'
+				})
+			;
+		}
+
+		{
+			jQuery('#idSearch_Results')
+				.empty()
+				.append(jQuery('<table></table>')
+					.addClass('table')
+					.css({
+						'margin': '10px 0px 0px 0px'
+					})
+					.append(jQuery('<thead></thead>')
+						.append(jQuery('<tr></tr>')
+							.append(jQuery('<th></th>')
+								.attr({
+									'width': '1%'
+								})
+								.css({
+									'text-align': 'right'
+								})
+								.text('Time')
+							)
+							.append(jQuery('<th></th>')
+								.text('Title')
+							)
+							.append(jQuery('<th></th>')
+								.attr({
+									'width': '1%'
+								})
+								.css({
+									'text-align': 'right'
+								})
+								.text('Visits')
+							)
+							.append(jQuery('<th></th>')
+								.attr({
+									'width': '1%'
+								})
+							)
+						)
+					)
+					.append(jQuery('<tbody></tbody>')
+						.each(function() {
+							for (var intFor1 = 0; intFor1 < objectArguments.objectResults.length; intFor1 += 1) {
+								jQuery(this)
+									.append(jQuery('<tr></tr>')
+										.append(jQuery('<td></td>')
+											.append(jQuery('<div></div>')
+												.css({
+													'white-space': 'nowrap',
+													'text-align': 'right'
+												})
+												.text(moment(objectArguments.objectResults[intFor1].longTimestamp).format('Do MMMM YYYY - HH:mm'))
+											)
+										)
+										.append(jQuery('<td></td>')
+											.css({
+												'position': 'relative'
+											})
+											.append(jQuery('<div></div>')
+												.css({
+													'position': 'absolute',
+													'left': '8px',
+													'right': '-8px',
+													'white-space': 'nowrap',
+													'overflow': 'hidden',
+													'text-overflow': 'ellipsis'
+												})
+												.append(jQuery('<a></a>')
+													.attr({
+														'href': 'https://www.youtube.com/watch?v=' + objectArguments.objectResults[intFor1].strIdent
+													})
+													.text(objectArguments.objectResults[intFor1].strTitle)
+												)
+											)
+										)
+										.append(jQuery('<td></td>')
+											.append(jQuery('<div></div>')
+												.css({
+													'white-space': 'nowrap',
+													'text-align': 'right'
+												})
+												.text(objectArguments.objectResults[intFor1].intCount)
+											)
+										)
+										.append(jQuery('<td></td>')
+											.append(jQuery('<div></div>')
+												.css({
+													'white-space': 'nowrap'
+												})
+												.append(jQuery('<a></a>')
+													.addClass('fa')
+													.addClass('fa-trash-o')
+													.css({
+														'cursor': 'pointer'
+													})
+													.data({
+														'strIdent': objectArguments.objectResults[intFor1].strIdent
+													})
+													.on('click', function() {
+														Search.delete(jQuery(this).data('strIdent'));
+													})
+												)
+											)
+										)
+									)
+								;
+							}
+						})
+					)
+				)
+			;
+		}
+	},
+	
+	delete: function(strIdent) {
+		{
+			jQuery('#idSearch_Lookup')
+				.css({
+					'display': 'none'
+				})
+			;
+
+			jQuery('#idSearch_Loading')
+				.css({
+					'display': 'block'
+				})
+			;
+		}
+
+		{
+			Search.objectPort.postMessage({
+				'strMessage': 'searchDelete',
+				'objectArguments' : {
+					'strIdent': strIdent
+				}
+			});
+		}
+	},
+	
+	deleteCallback: function(objectArguments) {
+		if (objectArguments === null) {
+			return;
+		}
+
+		{
+			jQuery('#idSearch_Lookup')
+				.css({
+					'display': 'block'
+				})
+			;
+
+			jQuery('#idSearch_Loading')
+				.css({
+					'display': 'none'
+				})
+			;
+		}
+
+		{
+			jQuery('#idDatabase_Size').triggerHandler('update');
+
+			jQuery('#idSearch_Lookup').triggerHandler('update');
+		}
+	}
+};
+Search.init();
+
 jQuery(window.document).ready(function() {
 	{
 		jQuery('#idGeneral_ModalLoading_Close')
@@ -606,5 +840,24 @@ jQuery(window.document).ready(function() {
 		;
 		
 		jQuery('#idVisualization_Hideprogress').triggerHandler('update');
+	}
+
+	{
+		jQuery('#idSearch_Lookup')
+			.off('click')
+			.on('click', function() {
+				{
+					Search.lookup(jQuery('#idSearch_Query').val());
+				}
+			})
+			.off('update')
+			.on('update', function() {
+				{
+					Search.lookup(jQuery('#idSearch_Query').val());
+				}
+			})
+		;
+
+		jQuery('#idSearch_Lookup').triggerHandler('update');
 	}
 });

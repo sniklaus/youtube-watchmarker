@@ -5,24 +5,36 @@ var Database = {
 	
 	init: function() {
 		{
-			var objectRequest = window.indexedDB.open('Database', 1);
+			var objectRequest = window.indexedDB.open('Database', 301);
 			
 			objectRequest.onerror = function() {
 				console.log(objectRequest.error.name);
 			};
 			
 			objectRequest.onupgradeneeded = function() {
-				if (objectRequest.result.objectStoreNames.contains('storeDatabase') === true) {
-					return;
+				var objectStore = null;
+
+				if (objectRequest.result.objectStoreNames.contains('storeDatabase') === false) {
+					objectStore = objectRequest.result.createObjectStore('storeDatabase', {
+						'keyPath': 'strIdent'
+					});
+
+				} else if (objectRequest.result.objectStoreNames.contains('storeDatabase') === true) {
+					objectStore = objectRequest.transaction.objectStore('storeDatabase');
+
 				}
 				
-				var objectStore = objectRequest.result.createObjectStore('storeDatabase', {
-					'keyPath': 'strIdent'
-				})
+				if (objectStore.indexNames.contains('strIdent') === false) {
+					objectStore.createIndex('strIdent', 'strIdent', {
+						'unique': true
+					});
+				}
 				
-				objectStore.createIndex('strIdent', 'strIdent', {
-					'unique': true
-				});
+				if (objectStore.indexNames.contains('longTimestamp') === false) {
+					objectStore.createIndex('longTimestamp', 'longTimestamp', {
+						'unique': false
+					});
+				}
 			};
 			
 			objectRequest.onsuccess = function() {
@@ -992,6 +1004,124 @@ var Youtube = {
 	}
 };
 Youtube.init();
+
+var Search = {
+	init: function() {
+		{
+			chrome.runtime.onConnect.addListener(function(objectPort) {
+				if (objectPort.name === 'search') {
+					objectPort.onMessage.addListener(function(objectData) {
+						if (objectData.strMessage === 'searchLookup') {
+							Search.lookup(objectData.objectArguments, function(objectArguments) {
+								objectPort.postMessage({
+									'strMessage': 'searchLookup',
+									'objectArguments': objectArguments
+								});
+							});
+
+						} else if (objectData.strMessage === 'searchDelete') {
+							Search.delete(objectData.objectArguments, function(objectArguments) {
+								objectPort.postMessage({
+									'strMessage': 'searchDelete',
+									'objectArguments': objectArguments
+								});
+							});
+
+						}
+					});
+				}
+			});
+		}
+	},
+	
+	dispel: function() {
+		
+	},
+	
+	lookup: function(objectArguments, functionCallback) {
+		var Transaction_objectStore = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase');
+				
+				Transaction_objectStore.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionSelect();
+		};
+		
+		var Select_objectResults = [];
+		
+		var functionSelect = function() {
+			var objectRequest = Transaction_objectStore.index('longTimestamp').openCursor(null, 'prev');
+			
+			objectRequest.onsuccess = function() {
+				if ((objectRequest.result === undefined) || (objectRequest.result === null) || (Select_objectResults.length === 10)) {
+					functionCallback({
+						'objectResults': Select_objectResults
+					});
+					
+				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
+					if (objectRequest.result.value.strTitle.toLowerCase().indexOf(objectArguments.strQuery) !== -1) {
+						Select_objectResults.push({
+							'strIdent': objectRequest.result.value.strIdent,
+							'longTimestamp': objectRequest.result.value.longTimestamp,
+							'strTitle': objectRequest.result.value.strTitle,
+							'intCount': objectRequest.result.value.intCount
+						});
+					}
+					
+					objectRequest.result.continue();
+					
+				}
+			};
+		};
+		
+		functionTransaction();
+	},
+	
+	delete: function(objectArguments, functionCallback) {
+		var Transaction_objectStore = null;
+		
+		var functionTransaction = function() {
+			{
+				Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
+				
+				Transaction_objectStore.onerror = function() {
+					functionCallback(null);
+				};
+			}
+			
+			functionReset();
+		};
+		
+		var functionReset = function() {
+			var objectRequest = Transaction_objectStore.delete(objectArguments.strIdent);
+			
+			objectRequest.onsuccess = function() {
+				functionCount();
+			};
+		};
+		
+		var functionCount = function() {
+			var objectRequest = Transaction_objectStore.count();
+			
+			objectRequest.onsuccess = function() {
+				{
+					window.localStorage.setItem('extensions.YouRect.Database.intSize', String(objectRequest.result));
+				}
+				
+				functionCallback({});
+			};
+		};
+		
+		functionTransaction();
+	}
+};
+Search.init();
 
 {
 	if (window.localStorage.getItem('extensions.YouRect.Database.intSize') === null) {

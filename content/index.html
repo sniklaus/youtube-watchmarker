@@ -5,7 +5,7 @@
 
 		<meta name="viewport" content="width=1000" />
 		
-		<title>@string/General_Caption</title>
+		<title>Youtube Watchmarker</title>
 
 		<link rel="icon" type="image/png" href="images/icon.png" />
 
@@ -47,37 +47,6 @@
 
 		<link rel="stylesheet" type="text/css" href="fontawesome.css" />
 
-		<script type="text/javascript">
-			var jsLanguage = {
-				getStrStrings: function() {
-					return '[]';
-				}
-			};
-
-			jQuery(window.document).ready(function() {
-				var strStrings = window.document.body.innerHTML.match(new RegExp('(@string\\/)([a-zA-Z_]+)', 'g'));
-
-				strStrings.push('@string/General_Caption');
-
-				for (var intFor1 = 0; intFor1 < strStrings.length; intFor1 += 1) {
-					var strString = strStrings[intFor1].substr(8);
-
-					for (var intFor2 = 0; intFor2 < Language.objectStrings.length; intFor2 += 1) {
-						if (Language.objectStrings[intFor2].strName === strString) {
-							strString = null;
-						}
-					}
-
-					if (strString !== null) {
-						Language.objectStrings.push({
-							'strName': strString,
-							'strValue': chrome.i18n.getMessage(strString)
-						});
-					}
-				}
-			});
-		</script>
-		<script type="text/javascript" src="libLanguage.js"></script>
 		<script type="text/javascript" src="libModal.js"></script>
 
 		<script type="text/javascript" src="index.js"></script>
@@ -91,7 +60,7 @@
 						<table class="table" style="margin:0px;">
 							<tr>
 								<th style="width:1%; border:none; text-align:right; white-space:nowrap;">
-									@string/General_ModalLoading_Message
+									Message:
 								</th>
 								<td style="border:none;">
 									<span id="idGeneral_ModalLoading_Message"></span>
@@ -99,7 +68,7 @@
 							</tr>
 							<tr>
 								<th style="text-align:right; white-space:nowrap;">
-									@string/General_ModalLoading_Progress
+									Progress:
 								</th>
 								<td>
 									<span id="idGeneral_ModalLoading_Progress"></span>
@@ -111,16 +80,16 @@
 						
 						<div class="pull-right">
 							<a class="btn btn-primary" id="idGeneral_ModalLoading_Close">
-								@string/General_ModalLoading_Close
+								Close
 							</a>
 						</div>
 					</div>
 				</div>
 			</div>
-			
+
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/Database_Caption
+					Database
 				</div>
 				<div class="panel-body">
 					<div style="position:absolute; left:-1024px; top:-1024px;">
@@ -128,26 +97,26 @@
 					</div>
 					
 					<div style="text-align:justify;">
-						@string/Database_Description
+						The database is only stored within Firefox, which is why removing the browser or even just this addon would lead to the loss of your timeline. You are therefore highly encouraged to regularly export the database in order to have a backup.
 					</div>
 					
 					<div style="height:15px;"></div>
 					
 					<a class="btn btn-primary" id="idDatabase_Export">
-						@string/Database_Export
+						Export
 					</a>
 					
 					<a class="btn btn-primary" id="idDatabase_Import">
-						@string/Database_Import
+						Import
 					</a>
 					
 					<a class="btn btn-primary" id="idDatabase_Reset">
-						@string/Database_Reset
+						Reset
 					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
 						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">@string/Database_Size</div>
+							<div class="input-group-addon" style="text-align:right;">Size:</div>
 							<div class="form-control" id="idDatabase_Size" style="width:auto;"></div>
 						</div>
 					</div>
@@ -159,18 +128,18 @@
 				<div class="panel panel-default modal-content">
 					<div class="panel-body">
 						<div style="text-align:justify;">
-							@string/Database_ModalReset_Description
+							Do you really want to reset the database, clearing your entire timeline?
 						</div>
 						
 						<hr></hr>
 						
 						<div class="pull-right">
 							<a class="btn btn-primary" id="idDatabase_ModalReset_Yes">
-								@string/Database_ModalReset_Yes
+								Yes
 							</a>
 							
 							<a class="btn btn-primary" id="idDatabase_ModalReset_No">
-								@string/Database_ModalReset_No
+								No
 							</a>
 						</div>
 					</div>
@@ -179,22 +148,22 @@
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/History_Caption
+					History
 				</div>
 				<div class="panel-body">
 					<div style="text-align:justify;">
-						@string/History_Description
+						The history of your browser provides a straightforward way to initialize your timeline, which you can manually initiate. It is usually not necessary to use this feature more than once, as every subsequent activity on Youtube will already be tracked by this addon.
 					</div>
 					
 					<div style="height:15px;"></div>
 					
 					<a class="btn btn-primary" id="idHistory_Synchronize">
-						@string/History_Synchronize
+						Synchronize
 					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
 						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">@string/History_Timestamp</div>
+							<div class="input-group-addon" style="text-align:right;">Timestamp:</div>
 							<div class="form-control" id="idHistory_Timestamp" style="width:auto;"></div>
 						</div>	
 					</div>
@@ -203,22 +172,22 @@
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/Youtube_Caption
+					Youtube
 				</div>
 				<div class="panel-body">
 					<div style="text-align:justify;">
-						@string/Youtube_Description
+						In order to synchronize your timeline across multiple devices, this addon fetches your browsing information directly from your Youtube account. It will in this regard automatically fetch the most recent activity every hour, but you can manually initiate a complete fetch of the entire browsing information.
 					</div>
 					
 					<div style="height:15px;"></div>
 					
 					<a class="btn btn-primary" id="idYoutube_Synchronize">
-						@string/Youtube_Synchronize
+						Synchronize
 					</a>
 					
 					<div style="display:inline-block; vertical-align:top;">
 						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">@string/Youtube_Timestamp</div>
+							<div class="input-group-addon" style="text-align:right;">Timestamp:</div>
 							<div class="form-control" id="idYoutube_Timestamp" style="width:auto;"></div>
 						</div>
 					</div>
@@ -227,13 +196,34 @@
 			
 			<div class="panel panel-default modal-content">
 				<div class="panel-heading">
-					@string/Visualization_Caption
+					Visualization
 				</div>
 				<div class="panel-body">
 					<a class="btn btn-primary" id="idVisualization_Hideprogress" style="display:block; text-align:left; white-space:normal;">
-						@string/Visualization_Hideprogress
+						Hide the progressbar that is being shown underneath watched videos.
 						<span class="fa fa-square-o pull-right" style="line-height:1.4;"></span>
 					</a>
+				</div>
+			</div>
+			
+			<div class="panel panel-default modal-content">
+				<div class="panel-heading">
+					Search
+				</div>
+				<div class="panel-body">
+					<div class="input-group">
+						<input class="form-control" id="idSearch_Query" type="text" placeholder="..." />
+						<span class="input-group-btn">
+							<a class="btn btn-primary" id="idSearch_Lookup">
+								<span class="fa fa-search"></span>
+							</a>
+							<a class="btn btn-primary disabled" id="idSearch_Loading">
+								<span class="fa fa-cog fa-spin"></span>
+							</a>
+						</span>
+					</div>
+					
+					<div id="idSearch_Results"></div>
 				</div>
 			</div>
 		</div>

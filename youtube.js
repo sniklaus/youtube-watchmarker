@@ -25,6 +25,8 @@ var Youtube = {
 		}
 		
 		{
+			Youtube.clicks();
+
 			Youtube.ensure();
 
 			Youtube.watch();
@@ -36,6 +38,26 @@ var Youtube = {
 	dispel: function() {
 		{
 			Youtube.objectPort = null;
+		}
+	},
+
+	clicks: function() {
+		{
+			var objectAnchors = window.document.getElementsByTagName('a');
+			
+			for (var intFor1 = 0; intFor1 < objectAnchors.length; intFor1 += 1) {
+				if (objectAnchors[intFor1].onclick !== null) {
+					continue;
+					
+				} else if (objectAnchors[intFor1].getAttribute('href') === null) {
+					continue;
+					
+				} 
+				
+				objectAnchors[intFor1].onclick = function(objectEvent) {
+					objectEvent.stopPropagation();
+				};
+			}
 		}
 	},
 
@@ -385,6 +407,8 @@ Youtube.init();
 	chrome.runtime.onMessage.addListener(function(objectData) {
 		if (objectData.strMessage === 'youtubeUpdate') {
 			{
+				Youtube.clicks();
+
 				Youtube.ensure();
 
 				Youtube.watch();
