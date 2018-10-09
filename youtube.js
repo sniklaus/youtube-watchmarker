@@ -338,7 +338,7 @@ var Youtube = {
 				}
 				
 				{
-					objectVideo[intFor1].id = 'YouRect' + '-' + strIdent;
+					objectVideo[intFor1].classList.add('YouRect' + '-' + strIdent);
 				}
 				
 				{
@@ -363,16 +363,9 @@ var Youtube = {
 		}
 		
 		{
-			do {
-				var objectVideo = window.document.getElementById('YouRect' + '-' + objectArguments.strIdent);
-				
-				if (objectVideo === null) {
-					break;
-				}
-				
-				{
-					objectVideo.id = 'YouRect' + '-' + objectArguments.strIdent + '-' + 'watched';
-				}
+			var objectVideos = window.document.getElementsByClassName('YouRect' + '-' + objectArguments.strIdent);
+			for (var intFor1 = 0; intFor1 < objectVideos.length; intFor1 += 1) {
+				var objectVideo = objectVideos[intFor1];
 				
 				if (objectVideo.getElementsByTagName('img').length === 0) {
 					continue;
@@ -397,7 +390,7 @@ var Youtube = {
 					
 					objectVideo.appendChild(objectBadge);
 				}
-			} while (true);
+			}
 		}
 	}
 };
@@ -418,8 +411,8 @@ Youtube.init();
 
 		} else if (objectData.strMessage === 'youtubeImage') {
 			{
-				if (window.document.getElementById('YouRect' + '-' + objectData.strIdent) === null) {
-					if (window.document.getElementById('YouRect' + '-' + objectData.strIdent + '-' + 'watched') === null) {
+				if (window.document.getElementsByClassName('YouRect' + '-' + objectData.strIdent).length === 0) {
+					if (window.document.getElementsByClassName('YouRect' + '-' + objectData.strIdent + '-' + 'watched').length === 0) {
 						Youtube.lookup();
 					}
 				}
