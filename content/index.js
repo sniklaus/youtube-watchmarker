@@ -1,44 +1,36 @@
 'use strict';
 
 var Database = {
-	objectPort: null,
+	objPort: null,
 
 	init: function() {
-		{
-			Database.objectPort = chrome.runtime.connect({
-				'name': 'database'
-			});
+		Database.objPort = chrome.runtime.connect({
+			'name': 'database'
+		});
 
-			Database.objectPort.onMessage.addListener(function(objectData) {
-				if (objectData.strMessage === 'databaseSave') {
-					Database.saveCallback(objectData.objectArguments);
-				}
+		Database.objPort.onMessage.addListener(function(objData) {
+			if (objData.strMessage === 'databaseSave') {
+				Database.saveCallback(objData.objResponse);
+			}
 
-				if (objectData.strMessage === 'databaseSave-progress') {
-					Database.saveProgress(objectData.objectArguments);
-				}
+			if (objData.strMessage === 'databaseSave-progress') {
+				Database.saveProgress(objData.objResponse);
+			}
 
-				if (objectData.strMessage === 'databaseLoad') {
-					Database.loadCallback(objectData.objectArguments);
-				}
+			if (objData.strMessage === 'databaseLoad') {
+				Database.loadCallback(objData.objResponse);
+			}
 
-				if (objectData.strMessage === 'databaseLoad-progress') {
-					Database.loadProgress(objectData.objectArguments);
-				}
+			if (objData.strMessage === 'databaseLoad-progress') {
+				Database.loadProgress(objData.objResponse);
+			}
 
-				if (objectData.strMessage === 'databaseReset') {
-					Database.resetCallback(objectData.objectArguments);
-				}
-			});
-		}
+			if (objData.strMessage === 'databaseReset') {
+				Database.resetCallback(objData.objResponse);
+			}
+		});
 	},
-	
-	dispel: function() {
-		{
-			Database.objectPort = null;
-		}
-	},
-	
+
 	save: function() {
 		{
 			jQuery('#idGeneral_ModalLoading')
@@ -66,20 +58,20 @@ var Database = {
 		}
 		
 		{
-			Database.objectPort.postMessage({
+			Database.objPort.postMessage({
 				'strMessage': 'databaseSave',
-				'objectArguments' : {}
+				'objRequest': {}
 			});
 		}
 	},
 	
-	saveCallback: function(objectArguments) {
-		if (objectArguments === null) {
+	saveCallback: function(objResponse) {
+		if (objResponse === null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('error while saving')
 			;
 
-		} else if (objectArguments !== null) {
+		} else if (objResponse !== null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('finished saving')
 			;
@@ -97,10 +89,10 @@ var Database = {
 		}
 	},
 	
-	saveProgress: function(objectArguments) {
+	saveProgress: function(objResponse) {
 		{
 			jQuery('#idGeneral_ModalLoading_Progress')
-				.text(objectArguments.strProgress)
+				.text(objResponse.strProgress)
 			;
 		}
 	},
@@ -132,32 +124,32 @@ var Database = {
 		}
 		
 		{
-			var objectFilereader = new FileReader();
+			var objFilereader = new FileReader();
 			
-			objectFilereader.onload = function(objectEvent) {
-				Database.objectPort.postMessage({
+			objFilereader.onload = function(objEvent) {
+				Database.objPort.postMessage({
 					'strMessage': 'databaseLoad',
-					'objectArguments' : {
-						'objectResults': JSON.parse(decodeURIComponent(escape(atob(objectEvent.target.result))))
+					'objRequest': {
+						'objVideos': JSON.parse(decodeURIComponent(escape(atob(objEvent.target.result))))
 					}
 				});
 			};
 			
 			if (jQuery('#idDatabase_File').get(0).files !== undefined) {
 				if (jQuery('#idDatabase_File').get(0).files.length === 1) {
-					objectFilereader.readAsText(jQuery('#idDatabase_File').get(0).files[0], 'UTF-8');
+					objFilereader.readAsText(jQuery('#idDatabase_File').get(0).files[0], 'UTF-8');
 				}
 			}
 		}
 	},
 	
-	loadCallback: function(objectArguments) {
-		if (objectArguments === null) {
+	loadCallback: function(objResponse) {
+		if (objResponse === null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('error while loading')
 			;
 
-		} else if (objectArguments !== null) {
+		} else if (objResponse !== null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('finished loading')
 			;
@@ -175,25 +167,25 @@ var Database = {
 		}
 	},
 	
-	loadProgress: function(objectArguments) {
+	loadProgress: function(objResponse) {
 		{
 			jQuery('#idGeneral_ModalLoading_Progress')
-				.text(objectArguments.strProgress)
+				.text(objResponse.strProgress)
 			;
 		}
 	},
 	
 	reset: function() {
 		{
-			Database.objectPort.postMessage({
+			Database.objPort.postMessage({
 				'strMessage': 'databaseReset',
-				'objectArguments' : {}
+				'objRequest': {}
 			});
 		}
 	},
 	
-	resetCallback: function(objectArguments) {
-		if (objectArguments === null) {
+	resetCallback: function(objResponse) {
+		if (objResponse === null) {
 			return;
 		}
 		
@@ -205,32 +197,24 @@ var Database = {
 Database.init();
 
 var History = {
-	objectPort: null,
+	objPort: null,
 
 	init: function() {
-		{
-			History.objectPort = chrome.runtime.connect({
-				'name': 'history'
-			});
+		History.objPort = chrome.runtime.connect({
+			'name': 'history'
+		});
 
-			History.objectPort.onMessage.addListener(function(objectData) {
-				if (objectData.strMessage === 'historySynchronize') {
-					History.synchronizeCallback(objectData.objectArguments);
-				}
+		History.objPort.onMessage.addListener(function(objData) {
+			if (objData.strMessage === 'historySynchronize') {
+				History.synchronizeCallback(objData.objResponse);
+			}
 
-				if (objectData.strMessage === 'historySynchronize-progress') {
-					History.synchronizeProgress(objectData.objectArguments);
-				}
-			});
-		}
+			if (objData.strMessage === 'historySynchronize-progress') {
+				History.synchronizeProgress(objData.objResponse);
+			}
+		});
 	},
-	
-	dispel: function() {
-		{
-			History.objectPort = null;
-		}
-	},
-	
+
 	synchronize: function() {
 		{
 			jQuery('#idGeneral_ModalLoading')
@@ -258,22 +242,22 @@ var History = {
 		}
 		
 		{
-			History.objectPort.postMessage({
+			History.objPort.postMessage({
 				'strMessage': 'historySynchronize',
-				'objectArguments' : {
-					'longTimestamp': 0
+				'objRequest': {
+					'intTimestamp': 0
 				}
 			});
 		}
 	},
 	
-	synchronizeCallback: function(objectArguments) {
-		if (objectArguments === null) {
+	synchronizeCallback: function(objResponse) {
+		if (objResponse === null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('error while synchronizing')
 			;
 
-		} else if (objectArguments !== null) {
+		} else if (objResponse !== null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('finished synchronizing')
 			;
@@ -293,10 +277,10 @@ var History = {
 		}
 	},
 	
-	synchronizeProgress: function(objectArguments) {
+	synchronizeProgress: function(objResponse) {
 		{
 			jQuery('#idGeneral_ModalLoading_Progress')
-				.text(objectArguments.strProgress)
+				.text(objResponse.strProgress)
 			;
 		}
 	}
@@ -304,30 +288,22 @@ var History = {
 History.init();
 
 var Youtube = {
-	objectPort: null,
+	objPort: null,
 
 	init: function() {
-		{
-			Youtube.objectPort = chrome.runtime.connect({
-				'name': 'youtube'
-			});
+		Youtube.objPort = chrome.runtime.connect({
+			'name': 'youtube'
+		});
 
-			Youtube.objectPort.onMessage.addListener(function(objectData) {
-				if (objectData.strMessage === 'youtubeSynchronize') {
-					Youtube.synchronizeCallback(objectData.objectArguments);
-				}
+		Youtube.objPort.onMessage.addListener(function(objData) {
+			if (objData.strMessage === 'youtubeSynchronize') {
+				Youtube.synchronizeCallback(objData.objResponse);
+			}
 
-				if (objectData.strMessage === 'youtubeSynchronize-progress') {
-					Youtube.synchronizeProgress(objectData.objectArguments);
-				}
-			});
-		}
-	},
-	
-	dispel: function() {
-		{
-			Youtube.objectPort = null;
-		}
+			if (objData.strMessage === 'youtubeSynchronize-progress') {
+				Youtube.synchronizeProgress(objData.objResponse);
+			}
+		});
 	},
 
 	synchronize: function() {
@@ -357,22 +333,22 @@ var Youtube = {
 		}
 		
 		{
-			Youtube.objectPort.postMessage({
+			Youtube.objPort.postMessage({
 				'strMessage': 'youtubeSynchronize',
-				'objectArguments' : {
-					'intThreshold': 1000000
+				'objRequest': {
+					'intThreshold': 1000000000
 				}
 			});
 		}
 	},
 	
-	synchronizeCallback: function(objectArguments) {
-		if (objectArguments === null) {
+	synchronizeCallback: function(objResponse) {
+		if (objResponse === null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('error while synchronizing')
 			;
 
-		} else if (objectArguments !== null) {
+		} else if (objResponse !== null) {
 			jQuery('#idGeneral_ModalLoading_Message')
 				.text('finished synchronizing')
 			;
@@ -392,10 +368,10 @@ var Youtube = {
 		}
 	},
 	
-	synchronizeProgress: function(objectArguments) {
+	synchronizeProgress: function(objResponse) {
 		{
 			jQuery('#idGeneral_ModalLoading_Progress')
-				.text(objectArguments.strProgress)
+				.text(objResponse.strProgress)
 			;
 		}
 	}
@@ -403,237 +379,217 @@ var Youtube = {
 Youtube.init();
 
 var Search = {
-	objectPort: null,
+	objPort: null,
 
 	init: function() {
-		{
-			Search.objectPort = chrome.runtime.connect({
-				'name': 'search'
-			});
+		Search.objPort = chrome.runtime.connect({
+			'name': 'search'
+		});
 
-			Search.objectPort.onMessage.addListener(function(objectData) {
-				if (objectData.strMessage === 'searchLookup') {
-					Search.lookupCallback(objectData.objectArguments);
+		Search.objPort.onMessage.addListener(function(objData) {
+			if (objData.strMessage === 'searchLookup') {
+				Search.lookupCallback(objData.objResponse);
 
-				} else if (objectData.strMessage === 'searchDelete') {
-					Search.deleteCallback(objectData.objectArguments);
+			} else if (objData.strMessage === 'searchDelete') {
+				Search.deleteCallback(objData.objResponse);
 
-				}
-			});
-		}
+			}
+		});
 	},
-	
-	dispel: function() {
-		{
-			Search.objectPort = null;
-		}
-	},
-	
+
 	lookup: function(strQuery) {
-		{
-			jQuery('#idSearch_Lookup')
-				.css({
-					'display': 'none'
-				})
-			;
+		jQuery('#idSearch_Lookup')
+			.css({
+				'display': 'none'
+			})
+		;
 
-			jQuery('#idSearch_Loading')
-				.css({
-					'display': 'block'
-				})
-			;
-		}
+		jQuery('#idSearch_Loading')
+			.css({
+				'display': 'block'
+			})
+		;
 
-		{
-			Search.objectPort.postMessage({
-				'strMessage': 'searchLookup',
-				'objectArguments' : {
-					'strQuery': strQuery.toLowerCase()
-				}
-			});
-		}
+		Search.objPort.postMessage({
+			'strMessage': 'searchLookup',
+			'objRequest': {
+				'strQuery': strQuery
+			}
+		});	
 	},
 	
-	lookupCallback: function(objectArguments) {
-		if (objectArguments === null) {
+	lookupCallback: function(objResponse) {
+		if (objResponse === null) {
 			return;
 		}
 
-		{
-			jQuery('#idSearch_Lookup')
-				.css({
-					'display': 'block'
-				})
-			;
+		jQuery('#idSearch_Lookup')
+			.css({
+				'display': 'block'
+			})
+		;
 
-			jQuery('#idSearch_Loading')
-				.css({
-					'display': 'none'
-				})
-			;
-		}
+		jQuery('#idSearch_Loading')
+			.css({
+				'display': 'none'
+			})
+		;
 
-		{
-			jQuery('#idSearch_Results')
-				.empty()
-				.append(jQuery('<table></table>')
-					.addClass('table')
-					.css({
-						'margin': '10px 0px 0px 0px'
-					})
-					.append(jQuery('<thead></thead>')
-						.append(jQuery('<tr></tr>')
-							.append(jQuery('<th></th>')
-								.attr({
-									'width': '1%'
-								})
-								.css({
-									'text-align': 'right'
-								})
-								.text('Time')
-							)
-							.append(jQuery('<th></th>')
-								.text('Title')
-							)
-							.append(jQuery('<th></th>')
-								.attr({
-									'width': '1%'
-								})
-								.css({
-									'text-align': 'right'
-								})
-								.text('Visits')
-							)
-							.append(jQuery('<th></th>')
-								.attr({
-									'width': '1%'
-								})
-							)
+		jQuery('#idSearch_Results')
+			.empty()
+			.append(jQuery('<table></table>')
+				.addClass('table')
+				.addClass('table-sm')
+				.append(jQuery('<thead></thead>')
+					.append(jQuery('<tr></tr>')
+						.append(jQuery('<th></th>')
+							.attr({
+								'width': '1%'
+							})
+							.css({
+								'border-top': 'none'
+							})
+							.text('Time')
+						)
+						.append(jQuery('<th></th>')
+							.css({
+								'border-top': 'none'
+							})
+							.text('Title')
+						)
+						.append(jQuery('<th></th>')
+							.attr({
+								'width': '1%'
+							})
+							.css({
+								'border-top': 'none',
+								'text-align': 'right'
+							})
+							.text('Visits')
+						)
+						.append(jQuery('<th></th>')
+							.css({
+								'border-top': 'none'
+							})
+							.attr({
+								'width': '1%'
+							})
 						)
 					)
-					.append(jQuery('<tbody></tbody>')
-						.each(function() {
-							for (var intFor1 = 0; intFor1 < objectArguments.objectResults.length; intFor1 += 1) {
-								jQuery(this)
-									.append(jQuery('<tr></tr>')
-										.append(jQuery('<td></td>')
-											.append(jQuery('<div></div>')
-												.css({
-													'white-space': 'nowrap',
-													'text-align': 'right'
-												})
-												.text(moment(objectArguments.objectResults[intFor1].longTimestamp).format('Do MMMM YYYY - HH:mm'))
-											)
-										)
-										.append(jQuery('<td></td>')
+				)
+				.append(jQuery('<tbody></tbody>')
+					.each(function() {
+						for (var objVideo of objResponse.objVideos) {
+							jQuery(this)
+								.append(jQuery('<tr></tr>')
+									.append(jQuery('<td></td>')
+										.append(jQuery('<div></div>')
 											.css({
-												'position': 'relative'
+												'white-space': 'nowrap'
 											})
-											.append(jQuery('<div></div>')
-												.css({
-													'position': 'absolute',
-													'left': '8px',
-													'right': '-8px',
-													'white-space': 'nowrap',
-													'overflow': 'hidden',
-													'text-overflow': 'ellipsis'
-												})
-												.append(jQuery('<a></a>')
-													.attr({
-														'href': 'https://www.youtube.com/watch?v=' + objectArguments.objectResults[intFor1].strIdent
-													})
-													.text(objectArguments.objectResults[intFor1].strTitle)
-												)
-											)
+											.text(moment(objVideo.longTimestamp).format('YYYY.MM.DD - HH:mm'))
 										)
-										.append(jQuery('<td></td>')
-											.append(jQuery('<div></div>')
-												.css({
-													'white-space': 'nowrap',
-													'text-align': 'right'
+									)
+									.append(jQuery('<td></td>')
+										.css({
+											'position': 'relative'
+										})
+										.append(jQuery('<div></div>')
+											.css({
+												'left': '8px',
+												'overflow': 'hidden',
+												'position': 'absolute',
+												'right': '-8px',
+												'text-overflow': 'ellipsis',
+												'white-space': 'nowrap'
+											})
+											.append(jQuery('<a></a>')
+												.attr({
+													'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent
 												})
-												.text(objectArguments.objectResults[intFor1].intCount)
-											)
-										)
-										.append(jQuery('<td></td>')
-											.append(jQuery('<div></div>')
-												.css({
-													'white-space': 'nowrap'
-												})
-												.append(jQuery('<a></a>')
-													.addClass('fa')
-													.addClass('fa-trash-o')
-													.css({
-														'cursor': 'pointer'
-													})
-													.data({
-														'strIdent': objectArguments.objectResults[intFor1].strIdent
-													})
-													.on('click', function() {
-														Search.delete(jQuery(this).data('strIdent'));
-													})
-												)
+												.text(objVideo.strTitle)
 											)
 										)
 									)
-								;
-							}
-						})
-					)
+									.append(jQuery('<td></td>')
+										.append(jQuery('<div></div>')
+											.css({
+												'white-space': 'nowrap',
+												'text-align': 'right'
+											})
+											.text(objVideo.intCount)
+										)
+									)
+									.append(jQuery('<td></td>')
+										.append(jQuery('<div></div>')
+											.css({
+												'white-space': 'nowrap'
+											})
+											.append(jQuery('<a></a>')
+												.addClass('far')
+												.addClass('fa-trash-alt')
+												.css({
+													'cursor': 'pointer'
+												})
+												.data({
+													'strIdent': objVideo.strIdent
+												})
+												.on('click', function() {
+													Search.delete(jQuery(this).data('strIdent'));
+												})
+											)
+										)
+									)
+								)
+							;
+						}
+					})
 				)
-			;
-		}
+			)
+		;
 	},
 	
 	delete: function(strIdent) {
-		{
-			jQuery('#idSearch_Lookup')
-				.css({
-					'display': 'none'
-				})
-			;
+		jQuery('#idSearch_Lookup')
+			.css({
+				'display': 'none'
+			})
+		;
 
-			jQuery('#idSearch_Loading')
-				.css({
-					'display': 'block'
-				})
-			;
-		}
+		jQuery('#idSearch_Loading')
+			.css({
+				'display': 'block'
+			})
+		;
 
-		{
-			Search.objectPort.postMessage({
-				'strMessage': 'searchDelete',
-				'objectArguments' : {
-					'strIdent': strIdent
-				}
-			});
-		}
+		Search.objPort.postMessage({
+			'strMessage': 'searchDelete',
+			'objRequest': {
+				'strIdent': strIdent
+			}
+		});
 	},
 	
-	deleteCallback: function(objectArguments) {
-		if (objectArguments === null) {
+	deleteCallback: function(objResponse) {
+		if (objResponse === null) {
 			return;
 		}
 
-		{
-			jQuery('#idSearch_Lookup')
-				.css({
-					'display': 'block'
-				})
-			;
+		jQuery('#idSearch_Lookup')
+			.css({
+				'display': 'block'
+			})
+		;
 
-			jQuery('#idSearch_Loading')
-				.css({
-					'display': 'none'
-				})
-			;
-		}
+		jQuery('#idSearch_Loading')
+			.css({
+				'display': 'none'
+			})
+		;
 
-		{
-			jQuery('#idDatabase_Size').triggerHandler('update');
+		jQuery('#idDatabase_Size').triggerHandler('update');
 
-			jQuery('#idSearch_Lookup').triggerHandler('update');
-		}
+		jQuery('#idSearch_Lookup').triggerHandler('update');
 	}
 };
 Search.init();
@@ -706,7 +662,7 @@ jQuery(window.document).ready(function() {
 			.on('update', function() {
 				{
 					jQuery(this)
-						.text(parseInt(window.localStorage.getItem('extensions.YouRect.Database.intSize'), 10))
+						.text(parseInt(window.localStorage.getItem('extensions.Youwatch.Database.intSize'), 10))
 					;
 				}
 			})
@@ -762,7 +718,7 @@ jQuery(window.document).ready(function() {
 			.on('update', function() {
 				{
 					jQuery(this)
-						.text(moment(parseInt(window.localStorage.getItem('extensions.YouRect.History.longTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
+						.text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.History.intTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
 					;
 				}
 			})
@@ -788,7 +744,7 @@ jQuery(window.document).ready(function() {
 			.on('update', function() {
 				{
 					jQuery(this)
-						.text(moment(parseInt(window.localStorage.getItem('extensions.YouRect.Youtube.longTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
+						.text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.Youtube.intTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
 					;
 				}
 			})
@@ -801,11 +757,11 @@ jQuery(window.document).ready(function() {
 		jQuery('#idVisualization_Hideprogress')
 			.off('click')
 			.on('click', function() {
-				if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(true)) {
-					window.localStorage.setItem('extensions.YouRect.Visualization.boolHideprogress', String(false));
+				if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
+					window.localStorage.setItem('extensions.Youwatch.Visualization.boolHideprogress', String(false));
 					
-				} else if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(false)) {
-					window.localStorage.setItem('extensions.YouRect.Visualization.boolHideprogress', String(true));
+				} else if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(false)) {
+					window.localStorage.setItem('extensions.Youwatch.Visualization.boolHideprogress', String(true));
 					
 				}
 
@@ -813,7 +769,7 @@ jQuery(window.document).ready(function() {
 			})
 			.off('update')
 			.on('update', function() {
-				if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(true)) {
+				if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
 					jQuery(this)
 						.addClass('btn-primary')
 						.removeClass('btn-default')
@@ -824,7 +780,7 @@ jQuery(window.document).ready(function() {
 						.removeClass('fa-square-o')
 					;
 					
-				} else if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(false)) {
+				} else if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(false)) {
 					jQuery(this)
 						.addClass('btn-default')
 						.removeClass('btn-primary')

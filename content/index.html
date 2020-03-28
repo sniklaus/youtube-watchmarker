@@ -14,216 +14,148 @@
 		<script type="text/javascript" src="moment.js"></script>
 		
 		<link rel="stylesheet" type="text/css" href="bootstrap.css" />
-		<style type="text/css">
-			.modal-overlay {
-				display:none;
-				position:fixed;
-
-				left:0px;
-				right:0px;
-				top:0px;
-				bottom:0px;
-
-				z-index:12000;
-			}
-
-			.modal-dialog {
-				display:none;
-				position:fixed;
-
-				left:50%;
-				top:50%;
-
-				width:100%;
-
-				z-index:12000;
-
-				margin:0px;
-				border:none;
-				border-spacing:0px;
-				padding:15px;
-			}
-		</style>
 
 		<link rel="stylesheet" type="text/css" href="fontawesome.css" />
 
-		<script type="text/javascript" src="libModal.js"></script>
-
 		<script type="text/javascript" src="index.js"></script>
 	</head>
-	<body style="background-color:#EEEEEE;">
-		<div style="max-width:700px; margin:0px auto 0px auto; padding:20px 20px 0px 20px;">
-			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idGeneral_ModalLoading" style="width:400px;">
-				<div class="panel panel-default modal-content">
-					<div class="panel-body">
-						<table class="table" style="margin:0px;">
-							<tr>
-								<th style="width:1%; border:none; text-align:right; white-space:nowrap;">
-									Message:
-								</th>
-								<td style="border:none;">
-									<span id="idGeneral_ModalLoading_Message"></span>
-								</td>
-							</tr>
-							<tr>
-								<th style="text-align:right; white-space:nowrap;">
-									Progress:
-								</th>
-								<td>
-									<span id="idGeneral_ModalLoading_Progress"></span>
-								</td>
-							</tr>
-						</table>
-						
-						<hr></hr>
-						
-						<div class="pull-right">
-							<a class="btn btn-primary" id="idGeneral_ModalLoading_Close">
-								Close
-							</a>
-						</div>
-					</div>
-				</div>
+	<body style="cursor:default; line-height:1.1; padding:20px 20px 0px 20px;">
+		<div class="card" style="margin:0px auto 20px auto; max-width:700px;">
+			<div class="card-header">
+				Database
 			</div>
 
-			<div class="panel panel-default modal-content">
-				<div class="panel-heading">
-					Database
+			<div class="card-body">
+				<div style="position:absolute; left:-1024px; top:-1024px;">
+					<input id="idDatabase_File" type="file" accept=".database" />
 				</div>
-				<div class="panel-body">
-					<div style="position:absolute; left:-1024px; top:-1024px;">
-						<input id="idDatabase_File" type="file" accept=".database" />
+
+				<p style="text-align:justify;">The database is only stored within Firefox, which is why removing the browser or even just this addon would lead to the loss of your timeline. You are therefore highly encouraged to regularly export the database in order to have a backup.</p>
+
+				<button class="btn btn-primary" id="idDatabase_Export">Export</button>
+
+				<button class="btn btn-primary" id="idDatabase_Import">Import</button>
+
+				<button class="btn btn-primary" id="idDatabase_Reset">Reset</button>
+
+				<div class="input-group" style="display:inline; font-size:0px; vertical-align:top;">
+					<div class="input-group-prepend" style="display:inline-block;"><span class="input-group-text">Size:</span></div>
+					<div class="form-control" id="idDatabase_Size" style="display:inline-block; width:auto;"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card" style="margin:0px auto 20px auto; max-width:700px;">
+			<div class="card-header">
+				History
+			</div>
+
+			<div class="card-body">
+				<p style="text-align:justify;">The history of your browser provides a straightforward way to initialize your timeline, which you can manually initiate. It is usually not necessary to use this feature more than once, as every subsequent activity on Youtube will already be tracked by this addon.</p>
+
+				<button class="btn btn-primary" id="idHistory_Synchronize">Synchronize</button>
+
+				<div class="input-group" style="display:inline; font-size:0px; vertical-align:top;">
+					<div class="input-group-prepend" style="display:inline-block;"><span class="input-group-text">Timestamp:</span></div>
+					<div class="form-control" id="idHistory_Timestamp" style="display:inline-block; width:auto;"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card" style="margin:0px auto 20px auto; max-width:700px;">
+			<div class="card-header">
+				Youtube
+			</div>
+
+			<div class="card-body">
+				<p style="text-align:justify;">In order to synchronize your timeline across multiple devices, this addon fetches your browsing information directly from your Youtube account. It will in this regard automatically fetch the most recent activity every hour, but you can manually initiate a complete fetch of the entire browsing information.</p>
+
+				<button class="btn btn-primary" id="idYoutube_Synchronize">Synchronize</button>
+
+				<div class="input-group" style="display:inline; font-size:0px; vertical-align:top;">
+					<div class="input-group-prepend" style="display:inline-block;"><span class="input-group-text">Timestamp:</span></div>
+					<div class="form-control" id="idYoutube_Timestamp" style="display:inline-block; width:auto;"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card" style="margin:0px auto 20px auto; max-width:700px;">
+			<div class="card-header">
+				Visualization
+			</div>
+
+			<div class="card-body">
+				<div class="input-group" style="margin:0px 0px 17px 0px;">
+					<div class="form-control">Show a watch badge in addition to graying out watched videos.</div>
+					<div class="input-group-append">
+						<button class="btn btn-primary" id="idSearch_Lookup">
+							<i class="far fa-square"></i>
+							<i class="far fa-check-square"></i>
+						</button>
 					</div>
-					
-					<div style="text-align:justify;">
-						The database is only stored within Firefox, which is why removing the browser or even just this addon would lead to the loss of your timeline. You are therefore highly encouraged to regularly export the database in order to have a backup.
+				</div>
+				<div class="input-group" style="margin:0px 0px 0px 0px;">
+					<div class="form-control">Hide the progressbar that is being shown underneath watched videos.</div>
+					<div class="input-group-append">
+						<button class="btn btn-primary" id="idSearch_Lookup">
+							<i class="far fa-square"></i>
+							<i class="far fa-check-square"></i>
+						</button>
 					</div>
-					
-					<div style="height:15px;"></div>
-					
-					<a class="btn btn-primary" id="idDatabase_Export">
-						Export
-					</a>
-					
-					<a class="btn btn-primary" id="idDatabase_Import">
-						Import
-					</a>
-					
-					<a class="btn btn-primary" id="idDatabase_Reset">
-						Reset
-					</a>
-					
-					<div style="display:inline-block; vertical-align:top;">
-						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">Size:</div>
-							<div class="form-control" id="idDatabase_Size" style="width:auto;"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card" style="margin:0px auto 20px auto; max-width:700px;">
+			<div class="card-header">
+				Search
+			</div>
+
+			<div class="card-body">
+				<div class="input-group" style="margin:0px 0px 17px 0px;">
+					<input id="idSearch_Query" type="text" class="form-control" placeholder="...">
+					<div class="input-group-append">
+						<button class="btn btn-primary" id="idSearch_Lookup">
+							<i class="fa fa-search"></i>
+							<i class="fa fa-cog fa-spin"></i>
+						</button>
+					</div>
+				</div>
+
+				<div id="idSearch_Results" style="font-size:14px;"></div>
+			</div>
+		</div>
+
+		<div style="background-color:#000000AA; bottom:0px; display:none; left:0px; padding:20px; position:fixed; right:0px; top:0px; z-index:10;">
+			<div class="card" style="margin:-95px auto 20px auto; max-width:500px; top:50%;">
+				<div class="card-body">
+					<div class="input-group" style="margin:0px 0px 17px 0px;">
+						<div class="input-group-prepend">
+							<span class="input-group-text" style="display:block; text-align:right; width:96px;">Message:</span>
 						</div>
+						<div class="form-control"></div>
 					</div>
-				</div>
-			</div>
-			
-			<div class="modal-overlay"></div>
-			<div class="modal-dialog" id="idDatabase_ModalReset" style="max-width:500px;">
-				<div class="panel panel-default modal-content">
-					<div class="panel-body">
-						<div style="text-align:justify;">
-							Do you really want to reset the database, clearing your entire timeline?
+
+					<div class="input-group" style="margin:0px 0px 17px 0px;">
+						<div class="input-group-prepend">
+							<span class="input-group-text" style="display:block; text-align:right; width:96px;">Progress:</span>
 						</div>
-						
-						<hr></hr>
-						
-						<div class="pull-right">
-							<a class="btn btn-primary" id="idDatabase_ModalReset_Yes">
-								Yes
-							</a>
-							
-							<a class="btn btn-primary" id="idDatabase_ModalReset_No">
-								No
-							</a>
-						</div>
+						<div class="form-control"></div>
 					</div>
+
+					<button class="btn btn-primary">Close</button>
 				</div>
 			</div>
-			
-			<div class="panel panel-default modal-content">
-				<div class="panel-heading">
-					History
-				</div>
-				<div class="panel-body">
-					<div style="text-align:justify;">
-						The history of your browser provides a straightforward way to initialize your timeline, which you can manually initiate. It is usually not necessary to use this feature more than once, as every subsequent activity on Youtube will already be tracked by this addon.
-					</div>
-					
-					<div style="height:15px;"></div>
-					
-					<a class="btn btn-primary" id="idHistory_Synchronize">
-						Synchronize
-					</a>
-					
-					<div style="display:inline-block; vertical-align:top;">
-						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">Timestamp:</div>
-							<div class="form-control" id="idHistory_Timestamp" style="width:auto;"></div>
-						</div>	
-					</div>
-				</div>
-			</div>
-			
-			<div class="panel panel-default modal-content">
-				<div class="panel-heading">
-					Youtube
-				</div>
-				<div class="panel-body">
-					<div style="text-align:justify;">
-						In order to synchronize your timeline across multiple devices, this addon fetches your browsing information directly from your Youtube account. It will in this regard automatically fetch the most recent activity every hour, but you can manually initiate a complete fetch of the entire browsing information.
-					</div>
-					
-					<div style="height:15px;"></div>
-					
-					<a class="btn btn-primary" id="idYoutube_Synchronize">
-						Synchronize
-					</a>
-					
-					<div style="display:inline-block; vertical-align:top;">
-						<div class="input-group">
-							<div class="input-group-addon" style="text-align:right;">Timestamp:</div>
-							<div class="form-control" id="idYoutube_Timestamp" style="width:auto;"></div>
-						</div>
-					</div>
-				</div>
-			</div>
-			
-			<div class="panel panel-default modal-content">
-				<div class="panel-heading">
-					Visualization
-				</div>
-				<div class="panel-body">
-					<a class="btn btn-primary" id="idVisualization_Hideprogress" style="display:block; text-align:left; white-space:normal;">
-						Hide the progressbar that is being shown underneath watched videos.
-						<span class="fa fa-square-o pull-right" style="line-height:1.4;"></span>
-					</a>
-				</div>
-			</div>
-			
-			<div class="panel panel-default modal-content">
-				<div class="panel-heading">
-					Search
-				</div>
-				<div class="panel-body">
-					<div class="input-group">
-						<input class="form-control" id="idSearch_Query" type="text" placeholder="..." />
-						<span class="input-group-btn">
-							<a class="btn btn-primary" id="idSearch_Lookup">
-								<span class="fa fa-search"></span>
-							</a>
-							<a class="btn btn-primary disabled" id="idSearch_Loading">
-								<span class="fa fa-cog fa-spin"></span>
-							</a>
-						</span>
-					</div>
-					
-					<div id="idSearch_Results"></div>
+		</div>
+
+		<div style="background-color:#000000AA; bottom:0px; display:none; left:0px; padding:20px; position:fixed; right:0px; top:0px; z-index:10;">
+			<div class="card" style="margin:-95px auto 20px auto; max-width:500px; top:50%;">
+				<div class="card-body">
+					<p style="text-align:justify;">Do you really want to reset the database of this extension, clearing your entire watch history?</p>
+
+					<button class="btn btn-primary">Yes</button>
+
+					<button class="btn btn-primary">No</button>
 				</div>
 			</div>
 		</div>

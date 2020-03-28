@@ -10,7 +10,7 @@
 	"permissions": [ "alarms", "downloads", "history", "tabs", "webRequest", "webNavigation", "*://*.youtube.com/*", "*://*.ytimg.com/*" ],
 
 	"icons": {
-		"72": "content/images/icon.png"
+		"72": "content/icon.png"
 	},
 
 	"applications": {
@@ -34,7 +34,7 @@
 		"browser_style": false,
 		"default_title": "Youtube Watchmarker",
 		"default_icon": {
-			"72" : "content/images/icon.png"
+			"72" : "content/icon.png"
 		}
 	}
 }

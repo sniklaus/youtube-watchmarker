@@ -1,1200 +1,1311 @@
 'use strict';
 
+var Node = {
+	series: function(objFunctions, funcCallback) {
+		var strFunctions = Object.keys(objFunctions);
+
+		var objWorkspace = {};
+
+		var funcNext = function(objArguments, objOverwrite) {
+			if (objArguments === null) {
+				return funcCallback(null);
+			}
+
+			objWorkspace[strFunctions[0]] = objArguments;
+
+			strFunctions.shift();
+
+			if (objOverwrite !== undefined) {
+				if (typeof(objOverwrite) === 'string') {
+					strFunctions = Object.keys(objFunctions);
+
+					while (true) {
+						if (strFunctions.length === 0) {
+							break;
+
+						} else if (strFunctions[0] === objOverwrite) {
+							break;
+
+						}
+
+						strFunctions.shift();
+					};
+
+				} else if (typeof(objOverwrite) === 'object') {
+					strFunctions = objOverwrite;
+
+				}
+			}
+
+			if (strFunctions.length === 0) {
+				return funcCallback(objWorkspace);
+			}
+
+			objFunctions[strFunctions[0]](objWorkspace, funcNext);
+		};
+
+		objFunctions[strFunctions[0]](objWorkspace, funcNext);
+	}
+};
+
 var Database = {
-	objectRequest: null,
+	objDatabase: null,
 
-	init: function() {
-		{
-			var objectRequest = window.indexedDB.open('Database', 301);
+	init: function(objRequest, funcResponse) {
+		Node.series({
+			'objStore': function(objArguments, funcCallback) {
+				var objQuery = window.indexedDB.open('Database', 301);
 
-			objectRequest.onerror = function() {
-				console.log(objectRequest.error.name);
-			};
+				objQuery.onupgradeneeded = function() {
+					var objStore = null;
 
-			objectRequest.onupgradeneeded = function() {
-				var objectStore = null;
+					if (objQuery.result.objectStoreNames.contains('storeDatabase') === true) {
+						objStore = objQuery.transaction.objectStore('storeDatabase');
 
-				if (objectRequest.result.objectStoreNames.contains('storeDatabase') === false) {
-					objectStore = objectRequest.result.createObjectStore('storeDatabase', {
-						'keyPath': 'strIdent'
-					});
+					} else if (objQuery.result.objectStoreNames.contains('storeDatabase') === false) {
+						objStore = objQuery.result.createObjectStore('storeDatabase', {
+							'keyPath': 'strIdent'
+						});
 
-				} else if (objectRequest.result.objectStoreNames.contains('storeDatabase') === true) {
-					objectStore = objectRequest.transaction.objectStore('storeDatabase');
+					}
 
-				}
-
-				if (objectStore.indexNames.contains('strIdent') === false) {
-					objectStore.createIndex('strIdent', 'strIdent', {
-						'unique': true
-					});
-				}
-
-				if (objectStore.indexNames.contains('longTimestamp') === false) {
-					objectStore.createIndex('longTimestamp', 'longTimestamp', {
-						'unique': false
-					});
-				}
-			};
-
-			objectRequest.onsuccess = function() {
-				Database.objectDatabase = objectRequest.result;
-			};
-		}
-
-		chrome.runtime.onConnect.addListener(function(objectPort) {
-			if (objectPort.name === 'database') {
-				objectPort.onMessage.addListener(function(objectData) {
-					if (objectData.strMessage === 'databaseSave') {
-						Database.save(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'databaseSave',
-								'objectArguments': objectArguments
-							});
-						}, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'databaseSave-progress',
-								'objectArguments': objectArguments
-							});
+					if (objStore.indexNames.contains('strIdent') === false) {
+						objStore.createIndex('strIdent', 'strIdent', {
+							'unique': true
 						});
 					}
 
-					if (objectData.strMessage === 'databaseLoad') {
-						Database.load(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'databaseLoad',
-								'objectArguments': objectArguments
-							});
-						}, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'databaseLoad-progress',
-								'objectArguments': objectArguments
-							});
+					if (objStore.indexNames.contains('longTimestamp') === false) {
+						objStore.createIndex('longTimestamp', 'longTimestamp', {
+							'unique': false
 						});
 					}
+				};
 
-					if (objectData.strMessage === 'databaseReset') {
-						Database.reset(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'databaseReset',
-								'objectArguments': objectArguments
-							});
+				objQuery.onerror = function() {
+					Database.objDatabase = null;
+
+					return funcCallback(null);
+				};
+
+				objQuery.onsuccess = function() {
+					Database.objDatabase = objQuery.result;
+
+					return funcCallback({});
+				};
+			},
+			'objMessaging': function(objArguments, funcCallback) {
+				chrome.runtime.onConnect.addListener(function(objPort) {
+					if (objPort.name === 'database') {
+						objPort.onMessage.addListener(function(objData) {
+							if (objData.strMessage === 'databaseSave') {
+								Database.save(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'databaseSave',
+										'objResponse': objResponse
+									});
+								}, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'databaseSave-progress',
+										'objResponse': objResponse
+									});
+								});
+							}
+
+							if (objData.strMessage === 'databaseLoad') {
+								Database.load(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'databaseLoad',
+										'objResponse': objResponse
+									});
+								}, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'databaseLoad-progress',
+										'objResponse': objResponse
+									});
+								});
+							}
+
+							if (objData.strMessage === 'databaseReset') {
+								Database.reset(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'databaseReset',
+										'objResponse': objResponse
+									});
+								});
+							}
 						});
 					}
 				});
+
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
+
 			}
 		});
 	},
 
-	dispel: function() {
-		Database.objectDatabase = null;
-	},
+	save: function(objRequest, funcResponse, funcProgress) {
+		Node.series({
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.openCursor();
 
-	save: function(objectArguments, functionCallback, functionProgress) {
-		var Transaction_objectStore = null;
+				objQuery.results = [];
 
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase');
+				objQuery.onsuccess = function() {
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						return funcCallback(objQuery.results);
+					}
 
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
-
-			return functionSelect();
-		};
-
-		var Select_objectResults = [];
-
-		var functionSelect = function() {
-			var objectRequest = Transaction_objectStore.openCursor();
-
-			objectRequest.onsuccess = function() {
-				functionProgress({
-					'strProgress': String(Select_objectResults.length)
-				});
-
-				if ((objectRequest.result === undefined) || (objectRequest.result === null)) {
-					chrome.downloads.download({
-						'url' : URL.createObjectURL(new Blob([ btoa(unescape(encodeURIComponent(JSON.stringify(Select_objectResults)))) ], {
-							'type': 'text/plain'
-						})),
-						'filename': new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.database',
-						'saveAs': true
+					funcProgress({
+						'strProgress': 'collected ' + objQuery.results.length + ' videos'
 					});
 
-					return functionCallback({});
-
-				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
-					Select_objectResults.push({
-						'strIdent': objectRequest.result.value.strIdent,
-						'longTimestamp': objectRequest.result.value.longTimestamp,
-						'strTitle': objectRequest.result.value.strTitle,
-						'intCount': objectRequest.result.value.intCount
+					objQuery.results.push({
+						'strIdent': objQuery.result.value.strIdent,
+						'longTimestamp': objQuery.result.value.longTimestamp,
+						'strTitle': objQuery.result.value.strTitle,
+						'intCount': objQuery.result.value.intCount
 					});
 
-					objectRequest.result.continue();
-
-				}
-			};
-		};
-
-		return functionTransaction();
-	},
-
-	load: function(objectArguments, functionCallback, functionProgress) {
-		var Transaction_objectStore = null;
-
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
-
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
-
-			return functionSelectIterator(null);
-		};
-
-		var SelectIterator_intIndex = 0;
-
-		var functionSelectIterator = function(intIncrement) {
-			if (intIncrement === null) {
-				SelectIterator_intIndex = 0;
-
-			} else if (intIncrement !== null) {
-				SelectIterator_intIndex += intIncrement;
-
-			}
-
-			if (SelectIterator_intIndex < objectArguments.objectResults.length) {
-				return functionSelect();
-
-			} else if (SelectIterator_intIndex >= objectArguments.objectResults.length) {
-				return functionCount();
-
-			}
-		};
-
-		var Select_strIdent = '';
-		var Select_longTimestamp = 0;
-		var Select_strTitle = '';
-		var Select_intCount = 0;
-
-		var functionSelect = function() {
-			var objectRequest = Transaction_objectStore.index('strIdent').get(objectArguments.objectResults[SelectIterator_intIndex].strIdent);
-
-			objectRequest.onsuccess = function() {
-				if (functionProgress.intNew === undefined) {
-					functionProgress.intNew = 0;
-					functionProgress.intExisting = 0;
-
-				} else if (functionProgress.intNew === undefined) {
-					functionProgress.intNew = 0;
-					functionProgress.intExisting = 0;
-
-				}
-
-				functionProgress({
-					'strProgress': (functionProgress.intNew + functionProgress.intExisting) + ' - ' + functionProgress.intNew + ' were new'
+					objQuery.result.continue();
+				};
+			},
+			'objDownload': function(objArguments, funcCallback) {
+				chrome.downloads.download({
+					'url' : URL.createObjectURL(new Blob([ btoa(unescape(encodeURIComponent(JSON.stringify(objArguments.objGet)))) ], {
+						'type': 'text/plain'
+					})),
+					'filename': new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.database',
+					'saveAs': true
 				});
 
-				if ((objectRequest.result === undefined) || (objectRequest.result === null)) {
-					functionProgress.intNew += 1;
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
 
-					Select_strIdent = objectArguments.objectResults[SelectIterator_intIndex].strIdent;
-					Select_longTimestamp = objectArguments.objectResults[SelectIterator_intIndex].longTimestamp || new Date().getTime();
-					Select_strTitle = objectArguments.objectResults[SelectIterator_intIndex].strTitle || '';
-					Select_intCount = objectArguments.objectResults[SelectIterator_intIndex].intCount || 1;
-
-					return functionPut();
-
-				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
-					functionProgress.intExisting += 1;
-
-					Select_strIdent = objectRequest.result.strIdent;
-					Select_longTimestamp = Math.max(objectRequest.result.longTimestamp, objectArguments.objectResults[SelectIterator_intIndex].longTimestamp) || new Date().getTime();
-					Select_strTitle = objectRequest.result.strTitle || objectArguments.objectResults[SelectIterator_intIndex].strTitle || '';
-					Select_intCount = Math.max(objectRequest.result.intCount, objectArguments.objectResults[SelectIterator_intIndex].intCount) || 1;
-
-					return functionPut();
-
-				}
-			};
-		};
-		
-		var functionPut = function() {
-			if (Select_strIdent.trim() === '') {
-				return functionSelectIterator(1);
-
-			} else if (Select_strTitle.trim() === '') {
-				return functionSelectIterator(1);
+			} else if (objArguments !== null) {
+				funcResponse({});
 
 			}
+		});
+	},
 
-			var objectRequest = Transaction_objectStore.put({
-				'strIdent': Select_strIdent,
-				'longTimestamp': Select_longTimestamp,
-				'strTitle': Select_strTitle,
-				'intCount': Select_intCount
-			});
+	load: function(objRequest, funcResponse, funcProgress) {
+		Node.series({
+			'objVideos': function(objArguments, funcCallback) {
+				return funcCallback(objRequest.objVideos);
+			},
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objVideo': function(objArguments, funcCallback) {
+				if (objArguments.hasOwnProperty('intVideo') === false) {
+					objArguments.intVideo = 0;
+				}
 
-			objectRequest.onsuccess = function() {
-				return functionSelectIterator(1);
-			};
-		};
-		
-		var functionCount = function() {
-			var objectRequest = Transaction_objectStore.count();
+				if (objArguments.intVideo >= objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo-Next');
+				}
 
-			objectRequest.onsuccess = function() {
-				window.localStorage.setItem('extensions.YouRect.Database.intSize', String(objectRequest.result));
+				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
 
-				return functionCallback({});
-			};
-		};
+				objQuery.onsuccess = function() {
+					if (objArguments.intNew === undefined) {
+						objArguments.intNew = 0;
+						objArguments.intExisting = 0;
+					}
 
-		return functionTransaction();
+					funcProgress({
+						'strProgress': 'imported ' + (objArguments.intNew + objArguments.intExisting) + ' videos - ' + objArguments.intNew + ' were new'
+					});
+
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						objArguments.intNew += 1;
+
+						return funcCallback({
+							'strIdent': objArguments.objVideo.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || '',
+							'intCount': objArguments.objVideo.intCount || 1
+						});
+
+					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+						objArguments.intExisting += 1;
+
+						return funcCallback({
+							'strIdent': objQuery.result.strIdent,
+							'longTimestamp': Math.max(objQuery.result.longTimestamp, objArguments.objVideo.longTimestamp) || new Date().getTime(),
+							'strTitle': objQuery.result.strTitle || objArguments.objVideo.strTitle || '',
+							'intCount': Math.max(objQuery.result.intCount, objArguments.objVideo.intCount) || 1
+						});
+
+					}
+				};
+			},
+			'objPut': function(objArguments, funcCallback) {
+				if (objArguments.objGet.strIdent.trim() === '') {
+					return funcCallback({});
+
+				} else if (objArguments.objGet.strTitle.trim() === '') {
+					return funcCallback({});
+
+				}
+
+				var objQuery = objArguments.objStore.put(objArguments.objGet);
+
+				objQuery.onsuccess = function() {
+					return funcCallback({});
+				};
+			},
+			'objVideo-Next': function(objArguments, funcCallback) {
+				objArguments.intVideo += 1;
+
+				if (objArguments.intVideo < objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo');
+				}
+
+				objArguments.intVideo = 0;
+
+				return funcCallback({});
+			},
+			'objCount': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.count();
+
+				objQuery.onsuccess = function() {
+					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
+
+					return funcCallback({});
+				};
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
+
+			}
+		});
 	},
 	
-	reset: function(objectArguments, functionCallback) {
-		var Transaction_objectStore = null;
+	reset: function(objRequest, funcResponse) {
+		Node.series({
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objClear': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.clear();
 
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
+				objQuery.onsuccess = function() {
+					return funcCallback({});
+				};
+			},
+			'objCount': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.count();
 
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
+				objQuery.onsuccess = function() {
+					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
 
-			return functionReset();
-		};
+					return funcCallback({});
+				};
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
 
-		var functionReset = function() {
-			var objectRequest = Transaction_objectStore.clear();
+			} else if (objArguments !== null) {
+				funcResponse({});
 
-			objectRequest.onsuccess = function() {
-				return functionCount();
-			};
-		};
-
-		var functionCount = function() {
-			var objectRequest = Transaction_objectStore.count();
-
-			objectRequest.onsuccess = function() {
-				window.localStorage.setItem('extensions.YouRect.Database.intSize', String(objectRequest.result));
-
-				return functionCallback({});
-			};
-		};
-
-		return functionTransaction();
+			}
+		});
 	}
 };
-Database.init();
 
 var History = {
-	init: function() {
-		chrome.runtime.onConnect.addListener(function(objectPort) {
-			if (objectPort.name === 'history') {
-				objectPort.onMessage.addListener(function(objectData) {
-					if (objectData.strMessage === 'historySynchronize') {
-						History.synchronize(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'historySynchronize',
-								'objectArguments': objectArguments
-							});
-						}, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'historySynchronize-progress',
-								'objectArguments': objectArguments
-							});
+	init: function(objRequest, funcResponse) {
+		Node.series({
+			'objMessaging': function(objArguments, funcCallback) {
+				chrome.runtime.onConnect.addListener(function(objPort) {
+					if (objPort.name === 'history') {
+						objPort.onMessage.addListener(function(objData) {
+							if (objData.strMessage === 'historySynchronize') {
+								History.synchronize(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'historySynchronize',
+										'objResponse': objResponse
+									});
+								}, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'historySynchronize-progress',
+										'objResponse': objResponse
+									});
+								});
+							}
 						});
 					}
 				});
+
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
+
 			}
 		});
 	},
 
-	dispel: function() {
-		
-	},
+	synchronize: function(objRequest, funcResponse, funcProgress) {
+		Node.series({
+			'objVideos': function(objArguments, funcCallback) {
+				chrome.history.search({
+					'text': 'https://www.youtube.com/watch?v=',
+					'startTime': objRequest.intTimestamp,
+					'maxResults': 1000000000
+				}, function(objResults) {
+					var objVideos = [];
 
-	synchronize: function(objectArguments, functionCallback, functionProgress) {
-		var Search_objectResults = [];
-		
-		var functionSearch = function() {
-			chrome.history.search({
-				'text': 'https://www.youtube.com/watch?v=',
-				'startTime': objectArguments.longTimestamp,
-				'maxResults': 1000000
-			}, function(objectResults) {
-				for (var objectResult of objectResults) {
-					if (objectResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
-						continue;
+					for (var objResult of objResults) {
+						if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
+							continue;
 
-					} else if (objectResult.title === null) {
-						continue;
+						} else if (objResult.title === null) {
+							continue;
 
-					} else if (objectResult.title.indexOf(' - YouTube') !== objectResult.title.length - 10) {
-						continue;
+						} else if (objResult.title.indexOf(' - YouTube') !== objResult.title.length - 10) {
+							continue;
 
+						}
+
+						objVideos.push({
+							'strIdent': objResult.url.substr(32).substr(0, 11),
+							'longTimestamp': objResult.lastVisitTime,
+							'strTitle': objResult.title.slice(0, -10),
+							'intCount': objResult.visitCount
+						});
 					}
 
-					Search_objectResults.push({
-						'strIdent': objectResult.url.substr(32).substr(0, 11),
-						'longTimestamp': objectResult.lastVisitTime,
-						'strTitle': objectResult.title.slice(0, -10),
-						'intCount': objectResult.visitCount
-					});
-				}
-
-				return functionTransaction();
-			});
-		};
-
-		var Transaction_objectStore = null;
-
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
-
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
-
-			return functionSelectIterator(null);
-		};
-
-		var SelectIterator_intIndex = 0;
-
-		var functionSelectIterator = function(intIncrement) {
-			if (intIncrement === null) {
-				SelectIterator_intIndex = 0;
-
-			} else if (intIncrement !== null) {
-				SelectIterator_intIndex += intIncrement;
-
-			}
-
-			if (SelectIterator_intIndex < Search_objectResults.length) {
-				return functionSelect();
-
-			} else if (SelectIterator_intIndex >= Search_objectResults.length) {
-				return functionCount();
-
-			}
-		};
-
-		var Select_strIdent = '';
-		var Select_longTimestamp = 0;
-		var Select_strTitle = '';
-		var Select_intCount = 0;
-
-		var functionSelect = function() {
-			var objectRequest = Transaction_objectStore.index('strIdent').get(Search_objectResults[SelectIterator_intIndex].strIdent);
-
-			objectRequest.onsuccess = function() {
-				if (functionProgress.intNew === undefined) {
-					functionProgress.intNew = 0;
-					functionProgress.intExisting = 0;
-
-				} else if (functionProgress.intNew === undefined) {
-					functionProgress.intNew = 0;
-					functionProgress.intExisting = 0;
-
-				}
-
-				functionProgress({
-					'strProgress': (functionProgress.intNew + functionProgress.intExisting) + ' - ' + functionProgress.intNew + ' were new'
+					return funcCallback(objVideos);
 				});
+			},
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objVideo': function(objArguments, funcCallback) {
+				if (objArguments.hasOwnProperty('intVideo') === false) {
+					objArguments.intVideo = 0;
+				}
 
-				if ((objectRequest.result === undefined) || (objectRequest.result === null)) {
-					functionProgress.intNew += 1;
+				if (objArguments.intVideo >= objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo-Next');
+				}
 
-					Select_strIdent = Search_objectResults[SelectIterator_intIndex].strIdent;
-					Select_longTimestamp = Search_objectResults[SelectIterator_intIndex].longTimestamp || new Date().getTime();
-					Select_strTitle = Search_objectResults[SelectIterator_intIndex].strTitle || '';
-					Select_intCount = Search_objectResults[SelectIterator_intIndex].intCount || 1;
+				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
 
-					return functionPut();
+				objQuery.onsuccess = function() {
+					if (objArguments.intNew === undefined) {
+						objArguments.intNew = 0;
+						objArguments.intExisting = 0;
+					}
 
-				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
-					functionProgress.intExisting += 1;
+					funcProgress({
+						'strProgress': 'imported ' + (objArguments.intNew + objArguments.intExisting) + ' videos - ' + objArguments.intNew + ' were new'
+					});
 
-					Select_strIdent = objectRequest.result.strIdent;
-					Select_longTimestamp = Math.max(objectRequest.result.longTimestamp, Search_objectResults[SelectIterator_intIndex].longTimestamp) || new Date().getTime();
-					Select_strTitle = objectRequest.result.strTitle || Search_objectResults[SelectIterator_intIndex].strTitle || '';
-					Select_intCount = Math.max(objectRequest.result.intCount, Search_objectResults[SelectIterator_intIndex].intCount) || 1;
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						objArguments.intNew += 1;
 
-					return functionPut();
+						return funcCallback({
+							'strIdent': objArguments.objVideo.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || '',
+							'intCount': objArguments.objVideo.intCount || 1
+						});
+
+					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+						objArguments.intExisting += 1;
+
+						return funcCallback({
+							'strIdent': objQuery.result.strIdent,
+							'longTimestamp': Math.max(objQuery.result.longTimestamp, objArguments.objVideo.longTimestamp) || new Date().getTime(),
+							'strTitle': objQuery.result.strTitle || objArguments.objVideo.strTitle || '',
+							'intCount': Math.max(objQuery.result.intCount, objArguments.objVideo.intCount) || 1
+						});
+
+					}
+				};
+			},
+			'objPut': function(objArguments, funcCallback) {
+				if (objArguments.objGet.strIdent.trim() === '') {
+					return funcCallback({});
+
+				} else if (objArguments.objGet.strTitle.trim() === '') {
+					return funcCallback({});
 
 				}
-			};
-		};
 
-		var functionPut = function() {
-			if (Select_strIdent.trim() === '') {
-				return functionSelectIterator(1);
+				var objQuery = objArguments.objStore.put(objArguments.objGet);
 
-			} else if (Select_strTitle.trim() === '') {
-				return functionSelectIterator(1);
+				objQuery.onsuccess = function() {
+					return funcCallback({});
+				};
+			},
+			'objVideo-Next': function(objArguments, funcCallback) {
+				objArguments.intVideo += 1;
+
+				if (objArguments.intVideo < objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo');
+				}
+
+				objArguments.intVideo = 0;
+
+				return funcCallback({});
+			},
+			'objCount': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.count();
+
+				objQuery.onsuccess = function() {
+					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
+
+					return funcCallback({});
+				};
+			},
+			'objTime': function(objArguments, funcCallback) {
+				window.localStorage.setItem('extensions.Youwatch.History.intTimestamp', String(new Date().getTime()));
+
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
 
 			}
-
-			var objectRequest = Transaction_objectStore.put({
-				'strIdent': Select_strIdent,
-				'longTimestamp': Select_longTimestamp,
-				'strTitle': Select_strTitle,
-				'intCount': Select_intCount
-			});
-
-			objectRequest.onsuccess = function() {
-				return functionSelectIterator(1);
-			};
-		};
-		
-		var functionCount = function() {
-			var objectRequest = Transaction_objectStore.count();
-
-			objectRequest.onsuccess = function() {
-				window.localStorage.setItem('extensions.YouRect.Database.intSize', String(objectRequest.result));
-				window.localStorage.setItem('extensions.YouRect.History.longTimestamp', String(new Date().getTime()));
-				
-				return functionCallback({});
-			};
-		};
-
-		return functionSearch();
+		});
 	}
 };
-History.init();
 
 var Youtube = {
-	init: function() {
-		chrome.runtime.onConnect.addListener(function(objectPort) {
-			if (objectPort.name === 'youtube') {
-				objectPort.onMessage.addListener(function(objectData) {
-					if (objectData.strMessage === 'youtubeSynchronize') {
-						Youtube.synchronize(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'youtubeSynchronize',
-								'objectArguments': objectArguments
-							});
-						}, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'youtubeSynchronize-progress',
-								'objectArguments': objectArguments
-							});
-						});
-					}
+	init: function(objRequest, funcResponse) {
+		Node.series({
+			'objMessaging': function(objArguments, funcCallback) {
+				chrome.runtime.onConnect.addListener(function(objPort) {
+					if (objPort.name === 'youtube') {
+						objPort.onMessage.addListener(function(objData) {
+							if (objData.strMessage === 'youtubeSynchronize') {
+								Youtube.synchronize(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'youtubeSynchronize',
+										'objResponse': objResponse
+									});
+								}, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'youtubeSynchronize-progress',
+										'objResponse': objResponse
+									});
+								});
+							}
 
-					if (objectData.strMessage === 'youtubeEnsure') {
-						Youtube.ensure(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'youtubeEnsure',
-								'objectArguments': objectArguments
-							});
-						});
-					}
+							if (objData.strMessage === 'youtubeEnsure') {
+								Youtube.ensure(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'youtubeEnsure',
+										'objResponse': objResponse
+									});
+								});
+							}
 
-					if (objectData.strMessage === 'youtubeWatch') {
-						Youtube.watch(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'youtubeWatch',
-								'objectArguments': objectArguments
-							});
-						});
-					}
+							if (objData.strMessage === 'youtubeWatch') {
+								Youtube.watch(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'youtubeWatch',
+										'objResponse': objResponse
+									});
+								});
+							}
 
-					if (objectData.strMessage === 'youtubeLookup') {
-						Youtube.lookup(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'youtubeLookup',
-								'objectArguments': objectArguments
-							});
+							if (objData.strMessage === 'youtubeLookup') {
+								Youtube.lookup(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'youtubeLookup',
+										'objResponse': objResponse
+									});
+								});
+							}
 						});
 					}
 				});
+
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
+
 			}
 		});
 	},
 
-	dispel: function() {
-		
-	},
-
-	synchronize: function(objectArguments, functionCallback, functionProgress) {
-		var History_strIdent = '';
-		var History_strPost = '';
-		var History_strContinuation = 'https://www.youtube.com/feed/history';
-		var History_objectResults = [];
-
-		var functionHistory = function() {
-			var objectAjax = new XMLHttpRequest();
-
-			objectAjax.onreadystatechange = function() {
-				if (objectAjax.readyState !== 4) {
-					return;
+	synchronize: function(objRequest, funcResponse, funcProgress) {
+		Node.series({
+			'objVideos': function(objArguments, funcCallback) {
+				if (objArguments.strContinuation === undefined) {
+					objArguments.strContinuation = 'https://www.youtube.com/feed/history';
+					objArguments.strIdent = null;
 				}
 
-				History_strContinuation = '';
-				History_objectResults = [];
+				var objAjax = new XMLHttpRequest();
 
-				var strContent = '';
+				objAjax.open('GET', objArguments.strContinuation);
 
-				try {
-					var objectResponse = JSON.parse(objectAjax.responseText); // old
-
-					if (objectResponse.content_html === undefined) {
-						throw new Error();
-
-					} else if (objectResponse.load_more_widget_html === undefined) {
-						throw new Error();
-
-					}
-
-					strContent += objectResponse.content_html;
-					strContent += objectResponse.load_more_widget_html;
-				} catch (objectError) {
-					strContent = objectAjax.responseText;
+				if (objArguments.strContinuation !== null) {
+					objArguments.strContinuation = null;
 				}
 
-				{
-					var strExec = new RegExp('("ID_TOKEN")([ ]*)(:)([ ]*)(")([^"]+)(")', 'g').exec(strContent);
-
-					if (strExec !== null) {
-						History_strIdent = strExec[6];
-					}
-
-					var strExec = new RegExp('("XSRF_TOKEN")([ ]*)(:)([ ]*)(")([^"]+)(")', 'g').exec(strContent);
-
-					if (strExec !== null) {
-						History_strPost = 'session_token=' + strExec[6];
-					}
+				if (objArguments.strIdent !== null) {
+					objAjax.setRequestHeader('X-YouTube-Client-Name', '1');
+					objAjax.setRequestHeader('X-YouTube-Client-Version', '2.20200325.03.01');
+					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.strIdent);
 				}
 
-				{
-					var strExec = new RegExp('("nextContinuationData")(.*?)("continuation")([ ]*)(:)([ ]*)(")([^"]+)(")(.*?)("clickTrackingParams")([ ]*)(:)([ ]*)(")([^"]+)(")', 'g').exec(strContent); // new
+				objAjax.onload = function() {
+					var strAjax = objAjax.responseText.split('\\"').join('\\u0022');
 
-					if (strExec !== null) {
-						History_strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strExec[8] + '&itct=' + strExec[16];
+					var strExec = null;
+					var objContinuation = new RegExp('("nextContinuationData":{"continuation":")([^"]+)(")(.*?)("clickTrackingParams":")([^"]+)(")', 'g');
+					var objIdent = new RegExp('("ID_TOKEN":")([^"]+)(")', 'g');
+					var objVideo = new RegExp('("videoRenderer":{"videoId":")([^"]{11})(")(.*?)("text":")([^"]*)(")', 'g');
+
+					if ((strExec = objContinuation.exec(strAjax)) !== null) {
+						objArguments.strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strExec[2] + '&continuation=' + strExec[2] + '&itct=' + strExec[6];
 					}
-				}
 
-				{
-					var strExec = new RegExp('(href="\\/browse_ajax\\?action_continuation)([^"]*)(")', 'g').exec(strContent); // old
-
-					if (strExec !== null) {
-						History_strContinuation = 'https://www.youtube.com/browse_ajax?action_continuation' + strExec[2];
+					if ((strExec = objIdent.exec(strAjax)) !== null) {
+						objArguments.strIdent = strExec[2];
 					}
-				}
 
-				{
-					var objectRegexp = new RegExp('("videoRenderer")(.*?)("videoId")([ ]*)(:)([ ]*)(")([^"]{11})(")(.*?)("title")(.*?)("simpleText")([ ]*)(:)([ ]*)(")([^"]*)(")', 'g'); // new
+					var objVideos = [];
 
-					while (true) {
-						var strExec = objectRegexp.exec(strContent);
+					while ((strExec = objVideo.exec(strAjax)) !== null) {
+						var strIdent = strExec[2];
+						var strTitle = strExec[6];
 
-						if (strExec === null) {
-							break;
-						}
+						strTitle = strTitle.split('\\u0022').join('"');
+						strTitle = strTitle.split('\\u0026').join('&');
+						strTitle = strTitle.split('\\u003C').join('<');
+						strTitle = strTitle.split('\\u003C').join('=');
+						strTitle = strTitle.split('\\u003E').join('>');
+						strTitle = strTitle.split('\\u003E').join('>');
 
-						var strIdent = strExec[8];
-						var strTitle = strExec[18];
-
-						strTitle = strTitle.replace(new RegExp('&amp;', 'g'), '&');
-						strTitle = strTitle.replace(new RegExp('&lt;', 'g'), '<');
-						strTitle = strTitle.replace(new RegExp('&gt;', 'g'), '>');
-						strTitle = strTitle.replace(new RegExp('&quot;', 'g'), '"');
-
-						History_objectResults.push({
+						objVideos.push({
 							'strIdent': strIdent,
 							'longTimestamp': null,
 							'strTitle': strTitle,
 							'intCount': null
 						});
 					}
+
+					return funcCallback(objVideos);
+				};
+
+				objAjax.send();
+			},
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objVideo': function(objArguments, funcCallback) {
+				if (objArguments.hasOwnProperty('intVideo') === false) {
+					objArguments.intVideo = 0;
 				}
 
-				{
-					var objectRegexp = new RegExp('(<a)([ ]*)(href="\\/watch\\?v=)([^"]{11})([^"]*)(")([^>]*)(title=")([^"]*)(")', 'g'); // old
+				if (objArguments.intVideo >= objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo-Next');
+				}
 
-					while (true) {
-						var strExec = objectRegexp.exec(strContent);
+				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
 
-						if (strExec === null) {
-							break;
-						}
+				objQuery.onsuccess = function() {
+					if (objArguments.intNew === undefined) {
+						objArguments.intNew = 0;
+						objArguments.intExisting = 0;
+					}
 
-						var strIdent = strExec[4];
-						var strTitle = strExec[9];
+					funcProgress({
+						'strProgress': 'imported ' + (objArguments.intNew + objArguments.intExisting) + ' videos - ' + objArguments.intNew + ' were new'
+					});
 
-						strTitle = strTitle.replace(new RegExp('&amp;', 'g'), '&');
-						strTitle = strTitle.replace(new RegExp('&lt;', 'g'), '<');
-						strTitle = strTitle.replace(new RegExp('&gt;', 'g'), '>');
-						strTitle = strTitle.replace(new RegExp('&quot;', 'g'), '"');
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						objArguments.intNew += 1;
 
-						History_objectResults.push({
-							'strIdent': strIdent,
-							'longTimestamp': null,
-							'strTitle': strTitle,
-							'intCount': null
+						return funcCallback({
+							'strIdent': objArguments.objVideo.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || '',
+							'intCount': objArguments.objVideo.intCount || 1
 						});
+
+					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+						objArguments.intExisting += 1;
+
+						return funcCallback({
+							'strIdent': objQuery.result.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || objQuery.result.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || objQuery.result.strTitle || '',
+							'intCount': objArguments.objVideo.intCount || objQuery.result.intCount || 1
+						});
+
+					}
+				};
+			},
+			'objPut': function(objArguments, funcCallback) {
+				if (objArguments.objGet.strIdent.trim() === '') {
+					return funcCallback({});
+
+				} else if (objArguments.objGet.strTitle.trim() === '') {
+					return funcCallback({});
+
+				}
+
+				var objQuery = objArguments.objStore.put(objArguments.objGet);
+
+				objQuery.onsuccess = function() {
+					return funcCallback({});
+				};
+			},
+			'objVideo-Next': function(objArguments, funcCallback) {
+				objArguments.intVideo += 1;
+
+				if (objArguments.intVideo < objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo');
+				}
+
+				objArguments.intVideo = 0;
+
+				return funcCallback({});
+			},
+			'objCount': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.count();
+
+				objQuery.onsuccess = function() {
+					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
+
+					return funcCallback({});
+				};
+			},
+			'objTime': function(objArguments, funcCallback) {
+				window.localStorage.setItem('extensions.Youwatch.Youtube.intTimestamp', String(new Date().getTime()));
+
+				return funcCallback({});
+			},
+			'objContinuation': function(objArguments, funcCallback) {
+				if (objArguments.intExisting < objRequest.intThreshold) {
+					if (objArguments.strContinuation !== null) {
+						return funcCallback({}, 'objVideos');
 					}
 				}
 
-				return functionTransaction();
-			};
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
 
-			if (History_strPost === '') {
-				objectAjax.open('GET', History_strContinuation);
-
-			} else if (History_strPost !== '') {
-				objectAjax.open('POST', History_strContinuation);
-
-				objectAjax.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+			} else if (objArguments !== null) {
+				funcResponse({});
 
 			}
-
-			if (History_strIdent !== '') {
-				objectAjax.setRequestHeader('X-YouTube-Client-Name', '1');
-				objectAjax.setRequestHeader('X-YouTube-Client-Version', '2.20170427');
-				objectAjax.setRequestHeader('X-Youtube-Identity-Token', History_strIdent);
-			}
-
-			if (History_strPost === '') {
-				objectAjax.send();
-
-			} else if (History_strPost !== '') {
-				objectAjax.send(History_strPost);
-
-			}
-		};
-
-		var Transaction_objectStore = null;
-
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
-
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
-
-			return functionSelectIterator(null);
-		};
-
-		var SelectIterator_intIndex = 0;
-
-		var functionSelectIterator = function(intIncrement) {
-			if (intIncrement === null) {
-				SelectIterator_intIndex = 0;
-
-			} else if (intIncrement !== null) {
-				SelectIterator_intIndex += intIncrement;
-
-			}
-
-			if (SelectIterator_intIndex < History_objectResults.length) {
-				return functionSelect();
-
-			} else if (SelectIterator_intIndex >= History_objectResults.length) {
-				return functionCount();
-
-			}
-		};
-
-		var Select_strIdent = '';
-		var Select_longTimestamp = 0;
-		var Select_strTitle = '';
-		var Select_intCount = 0;
-
-		var functionSelect = function() {
-			var objectRequest = Transaction_objectStore.index('strIdent').get(History_objectResults[SelectIterator_intIndex].strIdent);
-
-			objectRequest.onsuccess = function() {
-				if (functionProgress.intNew === undefined) {
-					functionProgress.intNew = 0;
-					functionProgress.intExisting = 0;
-
-				} else if (functionProgress.intNew === undefined) {
-					functionProgress.intNew = 0;
-					functionProgress.intExisting = 0;
-
-				}
-
-				functionProgress({
-					'strProgress': (functionProgress.intNew + functionProgress.intExisting) + ' - ' + functionProgress.intNew + ' were new'
-				});
-
-				if ((objectRequest.result === undefined) || (objectRequest.result === null)) {
-					functionProgress.intNew += 1;
-
-					Select_strIdent = History_objectResults[SelectIterator_intIndex].strIdent;
-					Select_longTimestamp = History_objectResults[SelectIterator_intIndex].longTimestamp || new Date().getTime();
-					Select_strTitle = History_objectResults[SelectIterator_intIndex].strTitle || '';
-					Select_intCount = History_objectResults[SelectIterator_intIndex].intCount || 1;
-
-					return functionPut();
-
-				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
-					functionProgress.intExisting += 1;
-
-					Select_strIdent = objectRequest.result.strIdent;
-					Select_longTimestamp = History_objectResults[SelectIterator_intIndex].longTimestamp || objectRequest.result.longTimestamp || new Date().getTime();
-					Select_strTitle = History_objectResults[SelectIterator_intIndex].strTitle || objectRequest.result.strTitle || '';
-					Select_intCount = History_objectResults[SelectIterator_intIndex].intCount || objectRequest.result.intCount || 1;
-
-					return functionPut();
-
-				}
-
-				if (functionProgress.intExisting > objectArguments.intThreshold) {
-					History_strContinuation = '';
-				}
-			};
-		};
-		
-		var functionPut = function() {
-			if (Select_strIdent.trim() === '') {
-				return functionSelectIterator(1);
-
-			} else if (Select_strTitle.trim() === '') {
-				return functionSelectIterator(1);
-
-			}
-
-			var objectRequest = Transaction_objectStore.put({
-				'strIdent': Select_strIdent,
-				'longTimestamp': Select_longTimestamp,
-				'strTitle': Select_strTitle,
-				'intCount': Select_intCount
-			});
-
-			objectRequest.onsuccess = function() {
-				return functionSelectIterator(1);
-			};
-		};
-		
-		var functionCount = function() {
-			var objectRequest = Transaction_objectStore.count();
-
-			objectRequest.onsuccess = function() {
-				window.localStorage.setItem('extensions.YouRect.Database.intSize', String(objectRequest.result));
-				window.localStorage.setItem('extensions.YouRect.Youtube.longTimestamp', String(new Date().getTime()));
-
-				return functionContinuation();
-			};
-		};
-
-		var functionContinuation = function() {
-			if (History_strContinuation === '') {
-				return functionCallback({});
-
-			} else if (History_strContinuation !== '') {
-				return functionHistory();
-
-			}
-		};
-
-		return functionHistory();
+		});
 	},
 	
-	ensure: function(objectArguments, functionCallback) {
-		var Transaction_objectStore = null;
+	ensure: function(objRequest, funcResponse) {
+		Node.series({
+			'objVideos': function(objArguments, funcCallback) {
+				return funcCallback(objRequest.objVideos);
+			},
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objVideo': function(objArguments, funcCallback) {
+				if (objArguments.hasOwnProperty('intVideo') === false) {
+					objArguments.intVideo = 0;
+				}
 
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
+				if (objArguments.intVideo >= objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo-Next');
+				}
 
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
+				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
 
-			return functionSelect();
-		};
+				objQuery.onsuccess = function() {
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						return funcCallback({
+							'strIdent': objArguments.objVideo.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || '',
+							'intCount': objArguments.objVideo.intCount || 1
+						});
 
-		var Select_objectStore = null;
+					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+						return funcCallback({
+							'strIdent': '',
+							'longTimestamp': 0,
+							'strTitle': '',
+							'intCount': 0
+						});
 
-		var functionSelect = function() {
-			Select_objectStore = Transaction_objectStore.index('strIdent');
+					}
+				};
+			},
+			'objPut': function(objArguments, funcCallback) {
+				if (objArguments.objGet.strIdent.trim() === '') {
+					return funcCallback({});
 
-			return objectArguments.objectVideos.forEach(functionParallel);
-		};
-		
-		var functionParallel = function(objectVideo) {
-			if (objectVideo.strIdent.trim() === '') {
-				return;
+				} else if (objArguments.objGet.strTitle.trim() === '') {
+					return funcCallback({});
 
-			} else if (objectVideo.strTitle.trim() === '') {
-				return;
+				}
+
+				var objQuery = objArguments.objStore.put(objArguments.objGet);
+
+				objQuery.onsuccess = function() {
+					return funcCallback({});
+				};
+			},
+			'objVideo-Next': function(objArguments, funcCallback) {
+				objArguments.intVideo += 1;
+
+				if (objArguments.intVideo < objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo');
+				}
+
+				objArguments.intVideo = 0;
+
+				return funcCallback({});
+			},
+			'objCount': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.count();
+
+				objQuery.onsuccess = function() {
+					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
+
+					return funcCallback({});
+				};
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
 
 			}
-
-			var objectRequest = Select_objectStore.get(objectVideo.strIdent);
-
-			objectRequest.onsuccess = function() {
-				if ((objectRequest.result === undefined) || (objectRequest.result === null)) {
-					Transaction_objectStore.put({
-						'strIdent': objectVideo.strIdent,
-						'longTimestamp': new Date().getTime(),
-						'strTitle': objectVideo.strTitle,
-						'intCount': 1
-					});
-				}
-			};
-		};
-
-		return functionTransaction();
+		});
 	},
 
-	watch: function(objectArguments, functionCallback) {
-		var Transaction_objectStore = null;
+	watch: function(objRequest, funcResponse) {
+		Node.series({
+			'objVideo': function(objArguments, funcCallback) {
+				return funcCallback(objRequest.objVideo);
+			},
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
 
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
+				objQuery.onsuccess = function() {
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						return funcCallback({
+							'strIdent': objArguments.objVideo.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || '',
+							'intCount': objArguments.objVideo.intCount || 1
+						});
 
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
+					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+						return funcCallback({
+							'strIdent': objQuery.result.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || objQuery.result.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || objQuery.result.strTitle || '',
+							'intCount': objQuery.result.intCount + 1 || 1
+						});
 
-			return functionSelect();
-		};
+					}
+				};
+			},
+			'objPut': function(objArguments, funcCallback) {
+				if (objArguments.objGet.strIdent.trim() === '') {
+					return funcCallback({});
 
-		var Select_strIdent = '';
-		var Select_longTimestamp = 0;
-		var Select_strTitle = '';
-		var Select_intCount = 0;
-
-		var functionSelect = function() {
-			var objectRequest = Transaction_objectStore.index('strIdent').get(objectArguments.strIdent);
-
-			objectRequest.onsuccess = function() {
-				if ((objectRequest.result === undefined) || (objectRequest.result === null)) {
-					Select_strIdent = objectArguments.strIdent;
-					Select_longTimestamp = objectArguments.longTimestamp || new Date().getTime();
-					Select_strTitle = objectArguments.strTitle || '';
-					Select_intCount = objectArguments.intCount || 1;
-
-					return functionPut();
-
-				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
-					Select_strIdent = objectRequest.result.strIdent;
-					Select_longTimestamp = objectArguments.longTimestamp || objectRequest.result.longTimestamp || new Date().getTime();
-					Select_strTitle = objectArguments.strTitle || objectRequest.result.strTitle || '';
-					Select_intCount = objectRequest.result.intCount + 1 || 1;
-
-					return functionPut();
+				} else if (objArguments.objGet.strTitle.trim() === '') {
+					return funcCallback({});
 
 				}
-			};
-		};
 
-		var functionPut = function() {
-			if (Select_strIdent.trim() === '') {
-				return functionSelectIterator(1);
+				var objQuery = objArguments.objStore.put(objArguments.objGet);
 
-			} else if (Select_strTitle.trim() === '') {
-				return functionSelectIterator(1);
+				objQuery.onsuccess = function() {
+					return funcCallback({});
+				};
+			},
+			'objCount': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.count();
+
+				objQuery.onsuccess = function() {
+					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
+
+					return funcCallback({});
+				};
+			},
+			'objBroadcast': function(objArguments, funcCallback) {
+				// TODO: still necessary?
+				chrome.tabs.query({
+					'url': '*://*.youtube.com/*'
+				}, function(objTabs) {
+					for (var objTab of objTabs) {
+						chrome.tabs.sendMessage(objTab.id, {
+							'strMessage': 'youtubeUpdate'
+						});
+					}
+				});
+
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
 
 			}
-
-			var objectRequest = Transaction_objectStore.put({
-				'strIdent': Select_strIdent,
-				'longTimestamp': Select_longTimestamp,
-				'strTitle': Select_strTitle,
-				'intCount': Select_intCount
-			});
-
-			objectRequest.onsuccess = function() {
-				return functionCount();
-			};
-		};
-
-		var functionCount = function() {
-			var objectRequest = Transaction_objectStore.count();
-
-			objectRequest.onsuccess = function() {
-				window.localStorage.setItem('extensions.YouRect.Database.intSize', String(objectRequest.result));
-
-				return functionBroadcast();
-			};
-		};
-
-		var functionBroadcast = function() {
-			chrome.tabs.query({
-				'url': '*://*.youtube.com/*'
-			}, function(objectTabs) {
-				for (var objectTab of objectTabs) {
-					chrome.tabs.sendMessage(objectTab.id, {
-						'strMessage': 'youtubeUpdate'
-					});
-				}
-			});
-
-			return functionCallback({
-				'strIdent': Select_strIdent,
-				'longTimestamp': Select_longTimestamp,
-				'strTitle': Select_strTitle,
-				'intCount': Select_intCount
-			});
-		};
-
-		return functionTransaction();
+		});
 	},
 
-	lookup: function(objectArguments, functionCallback) {
-		var Transaction_objectStore = null;
+	lookup: function(objRequest, funcResponse) {
+		Node.series({
+			'objVideos': function(objArguments, funcCallback) {
+				return funcCallback(objRequest.objVideos);
+			},
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
+			},
+			'objVideo': function(objArguments, funcCallback) {
+				if (objArguments.hasOwnProperty('intVideo') === false) {
+					objArguments.intVideo = 0;
+				}
 
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase');
+				if (objArguments.intVideo >= objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo-Next');
+				}
 
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
+				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
 
-			return functionSelect();
-		};
-		
-		var Select_objectStore = null;
-		
-		var functionSelect = function() {
-			Select_objectStore = Transaction_objectStore.index('strIdent');
-			
-			return objectArguments.objectVideos.forEach(functionParallel);
-		};
-		
-		var functionParallel = function(objectVideo) {
-			if (objectVideo.strIdent.trim() === '') {
-				return;
+				objQuery.onsuccess = function() {
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						return funcCallback({
+							'strIdent': objArguments.objVideo.strIdent,
+							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'strTitle': objArguments.objVideo.strTitle || '',
+							'intCount': objArguments.objVideo.intCount || 1
+						});
 
-			} else if (objectVideo.strTitle.trim() === '') {
-				return;
+					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+						return funcCallback({
+							'strIdent': '',
+							'longTimestamp': 0,
+							'strTitle': '',
+							'intCount': 0
+						});
+
+					}
+				};
+			},
+			'objBroadcast???': function(objArguments, funcCallback) {
+				if (objArguments.objGet.strIdent.trim() === '') {
+					return funcCallback({});
+
+				} else if (objArguments.objGet.strTitle.trim() === '') {
+					return funcCallback({});
+
+				}
+
+				// TODO
+			},
+			'objVideo-Next': function(objArguments, funcCallback) {
+				objArguments.intVideo += 1;
+
+				if (objArguments.intVideo < objArguments.objVideos.length) {
+					return funcCallback({}, 'objVideo');
+				}
+
+				objArguments.intVideo = 0;
+
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
 
 			}
-
-			var objectRequest = Select_objectStore.get(objectVideo.strIdent);
-			
-			objectRequest.onsuccess = function() {
-				if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
-					return functionCallback({
-						'strIdent': objectRequest.result.strIdent,
-						'longTimestamp': objectRequest.result.longTimestamp,
-						'strTitle': objectRequest.result.strTitle,
-						'intCount': objectRequest.result.intCount
-					});
-				}
-			};
-		};
-		
-		return functionTransaction();
+		});
 	}
 };
-Youtube.init();
 
 var Search = {
-	init: function() {
-		chrome.runtime.onConnect.addListener(function(objectPort) {
-			if (objectPort.name === 'search') {
-				objectPort.onMessage.addListener(function(objectData) {
-					if (objectData.strMessage === 'searchLookup') {
-						Search.lookup(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'searchLookup',
-								'objectArguments': objectArguments
-							});
-						});
+	init: function(objRequest, funcResponse) {
+		Node.series({
+			'objMessaging': function(objArguments, funcCallback) {
+				chrome.runtime.onConnect.addListener(function(objPort) {
+					if (objPort.name === 'search') {
+						objPort.onMessage.addListener(function(objData) {
+							if (objData.strMessage === 'searchLookup') {
+								Search.lookup(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'searchLookup',
+										'objResponse': objResponse
+									});
+								});
 
-					} else if (objectData.strMessage === 'searchDelete') {
-						Search.delete(objectData.objectArguments, function(objectArguments) {
-							objectPort.postMessage({
-								'strMessage': 'searchDelete',
-								'objectArguments': objectArguments
-							});
-						});
+							} else if (objData.strMessage === 'searchDelete') {
+								Search.delete(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'searchDelete',
+										'objResponse': objResponse
+									});
+								});
 
+							}
+						});
 					}
 				});
+
+				return funcCallback({});
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
+
 			}
 		});
 	},
 	
-	dispel: function() {
-		
-	},
-	
-	lookup: function(objectArguments, functionCallback) {
-		var Transaction_objectStore = null;
-		
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase');
-			
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
-			
-			return functionSelect();
-		};
-		
-		var Select_objectResults = [];
-		
-		var functionSelect = function() {
-			var objectRequest = Transaction_objectStore.index('longTimestamp').openCursor(null, 'prev');
-			
-			objectRequest.onsuccess = function() {
-				if ((objectRequest.result === undefined) || (objectRequest.result === null) || (Select_objectResults.length === 10)) {
-					return functionCallback({
-						'objectResults': Select_objectResults
-					});
-					
-				} else if ((objectRequest.result !== undefined) && (objectRequest.result !== null)) {
-					if (objectRequest.result.value.strTitle.toLowerCase().indexOf(objectArguments.strQuery) !== -1) {
-						Select_objectResults.push({
-							'strIdent': objectRequest.result.value.strIdent,
-							'longTimestamp': objectRequest.result.value.longTimestamp,
-							'strTitle': objectRequest.result.value.strTitle,
-							'intCount': objectRequest.result.value.intCount
+	lookup: function(objRequest, funcResponse) {
+		Node.series({
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.index('longTimestamp').openCursor(null, 'prev');
+
+				objQuery.results = [];
+
+				objQuery.onsuccess = function() {
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						return funcCallback(objQuery.results);
+					}
+
+					if (objQuery.results.length === 10) {
+						return funcCallback(objQuery.results);
+					}
+
+					if (objQuery.result.value.strTitle.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1) {
+						objQuery.results.push({
+							'strIdent': objQuery.result.value.strIdent,
+							'longTimestamp': objQuery.result.value.longTimestamp,
+							'strTitle': objQuery.result.value.strTitle,
+							'intCount': objQuery.result.value.intCount
 						});
 					}
-					
-					objectRequest.result.continue();
-					
-				}
-			};
-		};
-		
-		return functionTransaction();
+
+					objQuery.result.continue();
+				};
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({
+					'objVideos': objArguments.objGet
+				});
+
+			}
+		});
 	},
 	
-	delete: function(objectArguments, functionCallback) {
-		var Transaction_objectStore = null;
-		
-		var functionTransaction = function() {
-			Transaction_objectStore = Database.objectDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
-			
-			Transaction_objectStore.onerror = function() {
-				return functionCallback(null);
-			};
-			
-			return functionReset();
-		};
-		
-		var functionReset = function() {
-			var objectRequest = Transaction_objectStore.delete(objectArguments.strIdent);
-			
-			objectRequest.onsuccess = function() {
-				return functionCount();
-			};
-		};
-		
-		var functionCount = function() {
-			var objectRequest = Transaction_objectStore.count();
-			
-			objectRequest.onsuccess = function() {
-				window.localStorage.setItem('extensions.YouRect.Database.intSize', String(objectRequest.result));
-				
-				return functionCallback({});
-			};
-		};
-		
-		return functionTransaction();
+	delete: function(objRequest, funcResponse) {
+		Node.series({
+			'objStore': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objDelete': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.delete(objRequest.strIdent);
+
+				objQuery.onsuccess = function() {
+					return funcCallback({});
+				};
+			},
+			'objCount': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objStore.count();
+
+				objQuery.onsuccess = function() {
+					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
+
+					return funcCallback({});
+				};
+			},
+			'objHistory': function(objArguments, funcCallback) {
+				return funcCallback({}); // TODO
+			},
+			'objYoutube': function(objArguments, funcCallback) {
+				return funcCallback({}); // TODO
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
+
+			}
+		});
 	}
 };
-Search.init();
 
-{
-	if (window.localStorage.getItem('extensions.YouRect.Database.intSize') === null) {
-		window.localStorage.setItem('extensions.YouRect.Database.intSize', String(0));
-	}
+Node.series({
+	'objSettings': function(objArguments, funcCallback) {
+		if (window.localStorage.getItem('extensions.Youwatch.Database.intSize') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(0));
+		}
 
-	if (window.localStorage.getItem('extensions.YouRect.History.longTimestamp') === null) {
-		window.localStorage.setItem('extensions.YouRect.History.longTimestamp', String(0));
-	}
+		if (window.localStorage.getItem('extensions.Youwatch.History.intTimestamp') === null) {
+			window.localStorage.setItem('extensions.Youwatch.History.intTimestamp', String(0));
+		}
 
-	if (window.localStorage.getItem('extensions.YouRect.Youtube.longTimestamp') === null) {
-		window.localStorage.setItem('extensions.YouRect.Youtube.longTimestamp', String(0));
-	}
+		if (window.localStorage.getItem('extensions.Youwatch.Youtube.intTimestamp') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Youtube.intTimestamp', String(0));
+		}
 
-	if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === null) {
-		window.localStorage.setItem('extensions.YouRect.Visualization.boolHideprogress', String(false));
-	}
-}
+		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowwatched') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowwatched', String(true));
+		}
 
-{
-	chrome.browserAction.onClicked.addListener(function() {
-		chrome.tabs.create({
-			'url': 'content/index.html'
+		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Visualization.boolHideprogress', String(true));
+		}
+
+		return funcCallback({});
+	},
+	'objDatabase': function(objArguments, funcCallback) {
+		Database.init({}, function(objResponse) {
+			if (objResponse === null) {
+				funcCallback(null);
+
+			} else if (objResponse !== null) {
+				funcCallback({});
+
+			}
 		});
-	});
-}
+	},
+	'objHistory': function(objArguments, funcCallback) {
+		History.init({}, function(objResponse) {
+			if (objResponse === null) {
+				funcCallback(null);
 
-{
-	chrome.tabs.onUpdated.addListener(function(intTab, objectData, objectTab) {
-		if (objectTab.url.indexOf('https://www.youtube.com') === 0) {
-			chrome.tabs.sendMessage(objectTab.id, {
-				'strMessage': 'youtubeUpdate'
+			} else if (objResponse !== null) {
+				funcCallback({});
+
+			}
+		});
+	},
+	'objYoutube': function(objArguments, funcCallback) {
+		Youtube.init({}, function(objResponse) {
+			if (objResponse === null) {
+				funcCallback(null);
+
+			} else if (objResponse !== null) {
+				funcCallback({});
+
+			}
+		});
+	},
+	'objSearch': function(objArguments, funcCallback) {
+		Search.init({}, function(objResponse) {
+			if (objResponse === null) {
+				funcCallback(null);
+
+			} else if (objResponse !== null) {
+				funcCallback({});
+
+			}
+		});
+	},
+	'objIndex': function(objArguments, funcCallback) {
+		chrome.browserAction.onClicked.addListener(function() {
+			chrome.tabs.create({
+				'url': 'content/index.html'
 			});
+		});
 
-			if (window.localStorage.getItem('extensions.YouRect.Visualization.boolHideprogress') === String(true)) {
-				chrome.tabs.insertCSS(objectTab.id, {
-					'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }' // new
+		return funcCallback({});
+	},
+	'objTabhook': function(objArguments, funcCallback) {
+		chrome.tabs.onUpdated.addListener(function(intTab, objData, objTab) {
+			if (objTab.url.indexOf('https://www.youtube.com') === 0) {
+				chrome.tabs.sendMessage(objTab.id, {
+					'strMessage': 'youtubeUpdate'
 				});
 
-				chrome.tabs.insertCSS(objectTab.id, {
-					'code': '.resume-playback-background { display:none; } .resume-playback-progress-bar { display:none; }' // old
+				console.log('objTabhook:' + objTab.url);
+
+				if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
+					chrome.tabs.insertCSS(objTab.id, {
+						'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }'
+					});
+				}
+			}
+		});
+
+		return funcCallback({});
+	},
+	'objReqhook': function(objArguments, funcCallback) {
+		chrome.webRequest.onCompleted.addListener(function(objData) {
+			if (objData.tabId < 0) {
+				return;
+			}
+
+			console.log('objReqhook - youtube:' + objData.url);
+
+			chrome.tabs.sendMessage(objData.tabId, {
+				'strMessage': 'youtubeUpdate'
+			});
+		}, {
+			'urls': [ '*://*.youtube.com/*' ]
+		});
+
+		chrome.webRequest.onCompleted.addListener(function(objData) {
+			if (objData.tabId < 0) {
+				return;
+			}
+
+			console.log('objReqhook - image:' + objData.url);
+
+			var strLink = objData.url;
+			var strIdent = new RegExp('(\\/vi\\/)([^ ]*)(\\/)', 'g').exec(strLink)[2];
+			var boolWatched = false;
+
+			var objQuery = Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase').index('strIdent').get(strIdent);
+
+			objQuery.onsuccess = function() {
+				if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+					boolWatched = true;
+				}
+
+				chrome.tabs.sendMessage(objData.tabId, {
+					'strMessage': 'youtubeImage',
+					'strLink': strLink,
+					'strIdent': strIdent,
+					'boolWatched': boolWatched
+				});
+			};
+		}, {
+			'urls': [ '*://*.ytimg.com/vi/*/*' ]
+		});
+
+		return funcCallback({});
+	},
+	'objHisthook': function(objArguments, funcCallback) {
+		chrome.webNavigation.onHistoryStateUpdated.addListener(function(objData) {
+			if (objData.tabId < 0) {
+				return;
+			}
+
+			if (objData.url.indexOf('youtube.com') === -1) {
+				return;
+			}
+
+			chrome.tabs.sendMessage(objData.tabId, {
+				'strMessage': 'youtubeUpdate'
+			});
+		});
+
+		return funcCallback({});
+	},
+	'objSynchronize': function(objArguments, funcCallback) {
+		chrome.alarms.create('synchronize', {
+			'periodInMinutes': 60
+		});
+
+		chrome.alarms.onAlarm.addListener(function(objAlarm) {
+			if (objAlarm.name === 'synchronize') {
+				History.synchronize({
+					'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
+				}, function(objResponse) {
+					console.log('synchronized history');
+				}, function(objResponse) {
+					
+				});
+
+				Youtube.synchronize({
+					'intThreshold': 512
+				}, function(objResponse) {
+					console.log('synchronized youtube');
+				}, function(objResponse) {
+					
 				});
 			}
-		}
-	});
-}
-
-{
-	chrome.webRequest.onCompleted.addListener(function(objectData) {
-		chrome.tabs.sendMessage(objectData.tabId, {
-			'strMessage': 'youtubeUpdate'
 		});
-	}, {
-		'urls': [ '*://*.youtube.com/*' ]
-	});
 
-	chrome.webRequest.onCompleted.addListener(function(objectData) {
-		chrome.tabs.sendMessage(objectData.tabId, {
-			'strMessage': 'youtubeImage',
-			'strIdent': new RegExp('(\\/vi\\/)([^ ]*)(\\/)', 'g').exec(objectData.url)[2]
-		});
-	}, {
-		'urls': [ '*://*.ytimg.com/vi/*/*' ]
-	});
-}
+		return funcCallback({});
+	}
+}, function(objArguments) {
+	if (objArguments === null) {
+		console.log('error initializing commons');
 
-{
-	chrome.webNavigation.onHistoryStateUpdated.addListener(function(objectData) {
-		if (objectData.url.indexOf('youtube.com') !== -1) {
-			chrome.tabs.sendMessage(objectData.tabId, {
-				'strMessage': 'youtubeUpdate'
-			});
-		}
-	});
-}
+	} else if (objArguments !== null) {
+		console.log('initialized commons succesfully');
 
-{
-	chrome.alarms.create('synchronize', {
-		'periodInMinutes': 60
-	});
-
-	chrome.alarms.onAlarm.addListener(function(objectAlarm) {
-		if (objectAlarm.name === 'synchronize') {
-			History.synchronize({
-				'longTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
-			}, function(objectArguments) {
-				
-			}, function(objectArguments) {
-				
-			});
-
-			Youtube.synchronize({
-				'intThreshold': 256
-			}, function(objectArguments) {
-				
-			}, function(objectArguments) {
-				
-			});
-		}
-	});
-}
+	}
+});
