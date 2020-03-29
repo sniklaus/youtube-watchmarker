@@ -1,5 +1,21 @@
 'use strict';
 
+var funcSendmessage = function(intTab, objMessage, intRetry) {
+	if (intRetry === 0) {
+		return;
+
+	} else if (intRetry === undefined) {
+		intRetry = 100;
+
+	}
+
+	chrome.tabs.sendMessage(intTab, objMessage, {}, function(objResponse) {
+		if ((chrome.runtime.lastError !== undefined) && (chrome.runtime.lastError !== null)) {
+			setTimeout(funcSendmessage, 100, intTab, objMessage, intRetry - 1);
+		}
+	});
+};
+
 var Node = {
 	series: function(objFunctions, funcCallback) {
 		var strFunctions = Object.keys(objFunctions);
@@ -48,22 +64,24 @@ var Node = {
 	}
 };
 
+// ##########################################################
+
 var Database = {
 	objDatabase: null,
 
 	init: function(objRequest, funcResponse) {
 		Node.series({
-			'objStore': function(objArguments, funcCallback) {
-				var objQuery = window.indexedDB.open('Database', 301);
+			'objOpen': function(objArguments, funcCallback) {
+				var objOpen = window.indexedDB.open('Database', 400);
 
-				objQuery.onupgradeneeded = function() {
+				objOpen.onupgradeneeded = function() {
 					var objStore = null;
 
-					if (objQuery.result.objectStoreNames.contains('storeDatabase') === true) {
-						objStore = objQuery.transaction.objectStore('storeDatabase');
+					if (objOpen.result.objectStoreNames.contains('storeDatabase') === true) {
+						objStore = objOpen.transaction.objectStore('storeDatabase');
 
-					} else if (objQuery.result.objectStoreNames.contains('storeDatabase') === false) {
-						objStore = objQuery.result.createObjectStore('storeDatabase', {
+					} else if (objOpen.result.objectStoreNames.contains('storeDatabase') === false) {
+						objStore = objOpen.result.createObjectStore('storeDatabase', {
 							'keyPath': 'strIdent'
 						});
 
@@ -75,23 +93,49 @@ var Database = {
 						});
 					}
 
-					if (objStore.indexNames.contains('longTimestamp') === false) {
-						objStore.createIndex('longTimestamp', 'longTimestamp', {
+					if (objStore.indexNames.contains('intTimestamp') === false) {
+						objStore.createIndex('intTimestamp', 'intTimestamp', {
 							'unique': false
 						});
 					}
+
+					if (objStore.indexNames.contains('longTimestamp') === true) {
+						objStore.deleteIndex('longTimestamp'); // legacy
+					}
 				};
 
-				objQuery.onerror = function() {
+				objOpen.onerror = function() {
 					Database.objDatabase = null;
 
 					return funcCallback(null);
 				};
 
-				objQuery.onsuccess = function() {
-					Database.objDatabase = objQuery.result;
+				objOpen.onsuccess = function() {
+					Database.objDatabase = objOpen.result;
 
 					return funcCallback({});
+				};
+			},
+			'objLegacy': function(objArguments, funcCallback) {
+				var objStore = Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
+
+				var objQuery = objStore.openCursor();
+
+				objQuery.onsuccess = function() {
+					if ((objQuery.result === undefined) || (objQuery.result === null)) {
+						return funcCallback({});
+					}
+
+					if (objQuery.result.value.intTimestamp === undefined) {
+						objStore.put({
+							'strIdent': objQuery.result.value.strIdent,
+							'intTimestamp': objQuery.result.value.longTimestamp,
+							'strTitle': objQuery.result.value.strTitle,
+							'intCount': objQuery.result.value.intCount
+						});
+					}
+
+					objQuery.result.continue();
 				};
 			},
 			'objMessaging': function(objArguments, funcCallback) {
@@ -153,11 +197,11 @@ var Database = {
 
 	save: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.openCursor();
+				var objQuery = objArguments.objDatabase.openCursor();
 
 				objQuery.results = [];
 
@@ -172,7 +216,7 @@ var Database = {
 
 					objQuery.results.push({
 						'strIdent': objQuery.result.value.strIdent,
-						'longTimestamp': objQuery.result.value.longTimestamp,
+						'intTimestamp': objQuery.result.value.intTimestamp,
 						'strTitle': objQuery.result.value.strTitle,
 						'intCount': objQuery.result.value.intCount
 					});
@@ -207,7 +251,7 @@ var Database = {
 			'objVideos': function(objArguments, funcCallback) {
 				return funcCallback(objRequest.objVideos);
 			},
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objVideo': function(objArguments, funcCallback) {
@@ -222,7 +266,7 @@ var Database = {
 				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
 			},
 			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
+				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
 
 				objQuery.onsuccess = function() {
 					if (objArguments.intNew === undefined) {
@@ -234,12 +278,16 @@ var Database = {
 						'strProgress': 'imported ' + (objArguments.intNew + objArguments.intExisting) + ' videos - ' + objArguments.intNew + ' were new'
 					});
 
+					if (objArguments.objVideo.intTimestamp === undefined) {
+						objArguments.objVideo.intTimestamp = objArguments.objVideo.longTimestamp; // legacy
+					}
+
 					if ((objQuery.result === undefined) || (objQuery.result === null)) {
 						objArguments.intNew += 1;
 
 						return funcCallback({
 							'strIdent': objArguments.objVideo.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
 							'strTitle': objArguments.objVideo.strTitle || '',
 							'intCount': objArguments.objVideo.intCount || 1
 						});
@@ -249,7 +297,7 @@ var Database = {
 
 						return funcCallback({
 							'strIdent': objQuery.result.strIdent,
-							'longTimestamp': Math.max(objQuery.result.longTimestamp, objArguments.objVideo.longTimestamp) || new Date().getTime(),
+							'intTimestamp': Math.max(objQuery.result.intTimestamp, objArguments.objVideo.intTimestamp) || new Date().getTime(),
 							'strTitle': objQuery.result.strTitle || objArguments.objVideo.strTitle || '',
 							'intCount': Math.max(objQuery.result.intCount, objArguments.objVideo.intCount) || 1
 						});
@@ -266,7 +314,7 @@ var Database = {
 
 				}
 
-				var objQuery = objArguments.objStore.put(objArguments.objGet);
+				var objQuery = objArguments.objDatabase.put(objArguments.objGet);
 
 				objQuery.onsuccess = function() {
 					return funcCallback({});
@@ -284,7 +332,7 @@ var Database = {
 				return funcCallback({});
 			},
 			'objCount': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.count();
+				var objQuery = objArguments.objDatabase.count();
 
 				objQuery.onsuccess = function() {
 					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -305,18 +353,18 @@ var Database = {
 	
 	reset: function(objRequest, funcResponse) {
 		Node.series({
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objClear': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.clear();
+				var objQuery = objArguments.objDatabase.clear();
 
 				objQuery.onsuccess = function() {
 					return funcCallback({});
 				};
 			},
 			'objCount': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.count();
+				var objQuery = objArguments.objDatabase.count();
 
 				objQuery.onsuccess = function() {
 					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -387,7 +435,7 @@ var History = {
 						if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
 							continue;
 
-						} else if (objResult.title === null) {
+						} else if ((objResult.title === undefined) || (objResult.title === null)) {
 							continue;
 
 						} else if (objResult.title.indexOf(' - YouTube') !== objResult.title.length - 10) {
@@ -396,8 +444,8 @@ var History = {
 						}
 
 						objVideos.push({
-							'strIdent': objResult.url.substr(32).substr(0, 11),
-							'longTimestamp': objResult.lastVisitTime,
+							'strIdent': objResult.url.substr(32, 11),
+							'intTimestamp': objResult.lastVisitTime,
 							'strTitle': objResult.title.slice(0, -10),
 							'intCount': objResult.visitCount
 						});
@@ -406,7 +454,7 @@ var History = {
 					return funcCallback(objVideos);
 				});
 			},
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objVideo': function(objArguments, funcCallback) {
@@ -421,7 +469,7 @@ var History = {
 				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
 			},
 			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
+				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
 
 				objQuery.onsuccess = function() {
 					if (objArguments.intNew === undefined) {
@@ -438,7 +486,7 @@ var History = {
 
 						return funcCallback({
 							'strIdent': objArguments.objVideo.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
 							'strTitle': objArguments.objVideo.strTitle || '',
 							'intCount': objArguments.objVideo.intCount || 1
 						});
@@ -448,7 +496,7 @@ var History = {
 
 						return funcCallback({
 							'strIdent': objQuery.result.strIdent,
-							'longTimestamp': Math.max(objQuery.result.longTimestamp, objArguments.objVideo.longTimestamp) || new Date().getTime(),
+							'intTimestamp': Math.max(objQuery.result.intTimestamp, objArguments.objVideo.intTimestamp) || new Date().getTime(),
 							'strTitle': objQuery.result.strTitle || objArguments.objVideo.strTitle || '',
 							'intCount': Math.max(objQuery.result.intCount, objArguments.objVideo.intCount) || 1
 						});
@@ -465,7 +513,7 @@ var History = {
 
 				}
 
-				var objQuery = objArguments.objStore.put(objArguments.objGet);
+				var objQuery = objArguments.objDatabase.put(objArguments.objGet);
 
 				objQuery.onsuccess = function() {
 					return funcCallback({});
@@ -483,7 +531,7 @@ var History = {
 				return funcCallback({});
 			},
 			'objCount': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.count();
+				var objQuery = objArguments.objDatabase.count();
 
 				objQuery.onsuccess = function() {
 					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -529,6 +577,15 @@ var Youtube = {
 								});
 							}
 
+							if (objData.strMessage === 'youtubeLookup') {
+								Youtube.lookup(objData.objRequest, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'youtubeLookup',
+										'objResponse': objResponse
+									});
+								});
+							}
+
 							if (objData.strMessage === 'youtubeEnsure') {
 								Youtube.ensure(objData.objRequest, function(objResponse) {
 									objPort.postMessage({
@@ -538,19 +595,10 @@ var Youtube = {
 								});
 							}
 
-							if (objData.strMessage === 'youtubeWatch') {
-								Youtube.watch(objData.objRequest, function(objResponse) {
+							if (objData.strMessage === 'youtubeMark') {
+								Youtube.mark(objData.objRequest, function(objResponse) {
 									objPort.postMessage({
-										'strMessage': 'youtubeWatch',
-										'objResponse': objResponse
-									});
-								});
-							}
-
-							if (objData.strMessage === 'youtubeLookup') {
-								Youtube.lookup(objData.objRequest, function(objResponse) {
-									objPort.postMessage({
-										'strMessage': 'youtubeLookup',
+										'strMessage': 'youtubeMark',
 										'objResponse': objResponse
 									});
 								});
@@ -625,7 +673,7 @@ var Youtube = {
 
 						objVideos.push({
 							'strIdent': strIdent,
-							'longTimestamp': null,
+							'intTimestamp': null,
 							'strTitle': strTitle,
 							'intCount': null
 						});
@@ -636,7 +684,7 @@ var Youtube = {
 
 				objAjax.send();
 			},
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objVideo': function(objArguments, funcCallback) {
@@ -651,7 +699,7 @@ var Youtube = {
 				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
 			},
 			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
+				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
 
 				objQuery.onsuccess = function() {
 					if (objArguments.intNew === undefined) {
@@ -668,7 +716,7 @@ var Youtube = {
 
 						return funcCallback({
 							'strIdent': objArguments.objVideo.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
 							'strTitle': objArguments.objVideo.strTitle || '',
 							'intCount': objArguments.objVideo.intCount || 1
 						});
@@ -678,7 +726,7 @@ var Youtube = {
 
 						return funcCallback({
 							'strIdent': objQuery.result.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || objQuery.result.longTimestamp || new Date().getTime(),
+							'intTimestamp': objArguments.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),
 							'strTitle': objArguments.objVideo.strTitle || objQuery.result.strTitle || '',
 							'intCount': objArguments.objVideo.intCount || objQuery.result.intCount || 1
 						});
@@ -695,7 +743,7 @@ var Youtube = {
 
 				}
 
-				var objQuery = objArguments.objStore.put(objArguments.objGet);
+				var objQuery = objArguments.objDatabase.put(objArguments.objGet);
 
 				objQuery.onsuccess = function() {
 					return funcCallback({});
@@ -713,7 +761,7 @@ var Youtube = {
 				return funcCallback({});
 			},
 			'objCount': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.count();
+				var objQuery = objArguments.objDatabase.count();
 
 				objQuery.onsuccess = function() {
 					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -745,47 +793,64 @@ var Youtube = {
 			}
 		});
 	},
-	
-	ensure: function(objRequest, funcResponse) {
+
+	lookup: function(objRequest, funcResponse) {
 		Node.series({
-			'objVideos': function(objArguments, funcCallback) {
-				return funcCallback(objRequest.objVideos);
-			},
-			'objStore': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
-			},
 			'objVideo': function(objArguments, funcCallback) {
-				if (objArguments.hasOwnProperty('intVideo') === false) {
-					objArguments.intVideo = 0;
-				}
-
-				if (objArguments.intVideo >= objArguments.objVideos.length) {
-					return funcCallback({}, 'objVideo-Next');
-				}
-
-				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+				return funcCallback(objRequest);
+			},
+			'objDatabase': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
+				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
+
+				objQuery.onsuccess = function() {
+					if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
+						return funcCallback({
+							'strIdent': objQuery.result.strIdent,
+							'intTimestamp': objQuery.result.intTimestamp || new Date().getTime(),
+							'strTitle': objQuery.result.strTitle || '',
+							'intCount': objQuery.result.intCount || 1
+						});
+					}
+
+					return funcCallback(null);
+				};
+			}
+		}, function(objArguments) {
+			if (objArguments === null) {
+				funcResponse(null);
+
+			} else if (objArguments !== null) {
+				funcResponse({});
+
+			}
+		});
+	},
+
+	ensure: function(objRequest, funcResponse) {
+		Node.series({
+			'objVideo': function(objArguments, funcCallback) {
+				return funcCallback(objRequest);
+			},
+			'objDatabase': function(objArguments, funcCallback) {
+				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+			},
+			'objGet': function(objArguments, funcCallback) {
+				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
 
 				objQuery.onsuccess = function() {
 					if ((objQuery.result === undefined) || (objQuery.result === null)) {
 						return funcCallback({
 							'strIdent': objArguments.objVideo.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
 							'strTitle': objArguments.objVideo.strTitle || '',
 							'intCount': objArguments.objVideo.intCount || 1
 						});
-
-					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
-						return funcCallback({
-							'strIdent': '',
-							'longTimestamp': 0,
-							'strTitle': '',
-							'intCount': 0
-						});
-
 					}
+
+					return funcCallback(null);
 				};
 			},
 			'objPut': function(objArguments, funcCallback) {
@@ -797,25 +862,14 @@ var Youtube = {
 
 				}
 
-				var objQuery = objArguments.objStore.put(objArguments.objGet);
+				var objQuery = objArguments.objDatabase.put(objArguments.objGet);
 
 				objQuery.onsuccess = function() {
 					return funcCallback({});
 				};
 			},
-			'objVideo-Next': function(objArguments, funcCallback) {
-				objArguments.intVideo += 1;
-
-				if (objArguments.intVideo < objArguments.objVideos.length) {
-					return funcCallback({}, 'objVideo');
-				}
-
-				objArguments.intVideo = 0;
-
-				return funcCallback({});
-			},
 			'objCount': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.count();
+				var objQuery = objArguments.objDatabase.count();
 
 				objQuery.onsuccess = function() {
 					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -834,22 +888,22 @@ var Youtube = {
 		});
 	},
 
-	watch: function(objRequest, funcResponse) {
+	mark: function(objRequest, funcResponse) {
 		Node.series({
 			'objVideo': function(objArguments, funcCallback) {
-				return funcCallback(objRequest.objVideo);
+				return funcCallback(objRequest);
 			},
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
+				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
 
 				objQuery.onsuccess = function() {
 					if ((objQuery.result === undefined) || (objQuery.result === null)) {
 						return funcCallback({
 							'strIdent': objArguments.objVideo.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
+							'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
 							'strTitle': objArguments.objVideo.strTitle || '',
 							'intCount': objArguments.objVideo.intCount || 1
 						});
@@ -857,7 +911,7 @@ var Youtube = {
 					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
 						return funcCallback({
 							'strIdent': objQuery.result.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || objQuery.result.longTimestamp || new Date().getTime(),
+							'intTimestamp': objArguments.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),
 							'strTitle': objArguments.objVideo.strTitle || objQuery.result.strTitle || '',
 							'intCount': objQuery.result.intCount + 1 || 1
 						});
@@ -874,109 +928,20 @@ var Youtube = {
 
 				}
 
-				var objQuery = objArguments.objStore.put(objArguments.objGet);
+				var objQuery = objArguments.objDatabase.put(objArguments.objGet);
 
 				objQuery.onsuccess = function() {
 					return funcCallback({});
 				};
 			},
 			'objCount': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.count();
+				var objQuery = objArguments.objDatabase.count();
 
 				objQuery.onsuccess = function() {
 					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
 
 					return funcCallback({});
 				};
-			},
-			'objBroadcast': function(objArguments, funcCallback) {
-				// TODO: still necessary?
-				chrome.tabs.query({
-					'url': '*://*.youtube.com/*'
-				}, function(objTabs) {
-					for (var objTab of objTabs) {
-						chrome.tabs.sendMessage(objTab.id, {
-							'strMessage': 'youtubeUpdate'
-						});
-					}
-				});
-
-				return funcCallback({});
-			}
-		}, function(objArguments) {
-			if (objArguments === null) {
-				funcResponse(null);
-
-			} else if (objArguments !== null) {
-				funcResponse({});
-
-			}
-		});
-	},
-
-	lookup: function(objRequest, funcResponse) {
-		Node.series({
-			'objVideos': function(objArguments, funcCallback) {
-				return funcCallback(objRequest.objVideos);
-			},
-			'objStore': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
-			},
-			'objVideo': function(objArguments, funcCallback) {
-				if (objArguments.hasOwnProperty('intVideo') === false) {
-					objArguments.intVideo = 0;
-				}
-
-				if (objArguments.intVideo >= objArguments.objVideos.length) {
-					return funcCallback({}, 'objVideo-Next');
-				}
-
-				return funcCallback(objArguments.objVideos[objArguments.intVideo]);
-			},
-			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.index('strIdent').get(objArguments.objVideo.strIdent);
-
-				objQuery.onsuccess = function() {
-					if ((objQuery.result === undefined) || (objQuery.result === null)) {
-						return funcCallback({
-							'strIdent': objArguments.objVideo.strIdent,
-							'longTimestamp': objArguments.objVideo.longTimestamp || new Date().getTime(),
-							'strTitle': objArguments.objVideo.strTitle || '',
-							'intCount': objArguments.objVideo.intCount || 1
-						});
-
-					} else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
-						return funcCallback({
-							'strIdent': '',
-							'longTimestamp': 0,
-							'strTitle': '',
-							'intCount': 0
-						});
-
-					}
-				};
-			},
-			'objBroadcast???': function(objArguments, funcCallback) {
-				if (objArguments.objGet.strIdent.trim() === '') {
-					return funcCallback({});
-
-				} else if (objArguments.objGet.strTitle.trim() === '') {
-					return funcCallback({});
-
-				}
-
-				// TODO
-			},
-			'objVideo-Next': function(objArguments, funcCallback) {
-				objArguments.intVideo += 1;
-
-				if (objArguments.intVideo < objArguments.objVideos.length) {
-					return funcCallback({}, 'objVideo');
-				}
-
-				objArguments.intVideo = 0;
-
-				return funcCallback({});
 			}
 		}, function(objArguments) {
 			if (objArguments === null) {
@@ -1033,11 +998,11 @@ var Search = {
 	
 	lookup: function(objRequest, funcResponse) {
 		Node.series({
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.index('longTimestamp').openCursor(null, 'prev');
+				var objQuery = objArguments.objDatabase.index('intTimestamp').openCursor(null, 'prev');
 
 				objQuery.results = [];
 
@@ -1053,7 +1018,7 @@ var Search = {
 					if (objQuery.result.value.strTitle.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1) {
 						objQuery.results.push({
 							'strIdent': objQuery.result.value.strIdent,
-							'longTimestamp': objQuery.result.value.longTimestamp,
+							'intTimestamp': objQuery.result.value.intTimestamp,
 							'strTitle': objQuery.result.value.strTitle,
 							'intCount': objQuery.result.value.intCount
 						});
@@ -1077,18 +1042,18 @@ var Search = {
 	
 	delete: function(objRequest, funcResponse) {
 		Node.series({
-			'objStore': function(objArguments, funcCallback) {
+			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objDelete': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.delete(objRequest.strIdent);
+				var objQuery = objArguments.objDatabase.delete(objRequest.strIdent);
 
 				objQuery.onsuccess = function() {
 					return funcCallback({});
 				};
 			},
 			'objCount': function(objArguments, funcCallback) {
-				var objQuery = objArguments.objStore.count();
+				var objQuery = objArguments.objDatabase.count();
 
 				objQuery.onsuccess = function() {
 					window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -1114,6 +1079,8 @@ var Search = {
 	}
 };
 
+// ##########################################################
+
 Node.series({
 	'objSettings': function(objArguments, funcCallback) {
 		if (window.localStorage.getItem('extensions.Youwatch.Database.intSize') === null) {
@@ -1128,8 +1095,8 @@ Node.series({
 			window.localStorage.setItem('extensions.Youwatch.Youtube.intTimestamp', String(0));
 		}
 
-		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowwatched') === null) {
-			window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowwatched', String(true));
+		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowbadge', String(true));
 		}
 
 		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === null) {
@@ -1182,7 +1149,7 @@ Node.series({
 			}
 		});
 	},
-	'objIndex': function(objArguments, funcCallback) {
+	'objAction': function(objArguments, funcCallback) {
 		chrome.browserAction.onClicked.addListener(function() {
 			chrome.tabs.create({
 				'url': 'content/index.html'
@@ -1191,21 +1158,73 @@ Node.series({
 
 		return funcCallback({});
 	},
+	'objMessage': function(objArguments, funcCallback) {
+		chrome.runtime.onMessage.addListener(function(objRequest, objSender, funcResponse) {
+			if (objRequest.strMessage === 'youtubeEnsure') {
+				Youtube.ensure({
+					'strIdent': objRequest.strIdent,
+					'strTitle': objRequest.strTitle
+				}, function(objResponse) {
+					console.log('ensured video');
+				});
+			}
+		});
+
+		return funcCallback({});
+	},
 	'objTabhook': function(objArguments, funcCallback) {
 		chrome.tabs.onUpdated.addListener(function(intTab, objData, objTab) {
-			if (objTab.url.indexOf('https://www.youtube.com') === 0) {
-				chrome.tabs.sendMessage(objTab.id, {
-					'strMessage': 'youtubeUpdate'
+			if (objData.tabId < 0) {
+				return;
+
+			} else if (objTab.url.indexOf('https://www.youtube.com') !== 0) {
+				return;
+
+			}
+
+			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false)) {
+				chrome.tabs.insertCSS(objTab.id, {
+					'code': '.youwatch-mark:last-child:after { display:none; }'
 				});
+			}
 
-				console.log('objTabhook:' + objTab.url);
+			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
+				chrome.tabs.insertCSS(objTab.id, {
+					'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }'
+				});
+			}
 
-				if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
-					chrome.tabs.insertCSS(objTab.id, {
-						'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }'
+			if (objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
+				return;
+
+			} else if ((objData.title === undefined) || (objData.title === null)) {
+				return;
+
+			} else if (objData.title.indexOf(' - YouTube') !== objData.title.length - 10) {
+				return;
+
+			}
+
+			var strIdent = objTab.url.substr(32, 11);
+			var strTitle = objData.title.slice(0, -10);
+
+			Youtube.mark({
+				'strIdent': strIdent,
+				'strTitle': strTitle
+			}, function(objResponse) {
+				console.log('mark video');
+			});
+
+			chrome.tabs.query({
+				'url': '*://*.youtube.com/*'
+			}, function(objTabs) {
+				for (var objTab of objTabs) {
+					funcSendmessage(objTab.id, {
+						'strMessage': 'youtubeMark',
+						'strIdent': strIdent
 					});
 				}
-			}
+			});
 		});
 
 		return funcCallback({});
@@ -1214,61 +1233,28 @@ Node.series({
 		chrome.webRequest.onCompleted.addListener(function(objData) {
 			if (objData.tabId < 0) {
 				return;
-			}
 
-			console.log('objReqhook - youtube:' + objData.url);
-
-			chrome.tabs.sendMessage(objData.tabId, {
-				'strMessage': 'youtubeUpdate'
-			});
-		}, {
-			'urls': [ '*://*.youtube.com/*' ]
-		});
-
-		chrome.webRequest.onCompleted.addListener(function(objData) {
-			if (objData.tabId < 0) {
+			} else if (objData.url.indexOf('/vi/') === -1) {
 				return;
+
 			}
 
-			console.log('objReqhook - image:' + objData.url);
+			var strIdent = new RegExp('(\\/vi\\/)([^ ]*)(\\/)', 'g').exec(objData.url)[2];
+			var strTitle = undefined;
 
-			var strLink = objData.url;
-			var strIdent = new RegExp('(\\/vi\\/)([^ ]*)(\\/)', 'g').exec(strLink)[2];
-			var boolWatched = false;
-
-			var objQuery = Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase').index('strIdent').get(strIdent);
-
-			objQuery.onsuccess = function() {
-				if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
-					boolWatched = true;
+			Youtube.lookup({
+				'strIdent': strIdent,
+				'strTitle': strTitle
+			}, function(objResponse) {
+				if (objResponse !== null) {
+					funcSendmessage(objData.tabId, {
+						'strMessage': 'youtubeMark',
+						'strIdent': strIdent
+					});
 				}
-
-				chrome.tabs.sendMessage(objData.tabId, {
-					'strMessage': 'youtubeImage',
-					'strLink': strLink,
-					'strIdent': strIdent,
-					'boolWatched': boolWatched
-				});
-			};
+			});
 		}, {
 			'urls': [ '*://*.ytimg.com/vi/*/*' ]
-		});
-
-		return funcCallback({});
-	},
-	'objHisthook': function(objArguments, funcCallback) {
-		chrome.webNavigation.onHistoryStateUpdated.addListener(function(objData) {
-			if (objData.tabId < 0) {
-				return;
-			}
-
-			if (objData.url.indexOf('youtube.com') === -1) {
-				return;
-			}
-
-			chrome.tabs.sendMessage(objData.tabId, {
-				'strMessage': 'youtubeUpdate'
-			});
 		});
 
 		return funcCallback({});
@@ -1285,7 +1271,7 @@ Node.series({
 				}, function(objResponse) {
 					console.log('synchronized history');
 				}, function(objResponse) {
-					
+					// ...
 				});
 
 				Youtube.synchronize({
@@ -1293,7 +1279,7 @@ Node.series({
 				}, function(objResponse) {
 					console.log('synchronized youtube');
 				}, function(objResponse) {
-					
+					// ...
 				});
 			}
 		});

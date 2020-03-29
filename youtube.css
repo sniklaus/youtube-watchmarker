@@ -4,54 +4,31 @@ ytd-thumbnail-overlay-playback-status-renderer {
 	display:none;
 }
 
-.watched-badge {
-	display:none;
+/* youwatch watched fadeout */
+
+.youwatch-mark yt-img-shadow  {
+	background-color:#FFFFFF;
 }
 
-/* yourect watched badge */
+.youwatch-mark yt-img-shadow img  {
+	opacity:0.3;
+}
 
-.yourect-watched-badge {
-	position:absolute;
+/* youwatch watched badge */
 
-	left:10px;
-	top:10px;
-
-	padding:2px 6px 2px 6px;
-
+.youwatch-mark:last-child:after {
 	background-color:#000000;
-
 	color:#FFFFFF;
+	content:"WATCHED";
+	font-family:inherit;
 	font-size:11px;
 	font-weight:normal;
-	font-family:inherit;
-	text-decoration:none;
-	text-align:left;
+	left:10px;
 	line-height:1.42857143;
+	padding:2px 6px 2px 6px;
+	position:absolute;
+	text-align:left;
+	text-decoration:none;
+	top:10px;
 	white-space:normal;
-}
-
-.ytd-playlist-panel-video-renderer .yourect-watched-badge {
-	left:45px;
-}
-
-.playlist-video .yourect-watched-badge {
-	left:33px;
-}
-
-/* yourect watched fadeout */
-
-.yourect-watched-marker yt-img-shadow  {
-	background-color:#FFFFFF;
-}
-
-.yourect-watched-marker yt-img-shadow img  {
-	opacity:0.3;
-}
-
-.yourect-watched-marker .video-thumb, .yourect-watched-marker .yt-uix-simple-thumb-related {
-	background-color:#FFFFFF;
-}
-
-.yourect-watched-marker .video-thumb img, .yourect-watched-marker .yt-uix-simple-thumb-related img {
-	opacity:0.3;
 }

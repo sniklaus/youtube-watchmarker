@@ -487,7 +487,7 @@ var Search = {
 											.css({
 												'white-space': 'nowrap'
 											})
-											.text(moment(objVideo.longTimestamp).format('YYYY.MM.DD - HH:mm'))
+											.text(moment(objVideo.intTimestamp).format('YYYY.MM.DD - HH:mm'))
 										)
 									)
 									.append(jQuery('<td></td>')
