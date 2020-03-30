@@ -72,7 +72,7 @@ var Database = {
 	init: function(objRequest, funcResponse) {
 		Node.series({
 			'objOpen': function(objArguments, funcCallback) {
-				var objOpen = window.indexedDB.open('Database', 400);
+				var objOpen = window.indexedDB.open('Database', 401);
 
 				objOpen.onupgradeneeded = function() {
 					var objStore = null;

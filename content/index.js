@@ -411,6 +411,9 @@ jQuery(window.document).ready(function() {
 				.append(jQuery('<table></table>')
 					.addClass('table')
 					.addClass('table-sm')
+					.css({
+						'margin': '0px'
+					})
 					.append(jQuery('<thead></thead>')
 						.append(jQuery('<tr></tr>')
 							.append(jQuery('<th></th>')
