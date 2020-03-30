@@ -142,29 +142,29 @@ var Database = {
 				chrome.runtime.onConnect.addListener(function(objPort) {
 					if (objPort.name === 'database') {
 						objPort.onMessage.addListener(function(objData) {
-							if (objData.strMessage === 'databaseSave') {
-								Database.save(objData.objRequest, function(objResponse) {
+							if (objData.strMessage === 'databaseExport') {
+								Database.export(objData.objRequest, function(objResponse) {
 									objPort.postMessage({
-										'strMessage': 'databaseSave',
+										'strMessage': 'databaseExport',
 										'objResponse': objResponse
 									});
 								}, function(objResponse) {
 									objPort.postMessage({
-										'strMessage': 'databaseSave-progress',
+										'strMessage': 'databaseExport-progress',
 										'objResponse': objResponse
 									});
 								});
 							}
 
-							if (objData.strMessage === 'databaseLoad') {
-								Database.load(objData.objRequest, function(objResponse) {
+							if (objData.strMessage === 'databaseImport') {
+								Database.import(objData.objRequest, function(objResponse) {
 									objPort.postMessage({
-										'strMessage': 'databaseLoad',
+										'strMessage': 'databaseImport',
 										'objResponse': objResponse
 									});
 								}, function(objResponse) {
 									objPort.postMessage({
-										'strMessage': 'databaseLoad-progress',
+										'strMessage': 'databaseImport-progress',
 										'objResponse': objResponse
 									});
 								});
@@ -195,7 +195,7 @@ var Database = {
 		});
 	},
 
-	save: function(objRequest, funcResponse, funcProgress) {
+	export: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
 			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
@@ -246,7 +246,7 @@ var Database = {
 		});
 	},
 
-	load: function(objRequest, funcResponse, funcProgress) {
+	import: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
 			'objVideos': function(objArguments, funcCallback) {
 				return funcCallback(objRequest.objVideos);
@@ -969,15 +969,15 @@ var Search = {
 										'objResponse': objResponse
 									});
 								});
+							}
 
-							} else if (objData.strMessage === 'searchDelete') {
+							if (objData.strMessage === 'searchDelete') {
 								Search.delete(objData.objRequest, function(objResponse) {
 									objPort.postMessage({
 										'strMessage': 'searchDelete',
 										'objResponse': objResponse
 									});
 								});
-
 							}
 						});
 					}

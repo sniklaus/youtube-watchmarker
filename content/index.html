@@ -26,20 +26,24 @@
 			</div>
 
 			<div class="card-body">
-				<div style="position:absolute; left:-1024px; top:-1024px;">
-					<input id="idDatabase_File" type="file" accept=".database" />
-				</div>
-
 				<p style="text-align:justify;">The database is only stored within Firefox, which is why removing the browser or even just this addon would lead to the loss of your timeline. You are therefore highly encouraged to regularly export the database in order to have a backup.</p>
 
 				<button class="btn btn-primary" id="idDatabase_Export">Export</button>
 
-				<button class="btn btn-primary" id="idDatabase_Import">Import</button>
+				<button class="btn btn-primary" id="idDatabase_Import" style="position:relative;">
+					Import<input type="file" accept=".database" style="cursor:pointer; bottom:0px; height:100%; left:0px; opacity:0.0; position:absolute; right:0px; top:0px; width:100%; z-index:1;" />
+				</button>
 
 				<button class="btn btn-primary" id="idDatabase_Reset">Reset</button>
 
-				<div class="input-group" style="display:inline; font-size:0px; vertical-align:top;">
-					<div class="input-group-prepend" style="display:inline-block;"><span class="input-group-text">Size:</span></div>
+				<div class="input-group" style="display:none; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
+					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><button class="btn btn-primary">Reset</button></div>
+					<div class="form-control" style="display:inline-block; width:auto;">Are you sure?</div>
+					<div class="input-group-append" style="display:inline-block; vertical-align:top;"><button class="btn btn-danger" id="idDatabase_Resyes">Yes</button></div>
+				</div>
+
+				<div class="input-group" style="display:inline; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
+					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><span class="input-group-text">Size:</span></div>
 					<div class="form-control" id="idDatabase_Size" style="display:inline-block; width:auto;"></div>
 				</div>
 			</div>
@@ -55,8 +59,8 @@
 
 				<button class="btn btn-primary" id="idHistory_Synchronize">Synchronize</button>
 
-				<div class="input-group" style="display:inline; font-size:0px; vertical-align:top;">
-					<div class="input-group-prepend" style="display:inline-block;"><span class="input-group-text">Timestamp:</span></div>
+				<div class="input-group" style="display:inline; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
+					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><span class="input-group-text">Timestamp:</span></div>
 					<div class="form-control" id="idHistory_Timestamp" style="display:inline-block; width:auto;"></div>
 				</div>
 			</div>
@@ -72,8 +76,8 @@
 
 				<button class="btn btn-primary" id="idYoutube_Synchronize">Synchronize</button>
 
-				<div class="input-group" style="display:inline; font-size:0px; vertical-align:top;">
-					<div class="input-group-prepend" style="display:inline-block;"><span class="input-group-text">Timestamp:</span></div>
+				<div class="input-group" style="display:inline; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
+					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><span class="input-group-text">Timestamp:</span></div>
 					<div class="form-control" id="idYoutube_Timestamp" style="display:inline-block; width:auto;"></div>
 				</div>
 			</div>
@@ -88,7 +92,7 @@
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<div class="form-control">Show a textual badge in addition to graying out watched videos.</div>
 					<div class="input-group-append">
-						<button class="btn btn-primary" id="idSearch_Lookup">
+						<button class="btn btn-primary" id="idVisualization_Showbadge">
 							<i class="far fa-square"></i>
 							<i class="far fa-check-square"></i>
 						</button>
@@ -97,7 +101,7 @@
 				<div class="input-group" style="margin:0px 0px 0px 0px;">
 					<div class="form-control">Hide the progressbar that is being shown underneath watched videos.</div>
 					<div class="input-group-append">
-						<button class="btn btn-primary" id="idSearch_Lookup">
+						<button class="btn btn-primary" id="idVisualization_Hideprogress">
 							<i class="far fa-square"></i>
 							<i class="far fa-check-square"></i>
 						</button>
@@ -113,11 +117,11 @@
 
 			<div class="card-body">
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
-					<input id="idSearch_Query" type="text" class="form-control" placeholder="...">
+					<input class="form-control" id="idSearch_Query" type="text" placeholder="..." />
 					<div class="input-group-append">
 						<button class="btn btn-primary" id="idSearch_Lookup">
-							<i class="fa fa-search"></i>
-							<i class="fa fa-cog fa-spin"></i>
+							<i class="fa fa-search" style="display:inline;"></i>
+							<i class="fa fa-cog fa-spin" style="display:none;"></i>
 						</button>
 					</div>
 				</div>
@@ -126,36 +130,24 @@
 			</div>
 		</div>
 
-		<div style="background-color:#000000AA; bottom:0px; display:none; left:0px; padding:20px; position:fixed; right:0px; top:0px; z-index:10;">
+		<div id="idLoading_Container" style="background-color:#000000AA; bottom:0px; display:none; left:0px; padding:20px; position:fixed; right:0px; top:0px; z-index:10;">
 			<div class="card" style="margin:-95px auto 20px auto; max-width:500px; top:50%;">
 				<div class="card-body">
 					<div class="input-group" style="margin:0px 0px 17px 0px;">
 						<div class="input-group-prepend">
 							<span class="input-group-text" style="display:block; text-align:right; width:96px;">Message:</span>
 						</div>
-						<div class="form-control"></div>
+						<div class="form-control" id="idLoading_Message"></div>
 					</div>
 
 					<div class="input-group" style="margin:0px 0px 17px 0px;">
 						<div class="input-group-prepend">
 							<span class="input-group-text" style="display:block; text-align:right; width:96px;">Progress:</span>
 						</div>
-						<div class="form-control"></div>
+						<div class="form-control" id="idLoading_Progress"></div>
 					</div>
 
-					<button class="btn btn-primary">Close</button>
-				</div>
-			</div>
-		</div>
-
-		<div style="background-color:#000000AA; bottom:0px; display:none; left:0px; padding:20px; position:fixed; right:0px; top:0px; z-index:10;">
-			<div class="card" style="margin:-95px auto 20px auto; max-width:500px; top:50%;">
-				<div class="card-body">
-					<p style="text-align:justify;">Do you really want to reset the database of this extension, clearing your entire watch history?</p>
-
-					<button class="btn btn-primary">Yes</button>
-
-					<button class="btn btn-primary">No</button>
+					<button class="btn btn-primary" id="idLoading_Close">Close</button>
 				</div>
 			</div>
 		</div>
