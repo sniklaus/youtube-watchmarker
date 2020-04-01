@@ -1392,7 +1392,7 @@ Node.series({
 
 		chrome.alarms.onAlarm.addListener(function(objAlarm) {
 			if (objAlarm.name === 'synchronize') {
-				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(false)) {
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true)) {
 					History.synchronize({
 						'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
 					}, function(objResponse) {
@@ -1402,7 +1402,7 @@ Node.series({
 					});
 				}
 
-				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') !== null) {
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true)) {
 					Youtube.synchronize({
 						'intThreshold': 512
 					}, function(objResponse) {
