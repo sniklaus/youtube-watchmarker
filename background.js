@@ -1305,6 +1305,18 @@ Node.series({
 
 			}
 
+			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false)) {
+				chrome.tabs.insertCSS(objTab.id, {
+					'code': '.youwatch-mark:last-child:after { display:none; }'
+				});
+			}
+
+			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
+				chrome.tabs.insertCSS(objTab.id, {
+					'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }'
+				});
+			}
+
 			if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true)) {
 				if (objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
 					return;
@@ -1337,18 +1349,6 @@ Node.series({
 							'strIdent': strIdent
 						});
 					}
-				});
-			}
-
-			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false)) {
-				chrome.tabs.insertCSS(objTab.id, {
-					'code': '.youwatch-mark:last-child:after { display:none; }'
-				});
-			}
-
-			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
-				chrome.tabs.insertCSS(objTab.id, {
-					'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }'
 				});
 			}
 		});
