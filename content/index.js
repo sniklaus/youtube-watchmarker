@@ -288,6 +288,72 @@ jQuery(window.document).ready(function() {
 		.text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.Youtube.intTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
 	;	
 
+	jQuery('#idCondition_Browser')
+		.on('click', function() {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrowser', window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(false));
+
+			jQuery(this)
+				.find('i')
+					.eq(0)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'none' : 'block'
+						})
+					.end()
+					.eq(1)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'block' : 'none'
+						})
+					.end()
+				.end()
+			;
+		})
+		.find('i')
+			.eq(0)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'none' : 'block'
+				})
+			.end()
+			.eq(1)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'block' : 'none'
+				})
+			.end()
+		.end()
+	;
+
+	jQuery('#idCondition_Youtube')
+		.on('click', function() {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolYoutube', window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(false));
+
+			jQuery(this)
+				.find('i')
+					.eq(0)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'none' : 'block'
+						})
+					.end()
+					.eq(1)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'block' : 'none'
+						})
+					.end()
+				.end()
+			;
+		})
+		.find('i')
+			.eq(0)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'none' : 'block'
+				})
+			.end()
+			.eq(1)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'block' : 'none'
+				})
+			.end()
+		.end()
+	;
+
 	jQuery('#idVisualization_Showbadge')
 		.on('click', function() {
 			window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowbadge', window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false));
@@ -509,14 +575,30 @@ jQuery(window.document).ready(function() {
 														'strIdent': objVideo.strIdent
 													})
 													.on('click', function() {
-														// TODO
+														jQuery('#idLoading_Container')
+															.css({
+																'display': 'block'
+															})
+														;
 
-														/* objSearch.postMessage({
+														jQuery('#idLoading_Message')
+															.text('exporting database')
+														;
+
+														jQuery('#idLoading_Progress')
+															.text('...')
+														;
+
+														jQuery('#idLoading_Close')
+															.addClass('disabled')
+														;
+
+														objSearch.postMessage({
 															'strMessage': 'searchDelete',
 															'objRequest': {
 																'strIdent': jQuery(this).data('strIdent')
 															}
-														}); */
+														});
 													})
 												)
 											)
@@ -532,10 +614,26 @@ jQuery(window.document).ready(function() {
 
 		if (objData.strMessage === 'searchDelete') {
 			if (objData.objResponse === null) {
-				return;
-			}
+				jQuery('#idLoading_Message')
+					.text('error deleting video')
+				;
 
-			// TODO
+			} else if (objData.objResponse !== null) {
+				jQuery('#idLoading_Message')
+					.text('finished deleting video')
+				;
+
+			}
+			
+			jQuery('#idLoading_Close')
+				.removeClass('disabled')
+			;
+		}
+
+		if (objData.strMessage === 'searchDelete-progress') {
+			jQuery('#idLoading_Progress')
+				.text(objData.objResponse.strProgress)
+			;
 		}
 	});
 

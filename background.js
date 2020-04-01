@@ -438,15 +438,16 @@ var History = {
 						} else if ((objResult.title === undefined) || (objResult.title === null)) {
 							continue;
 
-						} else if (objResult.title.indexOf(' - YouTube') !== objResult.title.length - 10) {
-							continue;
+						}
 
+						if (objResult.title.indexOf(' - YouTube') === objResult.title.length - 10) {
+							objResult.title = objResult.title.slice(0, -10)
 						}
 
 						objVideos.push({
 							'strIdent': objResult.url.substr(32, 11),
 							'intTimestamp': objResult.lastVisitTime,
-							'strTitle': objResult.title.slice(0, -10),
+							'strTitle': objResult.title,
 							'intCount': objResult.visitCount
 						});
 					}
@@ -623,9 +624,9 @@ var Youtube = {
 	synchronize: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
 			'objVideos': function(objArguments, funcCallback) {
-				if (objArguments.strContinuation === undefined) {
+				if (objArguments.objYtcfg === undefined) {
+					objArguments.objYtcfg = null
 					objArguments.strContinuation = 'https://www.youtube.com/feed/history';
-					objArguments.strIdent = null;
 				}
 
 				var objAjax = new XMLHttpRequest();
@@ -636,33 +637,31 @@ var Youtube = {
 					objArguments.strContinuation = null;
 				}
 
-				if (objArguments.strIdent !== null) {
-					objAjax.setRequestHeader('X-YouTube-Client-Name', '1');
-					objAjax.setRequestHeader('X-YouTube-Client-Version', '2.20200325.03.01');
-					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.strIdent);
+				if (objArguments.objYtcfg !== null) {
+					objAjax.setRequestHeader('X-YouTube-Client-Name', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_NAME']);
+					objAjax.setRequestHeader('X-YouTube-Client-Version', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_VERSION']);
+					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.objYtcfg['ID_TOKEN']);
 				}
 
 				objAjax.onload = function() {
-					var strAjax = objAjax.responseText.split('\\"').join('\\u0022');
-
-					var strExec = null;
-					var objContinuation = new RegExp('("nextContinuationData":{"continuation":")([^"]+)(")(.*?)("clickTrackingParams":")([^"]+)(")', 'g');
-					var objIdent = new RegExp('("ID_TOKEN":")([^"]+)(")', 'g');
-					var objVideo = new RegExp('("videoRenderer":{"videoId":")([^"]{11})(")(.*?)("text":")([^"]*)(")', 'g');
-
-					if ((strExec = objContinuation.exec(strAjax)) !== null) {
-						objArguments.strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strExec[2] + '&continuation=' + strExec[2] + '&itct=' + strExec[6];
+					if (objArguments.objYtcfg === null) {
+						objArguments.objYtcfg = JSON.parse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_CONTEXT_CLIENT_VERSION') !== -1; }).slice(0, -2));
 					}
 
-					if ((strExec = objIdent.exec(strAjax)) !== null) {
-						objArguments.strIdent = strExec[2];
+					var strRegex = null;
+					var objContinuation = new RegExp('("nextContinuationData":{"continuation":")([^"]+)(")(.*?)("clickTrackingParams":")([^"]+)(")', 'g');
+					var objVideo = new RegExp('("videoRenderer":{"videoId":")([^"]{11})(")(.*?)("text":")([^"]*)(")', 'g');
+					var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022');
+
+					if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
+						objArguments.strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strRegex[2] + '&continuation=' + strRegex[2] + '&itct=' + strRegex[6];
 					}
 
 					var objVideos = [];
 
-					while ((strExec = objVideo.exec(strAjax)) !== null) {
-						var strIdent = strExec[2];
-						var strTitle = strExec[6];
+					while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
+						var strIdent = strRegex[2];
+						var strTitle = strRegex[6];
 
 						strTitle = strTitle.split('\\u0022').join('"');
 						strTitle = strTitle.split('\\u0026').join('&');
@@ -977,6 +976,11 @@ var Search = {
 										'strMessage': 'searchDelete',
 										'objResponse': objResponse
 									});
+								}, function(objResponse) {
+									objPort.postMessage({
+										'strMessage': 'searchDelete-progress',
+										'objResponse': objResponse
+									});
 								});
 							}
 						});
@@ -1011,7 +1015,7 @@ var Search = {
 						return funcCallback(objQuery.results);
 					}
 
-					if (objQuery.results.length === 10) {
+					if (objQuery.results.length === 100) {
 						return funcCallback(objQuery.results);
 					}
 
@@ -1040,12 +1044,16 @@ var Search = {
 		});
 	},
 	
-	delete: function(objRequest, funcResponse) {
+	delete: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
 			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objDelete': function(objArguments, funcCallback) {
+				funcProgress({
+					'strProgress': '1/4 - deleting it from the database'
+				});
+
 				var objQuery = objArguments.objDatabase.delete(objRequest.strIdent);
 
 				objQuery.onsuccess = function() {
@@ -1062,10 +1070,115 @@ var Search = {
 				};
 			},
 			'objHistory': function(objArguments, funcCallback) {
-				return funcCallback({}); // TODO
+				funcProgress({
+					'strProgress': '2/4 - deleting it from the history in the browser'
+				});
+
+				chrome.history.search({
+					'text': 'https://www.youtube.com/watch?v=' + objRequest.strIdent,
+					'startTime': 0,
+					'maxResults': 1000000000
+				}, function(objResults) {
+					for (var objResult of objResults) {
+						if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
+							continue;
+
+						} else if ((objResult.title === undefined) || (objResult.title === null)) {
+							continue;
+
+						}
+
+						chrome.history.deleteUrl({
+							'url': objResult.url
+						});
+					}
+
+					return funcCallback({});
+				});
 			},
-			'objYoutube': function(objArguments, funcCallback) {
-				return funcCallback({}); // TODO
+			'objYoulookup': function(objArguments, funcCallback) {
+				funcProgress({
+					'strProgress': '3/4 - locating it in the history on youtube'
+				});
+
+				if ((objArguments.intRetry = (objArguments.intRetry || 10) - 1) === 0) {
+					return funcCallback(null);
+				}
+
+				if (objArguments.objYtcfg === undefined) {
+					objArguments.objYtcfg = null
+					objArguments.strContinuation = 'https://www.youtube.com/feed/history';
+				}
+
+				var objAjax = new XMLHttpRequest();
+
+				objAjax.open('GET', objArguments.strContinuation);
+
+				if (objArguments.strContinuation !== null) {
+					objArguments.strContinuation = null;
+				}
+
+				if (objArguments.objYtcfg !== null) {
+					objAjax.setRequestHeader('X-YouTube-Client-Name', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_NAME']);
+					objAjax.setRequestHeader('X-YouTube-Client-Version', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_VERSION']);
+					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.objYtcfg['ID_TOKEN']);
+				}
+
+				objAjax.onload = function() {
+					if (objArguments.objYtcfg === null) {
+						objArguments.objYtcfg = JSON.parse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_CONTEXT_CLIENT_VERSION') !== -1; }).slice(0, -2));
+					}
+
+					var strRegex = null;
+					var objContinuation = new RegExp('("nextContinuationData":{"continuation":")([^"]+)(")(.*?)("clickTrackingParams":")([^"]+)(")', 'g');
+					var objVideo = new RegExp('("videoRenderer":{"videoId":")([^"]{11})(")(.*?)("topLevelButtons":)(.*?)("serviceEndpoint":)(.*?)(,"icon":{)', 'g');
+					var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022');
+
+					if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
+						objArguments.strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strRegex[2] + '&continuation=' + strRegex[2] + '&itct=' + strRegex[6];
+					}
+
+					while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
+						var strIdent = strRegex[2];
+						var strDelete = strRegex[8];
+
+						if (strIdent !== objRequest.strIdent) {
+							continue;
+						}
+
+						return funcCallback({
+							'strIdent': strIdent,
+							'strDelete': strDelete
+						});
+					}
+
+					return funcCallback({}, 'objYoulookup');
+				};
+
+				objAjax.send();
+			},
+			'objYoudelete': function(objArguments, funcCallback) {
+				funcProgress({
+					'strProgress': '4/4 - deleting it from the history on youtube'
+				});
+
+				var objAjax = new XMLHttpRequest();
+
+				objAjax.open('POST', 'https://www.youtube.com/service_ajax?name=feedbackEndpoint');
+
+				objAjax.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+				if (objArguments.objYtcfg !== null) {
+					objAjax.setRequestHeader('X-YouTube-Client-Name', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_NAME']);
+					objAjax.setRequestHeader('X-YouTube-Client-Version', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_VERSION']);
+					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.objYtcfg['ID_TOKEN']);
+				}
+
+				objAjax.onload = function() {
+					funcResponse({});
+				};
+
+				objAjax.send('sej=' + encodeURIComponent(objArguments.objYoulookup.strDelete) + '&csn=' + encodeURIComponent(objArguments.objYtcfg['EVENT_ID']) + '&session_token=' + encodeURIComponent(objArguments.objYtcfg['XSRF_TOKEN']));
 			}
 		}, function(objArguments) {
 			if (objArguments === null) {
@@ -1093,6 +1206,14 @@ Node.series({
 
 		if (window.localStorage.getItem('extensions.Youwatch.Youtube.intTimestamp') === null) {
 			window.localStorage.setItem('extensions.Youwatch.Youtube.intTimestamp', String(0));
+		}
+
+		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrowser', String(true));
+		}
+
+		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolYoutube', String(true));
 		}
 
 		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === null) {
@@ -1161,12 +1282,14 @@ Node.series({
 	'objMessage': function(objArguments, funcCallback) {
 		chrome.runtime.onMessage.addListener(function(objRequest, objSender, funcResponse) {
 			if (objRequest.strMessage === 'youtubeEnsure') {
-				Youtube.ensure({
-					'strIdent': objRequest.strIdent,
-					'strTitle': objRequest.strTitle
-				}, function(objResponse) {
-					console.log('ensured video');
-				});
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true)) {
+					Youtube.ensure({
+						'strIdent': objRequest.strIdent,
+						'strTitle': objRequest.strTitle
+					}, function(objResponse) {
+						console.log('ensured video');
+					});
+				}
 			}
 		});
 
@@ -1182,6 +1305,41 @@ Node.series({
 
 			}
 
+			if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true)) {
+				if (objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
+					return;
+
+				} else if ((objData.title === undefined) || (objData.title === null)) {
+					return;
+
+				}
+
+				if (objData.title.indexOf(' - YouTube') === objData.title.length - 10) {
+					objData.title = objData.title.slice(0, -10)
+				}
+
+				var strIdent = objTab.url.substr(32, 11);
+				var strTitle = objData.title;
+
+				Youtube.mark({
+					'strIdent': strIdent,
+					'strTitle': strTitle
+				}, function(objResponse) {
+					console.log('mark video');
+				});
+
+				chrome.tabs.query({
+					'url': '*://*.youtube.com/*'
+				}, function(objTabs) {
+					for (var objTab of objTabs) {
+						funcSendmessage(objTab.id, {
+							'strMessage': 'youtubeMark',
+							'strIdent': strIdent
+						});
+					}
+				});
+			}
+
 			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false)) {
 				chrome.tabs.insertCSS(objTab.id, {
 					'code': '.youwatch-mark:last-child:after { display:none; }'
@@ -1193,38 +1351,6 @@ Node.series({
 					'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }'
 				});
 			}
-
-			if (objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
-				return;
-
-			} else if ((objData.title === undefined) || (objData.title === null)) {
-				return;
-
-			} else if (objData.title.indexOf(' - YouTube') !== objData.title.length - 10) {
-				return;
-
-			}
-
-			var strIdent = objTab.url.substr(32, 11);
-			var strTitle = objData.title.slice(0, -10);
-
-			Youtube.mark({
-				'strIdent': strIdent,
-				'strTitle': strTitle
-			}, function(objResponse) {
-				console.log('mark video');
-			});
-
-			chrome.tabs.query({
-				'url': '*://*.youtube.com/*'
-			}, function(objTabs) {
-				for (var objTab of objTabs) {
-					funcSendmessage(objTab.id, {
-						'strMessage': 'youtubeMark',
-						'strIdent': strIdent
-					});
-				}
-			});
 		});
 
 		return funcCallback({});
@@ -1266,21 +1392,25 @@ Node.series({
 
 		chrome.alarms.onAlarm.addListener(function(objAlarm) {
 			if (objAlarm.name === 'synchronize') {
-				History.synchronize({
-					'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
-				}, function(objResponse) {
-					console.log('synchronized history');
-				}, function(objResponse) {
-					// ...
-				});
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(false)) {
+					History.synchronize({
+						'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
+					}, function(objResponse) {
+						console.log('synchronized history');
+					}, function(objResponse) {
+						// ...
+					});
+				}
 
-				Youtube.synchronize({
-					'intThreshold': 512
-				}, function(objResponse) {
-					console.log('synchronized youtube');
-				}, function(objResponse) {
-					// ...
-				});
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') !== null) {
+					Youtube.synchronize({
+						'intThreshold': 512
+					}, function(objResponse) {
+						console.log('synchronized youtube');
+					}, function(objResponse) {
+						// ...
+					});
+				}
 			}
 		});
 
