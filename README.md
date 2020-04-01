@@ -5,9 +5,6 @@ Youtube keeps track of your watch history and automatically marks videos that yo
 
 To install the Firefox extension, please see: https://addons.mozilla.org/en-US/firefox/addon/youtube-watchmarker/
 
-## compile
-You can simply run `python manifest.py` to download all dependencies, like jQuery, to obtain the XPI package.
-
 ## questions
 <b>Does this work with the old Youtube theme?</b> I am afraid that only the new theme is supported. If you do not know which theme you are currently using then it is very likely the new one.
 
