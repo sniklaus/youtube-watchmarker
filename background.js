@@ -427,7 +427,7 @@ var History = {
 				chrome.history.search({
 					'text': 'https://www.youtube.com/watch?v=',
 					'startTime': objRequest.intTimestamp,
-					'maxResults': 1000000000
+					'maxResults': 1000000
 				}, function(objResults) {
 					var objVideos = [];
 
@@ -623,45 +623,60 @@ var Youtube = {
 
 	synchronize: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
+			'strContauth': function(objArguments, funcCallback) {
+				chrome.cookies.get({
+					'url': 'https://www.youtube.com',
+					'name':'SAPISID'
+				}, function(objCookie) {
+					var intTime = Math.round(new Date().getTime() / 1000.0);
+					var strCookie = objCookie.value;
+					var strOrigin = 'https://www.youtube.com';
+
+					// https://stackoverflow.com/a/32065323
+
+					crypto.subtle.digest('SHA-1', new TextEncoder().encode(intTime + ' ' + strCookie + ' ' + strOrigin)).then(function(strHash) {
+						return funcCallback('SAPISIDHASH ' + intTime + '_' + Array.from(new Uint8Array(strHash)).map(function(intByte) { return intByte.toString(16).padStart(2, '0') }).join(''));
+					});
+				});
+			},
 			'objVideos': function(objArguments, funcCallback) {
-				if (objArguments.objYtcfg === undefined) {
-					objArguments.objYtcfg = null
-					objArguments.strContinuation = 'https://www.youtube.com/feed/history';
+				if (objArguments.strContinuation === undefined) {
+					objArguments.strContinuation = null;
+					objArguments.strClicktrack = null;
+					objArguments.objYtcfg = null;
+					objArguments.objYtctx = null;
 				}
 
 				var objAjax = new XMLHttpRequest();
-
-				objAjax.open('GET', objArguments.strContinuation);
-
-				if (objArguments.strContinuation !== null) {
-					objArguments.strContinuation = null;
-				}
-
-				if (objArguments.objYtcfg !== null) {
-					objAjax.setRequestHeader('X-YouTube-Client-Name', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_NAME']);
-					objAjax.setRequestHeader('X-YouTube-Client-Version', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_VERSION']);
-					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.objYtcfg['ID_TOKEN']);
-				}
 
 				objAjax.onload = function() {
 					if (objArguments.objYtcfg === null) {
 						objArguments.objYtcfg = JSON.parse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_CONTEXT_CLIENT_VERSION') !== -1; }).slice(0, -2));
 					}
 
+					if (objArguments.objYtctx === null) {
+						objArguments.objYtctx = JSON.parse(objAjax.responseText.split('ytcfg.set({"INNERTUBE_CONTEXT":')[1].split('}}});')[0] + '}}');
+					}
+
 					var strRegex = null;
-					var objContinuation = new RegExp('("nextContinuationData":{"continuation":")([^"]+)(")(.*?)("clickTrackingParams":")([^"]+)(")', 'g');
-					var objVideo = new RegExp('("videoRenderer":{"videoId":")([^"]{11})(")(.*?)("text":")([^"]*)(")', 'g');
-					var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022');
+					var objContinuation = new RegExp('("continuationCommand":)([^"]*)("token":)([^"]*)(")([^"]*)(")', 'g');
+					var objClicktrack = new RegExp('("continuationEndpoint":)([^"]*)("clickTrackingParams":)([^"]*)(")([^"]*)(")', 'g');
+					var objVideo = new RegExp('("videoRenderer":)([^"]*)("videoId":)([^"]*)(")([^"]{11})(")(.*?)("text")([^"]*)(")([^"]*)(")', 'g');
+					var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
 					if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-						objArguments.strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strRegex[2] + '&continuation=' + strRegex[2] + '&itct=' + strRegex[6];
+						objArguments.strContinuation = strRegex[6];
+					}
+
+					if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
+						objArguments.strClicktrack = strRegex[6];
 					}
 
 					var objVideos = [];
 
 					while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-						var strIdent = strRegex[2];
-						var strTitle = strRegex[6];
+						var strIdent = strRegex[6];
+						var strTitle = strRegex[12];
 
 						strTitle = strTitle.split('\\u0022').join('"');
 						strTitle = strTitle.split('\\u0026').join('&');
@@ -681,7 +696,47 @@ var Youtube = {
 					return funcCallback(objVideos);
 				};
 
-				objAjax.send();
+				if ((objArguments.strContinuation === null) || (objArguments.strClicktrack === null) || (objArguments.objYtcfg === null) || (objArguments.objYtctx === null)) {
+					objAjax.open('GET', 'https://www.youtube.com/feed/history');
+
+					objAjax.send();
+
+				} else if ((objArguments.strContinuation !== null) && (objArguments.strClicktrack !== null) && (objArguments.objYtcfg !== null) && (objArguments.objYtctx !== null)) {
+					objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/browse?key=' + objArguments.objYtcfg['INNERTUBE_API_KEY']);
+
+					objAjax.setRequestHeader('Authorization', objArguments.strContauth);
+					objAjax.setRequestHeader('Content-Type', 'application/json');
+					objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history');
+					objAjax.setRequestHeader('Origin', 'https://www.youtube.com');
+					objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
+					objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
+
+					objArguments.objYtctx['client']['screenWidthPoints'] = 1024;
+					objArguments.objYtctx['client']['screenHeightPoints'] = 768;
+					objArguments.objYtctx['client']['screenPixelDensity'] = 1;
+					objArguments.objYtctx['client']['utcOffsetMinutes'] = -420;
+					objArguments.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
+
+					objArguments.objYtctx['request']['internalExperimentFlags'] = [];
+					objArguments.objYtctx['request']['consistencyTokenJars'] = [];
+
+					objAjax.send(JSON.stringify({
+						'context': {
+							'client': objArguments.objYtctx['client'],
+							'request': objArguments.objYtctx['request'],
+							'user': {},
+							'clickTracking': {
+								'clickTrackingParams': objArguments.strClicktrack
+							}
+						},
+						'continuation': objArguments.strContinuation
+					}));
+
+				}
+
+				if (objArguments.strContinuation !== null) {
+					objArguments.strContinuation = null;
+				}
 			},
 			'objDatabase': function(objArguments, funcCallback) {
 				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
@@ -776,7 +831,7 @@ var Youtube = {
 			'objContinuation': function(objArguments, funcCallback) {
 				if (objArguments.intExisting < objRequest.intThreshold) {
 					if (objArguments.strContinuation !== null) {
-						return funcCallback({}, 'objVideos');
+						return funcCallback({}, 'strContauth');
 					}
 				}
 
@@ -1077,7 +1132,7 @@ var Search = {
 				chrome.history.search({
 					'text': 'https://www.youtube.com/watch?v=' + objRequest.strIdent,
 					'startTime': 0,
-					'maxResults': 1000000000
+					'maxResults': 1000000
 				}, function(objResults) {
 					for (var objResult of objResults) {
 						if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
@@ -1096,6 +1151,22 @@ var Search = {
 					return funcCallback({});
 				});
 			},
+			'strContauth': function(objArguments, funcCallback) {
+				chrome.cookies.get({
+					'url': 'https://www.youtube.com',
+					'name':'SAPISID'
+				}, function(objCookie) {
+					var intTime = Math.round(new Date().getTime() / 1000.0);
+					var strCookie = objCookie.value;
+					var strOrigin = 'https://www.youtube.com';
+
+					// https://stackoverflow.com/a/32065323
+
+					crypto.subtle.digest('SHA-1', new TextEncoder().encode(intTime + ' ' + strCookie + ' ' + strOrigin)).then(function(strHash) {
+						return funcCallback('SAPISIDHASH ' + intTime + '_' + Array.from(new Uint8Array(strHash)).map(function(intByte) { return intByte.toString(16).padStart(2, '0') }).join(''));
+					});
+				});
+			},
 			'objYoulookup': function(objArguments, funcCallback) {
 				funcProgress({
 					'strProgress': '3/4 - locating it in the history on youtube'
@@ -1105,42 +1176,42 @@ var Search = {
 					return funcCallback(null);
 				}
 
-				if (objArguments.objYtcfg === undefined) {
-					objArguments.objYtcfg = null
-					objArguments.strContinuation = 'https://www.youtube.com/feed/history';
+				if (objArguments.strContinuation === undefined) {
+					objArguments.strContinuation = null;
+					objArguments.strClicktrack = null;
+					objArguments.objYtcfg = null;
+					objArguments.objYtctx = null;
 				}
 
 				var objAjax = new XMLHttpRequest();
-
-				objAjax.open('GET', objArguments.strContinuation);
-
-				if (objArguments.strContinuation !== null) {
-					objArguments.strContinuation = null;
-				}
-
-				if (objArguments.objYtcfg !== null) {
-					objAjax.setRequestHeader('X-YouTube-Client-Name', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_NAME']);
-					objAjax.setRequestHeader('X-YouTube-Client-Version', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_VERSION']);
-					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.objYtcfg['ID_TOKEN']);
-				}
 
 				objAjax.onload = function() {
 					if (objArguments.objYtcfg === null) {
 						objArguments.objYtcfg = JSON.parse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_CONTEXT_CLIENT_VERSION') !== -1; }).slice(0, -2));
 					}
 
+					if (objArguments.objYtctx === null) {
+						objArguments.objYtctx = JSON.parse(objAjax.responseText.split('ytcfg.set({"INNERTUBE_CONTEXT":')[1].split('}}});')[0] + '}}');
+					}
+
 					var strRegex = null;
-					var objContinuation = new RegExp('("nextContinuationData":{"continuation":")([^"]+)(")(.*?)("clickTrackingParams":")([^"]+)(")', 'g');
-					var objVideo = new RegExp('("videoRenderer":{"videoId":")([^"]{11})(")(.*?)("topLevelButtons":)(.*?)("serviceEndpoint":)(.*?)(,"icon":{)', 'g');
-					var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022');
+					var objContinuation = new RegExp('("continuationCommand":)([^"]*)("token":)([^"]*)(")([^"]*)(")', 'g');
+					var objClicktrack = new RegExp('("continuationEndpoint":)([^"]*)("clickTrackingParams":)([^"]*)(")([^"]*)(")', 'g');
+					var objVideo = new RegExp('("videoRenderer":)([^"]*)("videoId":)([^"]*)(")([^"]{11})(")(.*?)("topLevelButtons")(.*?)("clickTrackingParams")([^"]*)(")([^"]*)(")(.*?)("feedbackToken")([^"]*)(")([^"]*)(")', 'g');
+					var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
 					if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-						objArguments.strContinuation = 'https://www.youtube.com/browse_ajax?ctoken=' + strRegex[2] + '&continuation=' + strRegex[2] + '&itct=' + strRegex[6];
+						objArguments.strContinuation = strRegex[6];
+					}
+
+					if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
+						objArguments.strClicktrack = strRegex[6];
 					}
 
 					while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-						var strIdent = strRegex[2];
-						var strDelete = strRegex[8];
+						var strIdent = strRegex[6];
+						var strClicktrack = strRegex[14];
+						var strFeedback = strRegex[20];
 
 						if (strIdent !== objRequest.strIdent) {
 							continue;
@@ -1148,14 +1219,71 @@ var Search = {
 
 						return funcCallback({
 							'strIdent': strIdent,
-							'strDelete': strDelete
+							'strClicktrack': strClicktrack,
+							'strFeedback': strFeedback
 						});
 					}
 
-					return funcCallback({}, 'objYoulookup');
+					return funcCallback({}, 'strContauth');
 				};
 
-				objAjax.send();
+				if ((objArguments.strContinuation === null) || (objArguments.strClicktrack === null) || (objArguments.objYtcfg === null) || (objArguments.objYtctx === null)) {
+					objAjax.open('GET', 'https://www.youtube.com/feed/history');
+
+					objAjax.send();
+
+				} else if ((objArguments.strContinuation !== null) && (objArguments.strClicktrack !== null) && (objArguments.objYtcfg !== null) && (objArguments.objYtctx !== null)) {
+					objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/browse?key=' + objArguments.objYtcfg['INNERTUBE_API_KEY']);
+
+					objAjax.setRequestHeader('Authorization', objArguments.strContauth);
+					objAjax.setRequestHeader('Content-Type', 'application/json');
+					objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history');
+					objAjax.setRequestHeader('Origin', 'https://www.youtube.com');
+					objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
+					objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
+
+					objArguments.objYtctx['client']['screenWidthPoints'] = 1024;
+					objArguments.objYtctx['client']['screenHeightPoints'] = 768;
+					objArguments.objYtctx['client']['screenPixelDensity'] = 1;
+					objArguments.objYtctx['client']['utcOffsetMinutes'] = -420;
+					objArguments.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
+
+					objArguments.objYtctx['request']['internalExperimentFlags'] = [];
+					objArguments.objYtctx['request']['consistencyTokenJars'] = [];
+
+					objAjax.send(JSON.stringify({
+						'context': {
+							'client': objArguments.objYtctx['client'],
+							'request': objArguments.objYtctx['request'],
+							'user': {},
+							'clickTracking': {
+								'clickTrackingParams': objArguments.strClicktrack
+							}
+						},
+						'continuation': objArguments.strContinuation
+					}));
+
+				}
+
+				if (objArguments.strContinuation !== null) {
+					objArguments.strContinuation = null;
+				}
+			},
+			'strFeedauth': function(objArguments, funcCallback) {
+				chrome.cookies.get({
+					'url': 'https://www.youtube.com',
+					'name':'SAPISID'
+				}, function(objCookie) {
+					var intTime = Math.round(new Date().getTime() / 1000.0);
+					var strCookie = objCookie.value;
+					var strOrigin = 'https://www.youtube.com';
+
+					// https://stackoverflow.com/a/32065323
+
+					crypto.subtle.digest('SHA-1', new TextEncoder().encode(intTime + ' ' + strCookie + ' ' + strOrigin)).then(function(strHash) {
+						return funcCallback('SAPISIDHASH ' + intTime + '_' + Array.from(new Uint8Array(strHash)).map(function(intByte) { return intByte.toString(16).padStart(2, '0') }).join(''));
+					});
+				});
 			},
 			'objYoudelete': function(objArguments, funcCallback) {
 				funcProgress({
@@ -1164,21 +1292,41 @@ var Search = {
 
 				var objAjax = new XMLHttpRequest();
 
-				objAjax.open('POST', 'https://www.youtube.com/service_ajax?name=feedbackEndpoint');
-
-				objAjax.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-
-				if (objArguments.objYtcfg !== null) {
-					objAjax.setRequestHeader('X-YouTube-Client-Name', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_NAME']);
-					objAjax.setRequestHeader('X-YouTube-Client-Version', objArguments.objYtcfg['INNERTUBE_CONTEXT_CLIENT_VERSION']);
-					objAjax.setRequestHeader('X-Youtube-Identity-Token', objArguments.objYtcfg['ID_TOKEN']);
-				}
-
 				objAjax.onload = function() {
 					funcResponse({});
 				};
 
-				objAjax.send('sej=' + encodeURIComponent(objArguments.objYoulookup.strDelete) + '&csn=' + encodeURIComponent(objArguments.objYtcfg['EVENT_ID']) + '&session_token=' + encodeURIComponent(objArguments.objYtcfg['XSRF_TOKEN']));
+				objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/feedback?key=' + objArguments.objYtcfg['INNERTUBE_API_KEY']);
+
+				objAjax.setRequestHeader('Authorization', objArguments.strFeedauth);
+				objAjax.setRequestHeader('Content-Type', 'application/json');
+				objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history');
+				objAjax.setRequestHeader('Origin', 'https://www.youtube.com');
+				objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
+				objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
+
+				objArguments.objYtctx['client']['screenWidthPoints'] = 1024;
+				objArguments.objYtctx['client']['screenHeightPoints'] = 768;
+				objArguments.objYtctx['client']['screenPixelDensity'] = 1;
+				objArguments.objYtctx['client']['utcOffsetMinutes'] = -420;
+				objArguments.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
+
+				objArguments.objYtctx['request']['internalExperimentFlags'] = [];
+				objArguments.objYtctx['request']['consistencyTokenJars'] = [];
+
+				objAjax.send(JSON.stringify({
+					'context': {
+						'client': objArguments.objYtctx['client'],
+						'request': objArguments.objYtctx['request'],
+						'user': {},
+						'clickTracking': {
+							'clickTrackingParams': objArguments.objYoulookup.strClicktrack
+						}
+					},
+					'feedbackTokens': [objArguments.objYoulookup.strFeedback],
+					'isFeedbackTokenUnencrypted': false,
+					'shouldMerge': false
+				}));
 			}
 		}, function(objArguments) {
 			if (objArguments === null) {
@@ -1208,12 +1356,20 @@ Node.series({
 			window.localStorage.setItem('extensions.Youwatch.Youtube.intTimestamp', String(0));
 		}
 
-		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === null) {
-			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrowser', String(true));
+		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrownav', String(true));
 		}
 
-		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === null) {
-			window.localStorage.setItem('extensions.Youwatch.Condition.boolYoutube', String(true));
+		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowhist') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrowhist', String(true));
+		}
+
+		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolYoubadge', String(true));
+		}
+
+		if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYouhist') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolYouhist', String(true));
 		}
 
 		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === null) {
@@ -1282,7 +1438,7 @@ Node.series({
 	'objMessage': function(objArguments, funcCallback) {
 		chrome.runtime.onMessage.addListener(function(objRequest, objSender, funcResponse) {
 			if (objRequest.strMessage === 'youtubeEnsure') {
-				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true)) {
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true)) {
 					Youtube.ensure({
 						'strIdent': objRequest.strIdent,
 						'strTitle': objRequest.strTitle
@@ -1307,17 +1463,17 @@ Node.series({
 
 			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false)) {
 				chrome.tabs.insertCSS(objTab.id, {
-					'code': '.youwatch-mark:last-child:after { display:none; }'
+					'code': '.youwatch-mark:last-child:after { display:none !important; }'
 				});
 			}
 
 			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
 				chrome.tabs.insertCSS(objTab.id, {
-					'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none; }'
+					'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none !important; }'
 				});
 			}
 
-			if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true)) {
+			if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
 				if (objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
 					return;
 
@@ -1392,7 +1548,7 @@ Node.series({
 
 		chrome.alarms.onAlarm.addListener(function(objAlarm) {
 			if (objAlarm.name === 'synchronize') {
-				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true)) {
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowhist') === String(true)) {
 					History.synchronize({
 						'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
 					}, function(objResponse) {
@@ -1402,7 +1558,7 @@ Node.series({
 					});
 				}
 
-				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true)) {
+				if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYouhist') === String(true)) {
 					Youtube.synchronize({
 						'intThreshold': 512
 					}, function(objResponse) {

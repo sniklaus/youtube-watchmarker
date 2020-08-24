@@ -252,7 +252,7 @@ jQuery(window.document).ready(function() {
 			objYoutube.postMessage({
 				'strMessage': 'youtubeSynchronize',
 				'objRequest': {
-					'intThreshold': 1000000000
+					'intThreshold': 1000000
 				}
 			});
 		})
@@ -286,22 +286,22 @@ jQuery(window.document).ready(function() {
 
 	jQuery('#idYoutube_Timestamp')
 		.text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.Youtube.intTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
-	;	
+	;
 
-	jQuery('#idCondition_Browser')
+	jQuery('#idCondition_Brownav')
 		.on('click', function() {
-			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrowser', window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(false));
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrownav', window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(false));
 
 			jQuery(this)
 				.find('i')
 					.eq(0)
 						.css({
-							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'none' : 'block'
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'none' : 'block'
 						})
 					.end()
 					.eq(1)
 						.css({
-							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'block' : 'none'
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'block' : 'none'
 						})
 					.end()
 				.end()
@@ -310,31 +310,31 @@ jQuery(window.document).ready(function() {
 		.find('i')
 			.eq(0)
 				.css({
-					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'none' : 'block'
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'none' : 'block'
 				})
 			.end()
 			.eq(1)
 				.css({
-					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowser') === String(true) ? 'block' : 'none'
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'block' : 'none'
 				})
 			.end()
 		.end()
 	;
 
-	jQuery('#idCondition_Youtube')
+	jQuery('#idCondition_Browhist')
 		.on('click', function() {
-			window.localStorage.setItem('extensions.Youwatch.Condition.boolYoutube', window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(false));
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolBrowhist', window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowhist') === String(false));
 
 			jQuery(this)
 				.find('i')
 					.eq(0)
 						.css({
-							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'none' : 'block'
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'none' : 'block'
 						})
 					.end()
 					.eq(1)
 						.css({
-							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'block' : 'none'
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'block' : 'none'
 						})
 					.end()
 				.end()
@@ -343,12 +343,78 @@ jQuery(window.document).ready(function() {
 		.find('i')
 			.eq(0)
 				.css({
-					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'none' : 'block'
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'none' : 'block'
 				})
 			.end()
 			.eq(1)
 				.css({
-					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoutube') === String(true) ? 'block' : 'none'
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'block' : 'none'
+				})
+			.end()
+		.end()
+	;
+
+	jQuery('#idCondition_Youbadge')
+		.on('click', function() {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolYoubadge', window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(false));
+
+			jQuery(this)
+				.find('i')
+					.eq(0)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'none' : 'block'
+						})
+					.end()
+					.eq(1)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'block' : 'none'
+						})
+					.end()
+				.end()
+			;
+		})
+		.find('i')
+			.eq(0)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'none' : 'block'
+				})
+			.end()
+			.eq(1)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'block' : 'none'
+				})
+			.end()
+		.end()
+	;
+
+	jQuery('#idCondition_Youhist')
+		.on('click', function() {
+			window.localStorage.setItem('extensions.Youwatch.Condition.boolYouhist', window.localStorage.getItem('extensions.Youwatch.Condition.boolYouhist') === String(false));
+
+			jQuery(this)
+				.find('i')
+					.eq(0)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'none' : 'block'
+						})
+					.end()
+					.eq(1)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'block' : 'none'
+						})
+					.end()
+				.end()
+			;
+		})
+		.find('i')
+			.eq(0)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'none' : 'block'
+				})
+			.end()
+			.eq(1)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'block' : 'none'
 				})
 			.end()
 		.end()
