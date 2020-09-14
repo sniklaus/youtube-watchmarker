@@ -7,7 +7,7 @@
 
 	"version": "4.0.6",
 
-	"permissions": [ "alarms", "downloads", "history", "tabs", "cookies", "webRequest", "*://*.youtube.com/*", "*://*.ytimg.com/*" ],
+	"permissions": [ "alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "*://*.youtube.com/*", "*://*.ytimg.com/*" ],
 
 	"icons": {
 		"72": "content/icon.png"

@@ -706,8 +706,8 @@ var Youtube = {
 
 					objAjax.setRequestHeader('Authorization', objArguments.strContauth);
 					objAjax.setRequestHeader('Content-Type', 'application/json');
-					objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history');
-					objAjax.setRequestHeader('Origin', 'https://www.youtube.com');
+					// objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history'); // not allowed on chrome
+					// objAjax.setRequestHeader('Origin', 'https://www.youtube.com'); // not allowed on chrome
 					objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
 					objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
 
@@ -1237,8 +1237,8 @@ var Search = {
 
 					objAjax.setRequestHeader('Authorization', objArguments.strContauth);
 					objAjax.setRequestHeader('Content-Type', 'application/json');
-					objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history');
-					objAjax.setRequestHeader('Origin', 'https://www.youtube.com');
+					// objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history'); // not allowed on chrome
+					// objAjax.setRequestHeader('Origin', 'https://www.youtube.com'); // not allowed on chrome
 					objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
 					objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
 
@@ -1300,8 +1300,8 @@ var Search = {
 
 				objAjax.setRequestHeader('Authorization', objArguments.strFeedauth);
 				objAjax.setRequestHeader('Content-Type', 'application/json');
-				objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history');
-				objAjax.setRequestHeader('Origin', 'https://www.youtube.com');
+				// objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history'); // not allowed on chrome
+				// objAjax.setRequestHeader('Origin', 'https://www.youtube.com'); // not allowed on chrome
 				objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
 				objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
 
@@ -1538,6 +1538,30 @@ Node.series({
 		}, {
 			'urls': [ '*://*.ytimg.com/vi/*/*' ]
 		});
+
+		chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
+			objData.requestHeaders.push({
+				'name': 'Referer', // workaround for chrome
+				'value': 'https://www.youtube.com/feed/history'
+			});
+
+			objData.requestHeaders.push({
+				'name': 'Origin', // workaround for chrome
+				'value': 'https://www.youtube.com'
+			});
+
+			console.log(objData.requestHeaders)
+
+			return {
+				'requestHeaders': objData.requestHeaders
+			};
+		},{
+			'urls': [ '*://*.youtube.com/youtubei/v1/*' ]
+		}, [
+			'requestHeaders',
+			'blocking',
+			'extraHeaders'
+		]);
 
 		return funcCallback({});
 	},
