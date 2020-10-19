@@ -7,7 +7,7 @@
 
 	"version": "4.0.7",
 
-	"permissions": [ "alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "*://*.youtube.com/*", "*://*.ytimg.com/*" ],
+	"permissions": [ "alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "*://www.youtube.com/*", "*://*.ytimg.com/vi/*/*" ],
 
 	"icons": {
 		"72": "content/icon.png"
@@ -25,7 +25,7 @@
 	},
 
 	"content_scripts": [{
-		"matches": [ "*://*.youtube.com/*" ],
+		"matches": [ "*://www.youtube.com/*" ],
 		"css": [ "youtube.css" ],
 		"js": [ "youtube.js" ]
 	}],

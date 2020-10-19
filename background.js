@@ -1546,7 +1546,7 @@ Node.series({
 				});
 
 				chrome.tabs.query({
-					'url': '*://*.youtube.com/*'
+					'url': '*://www.youtube.com/*'
 				}, function(objTabs) {
 					for (var objTab of objTabs) {
 						funcSendmessage(objTab.id, {
@@ -1603,7 +1603,7 @@ Node.series({
 				'requestHeaders': objData.requestHeaders
 			};
 		},{
-			'urls': [ '*://*.youtube.com/youtubei/v1/*' ]
+			'urls': [ '*://www.youtube.com/youtubei/v1/*' ]
 		}, [
 			'requestHeaders',
 			'blocking',
