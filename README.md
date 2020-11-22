@@ -5,8 +5,8 @@ Youtube keeps track of your watch history and automatically marks videos that yo
 
 ## installation
 Firefox: https://addons.mozilla.org/en-US/firefox/addon/youtube-watchmarker/
-
-Chrome: https://chrome.google.com/webstore/detail/watchmarker-for-youtube/pfkkfbfdhomeagojoahjmkojeeepcolc/related?hl=en
+<br />
+Chrome: [https://chrome.google.com/webstore/detail/watchmarker-for-youtube/](https://chrome.google.com/webstore/detail/watchmarker-for-youtube/pfkkfbfdhomeagojoahjmkojeeepcolc/)
 
 ## questions
 <b>Does this work with the old Youtube theme?</b> I am afraid that only the new theme is supported. If you do not know which theme you are currently using then it is very likely the new one.
