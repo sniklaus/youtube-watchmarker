@@ -538,8 +538,8 @@ var History = {
 					return funcCallback({});
 
 				} else if (objArguments.objGet.strTitle.trim() === '') {
-					return funcCallback({});
-
+					// Firefox and Chrome history show full URL when page title is missing
+					objArguments.objGet.strTitle = 'https://www.youtube.com/watch?v=' + objArguments.objGet.strIdent.trim();
 				}
 
 				var objQuery = objArguments.objDatabase.put(objArguments.objGet);
