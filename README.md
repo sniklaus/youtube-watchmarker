@@ -4,7 +4,7 @@ Youtube keeps track of your watch history and automatically marks videos that yo
 <p align="center"><a href="https://sniklaus.com/youwatch" rel="Paper"><img src="https://content.sniklaus.com/youwatch/screenshot.jpg" alt="Screenshot"></a></p>
 
 ## installation
-Firefox: https://addons.mozilla.org/en-US/firefox/addon/youtube-watchmarker/
+Firefox: https://addons.mozilla.org/en-US/firefox/addon/watchmarker-for-youtube/
 <br />
 Chrome: [https://chrome.google.com/webstore/detail/watchmarker-for-youtube/](https://chrome.google.com/webstore/detail/watchmarker-for-youtube/pfkkfbfdhomeagojoahjmkojeeepcolc/)
 
