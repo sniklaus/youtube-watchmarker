@@ -72,18 +72,18 @@ chrome.runtime.onMessage.addListener(function(objData) {
 // ##########################################################
 
 window.setInterval(function() {
-	objVideocache = window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="]');
-	objProgresscache = window.document.querySelectorAll('ytd-thumbnail-overlay-resume-playback-renderer');
-
-	var strFingerprint = window.location.href + ':' + window.document.title + ':' + objVideocache.length + ':' + objProgresscache.length;
-
-	if (strFingerprint === strLastchange) {
+	if (document.hidden === true) {
 		return;
 	}
 
-	strLastchange = strFingerprint;
+	objVideocache = window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="]');
+	objProgresscache = window.document.querySelectorAll('ytd-thumbnail-overlay-resume-playback-renderer');
+
+	if (strLastchange === window.location.href + ':' + window.document.title + ':' + objVideocache.length + ':' + objProgresscache.length) {
+		return;
+	}
+
+	strLastchange = window.location.href + ':' + window.document.title + ':' + objVideocache.length + ':' + objProgresscache.length;
 
 	refresh();
-
-	console.log('refreshed');
 }, 300);

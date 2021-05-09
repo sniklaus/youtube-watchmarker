@@ -145,7 +145,7 @@ var Database = {
 				};
 			},
 			'objLegacy': function(objArguments, funcCallback) {
-				var objStore = Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase');
+				var objStore = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
 
 				var objQuery = objStore.openCursor();
 
@@ -226,7 +226,7 @@ var Database = {
 	export: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
 				var objQuery = objArguments.objDatabase.openCursor();
@@ -254,7 +254,7 @@ var Database = {
 			},
 			'objDownload': function(objArguments, funcCallback) {
 				chrome.downloads.download({
-					'url' : URL.createObjectURL(new Blob([ btoa(unescape(encodeURIComponent(JSON.stringify(objArguments.objGet)))) ], {
+					'url' : URL.createObjectURL(new Blob([btoa(unescape(encodeURIComponent(JSON.stringify(objArguments.objGet))))], {
 						'type': 'text/plain'
 					})),
 					'filename': new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.database',
@@ -280,7 +280,7 @@ var Database = {
 				return funcCallback(objRequest.objVideos);
 			},
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objVideo': function(objArguments, funcCallback) {
 				if (objArguments.hasOwnProperty('intVideo') === false) {
@@ -382,7 +382,7 @@ var Database = {
 	reset: function(objRequest, funcResponse) {
 		Node.series({
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objClear': function(objArguments, funcCallback) {
 				var objQuery = objArguments.objDatabase.clear();
@@ -484,7 +484,7 @@ var History = {
 				});
 			},
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objVideo': function(objArguments, funcCallback) {
 				if (objArguments.hasOwnProperty('intVideo') === false) {
@@ -793,7 +793,7 @@ var Youtube = {
 				}
 			},
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objVideo': function(objArguments, funcCallback) {
 				if (objArguments.hasOwnProperty('intVideo') === false) {
@@ -908,7 +908,7 @@ var Youtube = {
 				return funcCallback(objRequest);
 			},
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
 				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
@@ -943,7 +943,7 @@ var Youtube = {
 				return funcCallback(objRequest);
 			},
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
 				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
@@ -1002,7 +1002,7 @@ var Youtube = {
 				return funcCallback(objRequest);
 			},
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
 				var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
@@ -1112,11 +1112,12 @@ var Search = {
 	lookup: function(objRequest, funcResponse) {
 		Node.series({
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readonly').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
 			},
 			'objGet': function(objArguments, funcCallback) {
 				var objQuery = objArguments.objDatabase.index('intTimestamp').openCursor(null, 'prev');
 
+				objQuery.skip = objRequest.intSkip;
 				objQuery.results = [];
 
 				objQuery.onsuccess = function() {
@@ -1124,17 +1125,23 @@ var Search = {
 						return funcCallback(objQuery.results);
 					}
 
-					if (objQuery.results.length === 100) {
+					if (objQuery.results.length === objRequest.intLength) {
 						return funcCallback(objQuery.results);
 					}
 
 					if (objQuery.result.value.strTitle.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1) {
-						objQuery.results.push({
-							'strIdent': objQuery.result.value.strIdent,
-							'intTimestamp': objQuery.result.value.intTimestamp,
-							'strTitle': objQuery.result.value.strTitle,
-							'intCount': objQuery.result.value.intCount
-						});
+						if (objQuery.skip !== 0) {
+							objQuery.skip -= 1;
+
+						} else if (objQuery.skip === 0) {
+							objQuery.results.push({
+								'strIdent': objQuery.result.value.strIdent,
+								'intTimestamp': objQuery.result.value.intTimestamp,
+								'strTitle': objQuery.result.value.strTitle,
+								'intCount': objQuery.result.value.intCount
+							});
+
+						}
 					}
 
 					objQuery.result.continue();
@@ -1156,7 +1163,7 @@ var Search = {
 	delete: function(objRequest, funcResponse, funcProgress) {
 		Node.series({
 			'objDatabase': function(objArguments, funcCallback) {
-				return funcCallback(Database.objDatabase.transaction([ 'storeDatabase' ], 'readwrite').objectStore('storeDatabase'));
+				return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
 			},
 			'objDelete': function(objArguments, funcCallback) {
 				funcProgress({
@@ -1449,6 +1456,14 @@ Node.series({
 			window.localStorage.setItem('extensions.Youwatch.Condition.boolYouhist', String(true));
 		}
 
+		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Visualization.boolFadeout', String(true));
+		}
+
+		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === null) {
+			window.localStorage.setItem('extensions.Youwatch.Visualization.boolGrayout', String(true));
+		}
+
 		if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === null) {
 			window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowbadge', String(true));
 		}
@@ -1538,9 +1553,21 @@ Node.series({
 
 			}
 
-			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false)) {
+			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true)) {
 				chrome.tabs.insertCSS(objTab.id, {
-					'code': '.youwatch-mark:last-child:after { display:none !important; }'
+					'code': '.youwatch-mark yt-img-shadow img { opacity:0.3; } .youwatch-mark yt-img-shadow { background-color:#FFFFFF; }'
+				});
+			}
+
+			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(true)) {
+				chrome.tabs.insertCSS(objTab.id, {
+					'code': '.youwatch-mark yt-img-shadow img { filter:grayscale(1.0); }'
+				});
+			}
+
+			if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(true)) {
+				chrome.tabs.insertCSS(objTab.id, {
+					'code': '.youwatch-mark:last-child:after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }'
 				});
 			}
 
@@ -1613,7 +1640,7 @@ Node.series({
 				}
 			});
 		}, {
-			'urls': [ '*://*.ytimg.com/vi/*/*' ]
+			'urls': ['*://*.ytimg.com/vi/*/*']
 		});
 
 		if (funcBrowser() === 'firefox') {
@@ -1632,7 +1659,7 @@ Node.series({
 					'requestHeaders': objData.requestHeaders
 				};
 			},{
-				'urls': [ '*://www.youtube.com/youtubei/v1/*' ]
+				'urls': ['*://www.youtube.com/youtubei/v1/*']
 			}, [
 				'requestHeaders',
 				'blocking'
@@ -1654,7 +1681,7 @@ Node.series({
 					'requestHeaders': objData.requestHeaders
 				};
 			},{
-				'urls': [ '*://www.youtube.com/youtubei/v1/*' ]
+				'urls': ['*://www.youtube.com/youtubei/v1/*']
 			}, [
 				'requestHeaders',
 				'blocking',

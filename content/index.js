@@ -420,6 +420,72 @@ jQuery(window.document).ready(function() {
 		.end()
 	;
 
+	jQuery('#idVisualization_Fadeout')
+		.on('click', function() {
+			window.localStorage.setItem('extensions.Youwatch.Visualization.boolFadeout', window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(false));
+
+			jQuery(this)
+				.find('i')
+					.eq(0)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'none' : 'block'
+						})
+					.end()
+					.eq(1)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'block' : 'none'
+						})
+					.end()
+				.end()
+			;
+		})
+		.find('i')
+			.eq(0)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'none' : 'block'
+				})
+			.end()
+			.eq(1)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'block' : 'none'
+				})
+			.end()
+		.end()
+	;
+
+	jQuery('#itVisualization_Grayout')
+		.on('click', function() {
+			window.localStorage.setItem('extensions.Youwatch.Visualization.boolGrayout', window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(false));
+
+			jQuery(this)
+				.find('i')
+					.eq(0)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'none' : 'block'
+						})
+					.end()
+					.eq(1)
+						.css({
+							'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'block' : 'none'
+						})
+					.end()
+				.end()
+			;
+		})
+		.find('i')
+			.eq(0)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'none' : 'block'
+				})
+			.end()
+			.eq(1)
+				.css({
+					'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'block' : 'none'
+				})
+			.end()
+		.end()
+	;
+
 	jQuery('#idVisualization_Showbadge')
 		.on('click', function() {
 			window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowbadge', window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(false));
@@ -487,7 +553,18 @@ jQuery(window.document).ready(function() {
 	;
 
 	jQuery('#idSearch_Lookup')
-		.on('click', function() {
+		.data({
+			'intSkip' : 0
+		})
+		.on('click', function(objEvent) {
+			if (objEvent.originalEvent !== undefined) {
+				jQuery('#idSearch_Lookup')
+					.data({
+						'intSkip' : 0
+					})
+				;
+			}
+
 			jQuery('#idSearch_Lookup')
 				.addClass('disabled')
 				.find('i')
@@ -507,7 +584,9 @@ jQuery(window.document).ready(function() {
 			objSearch.postMessage({
 				'strMessage': 'searchLookup',
 				'objRequest': {
-					'strQuery': jQuery('#idSearch_Query').val()
+					'strQuery': jQuery('#idSearch_Query').val(),
+					'intSkip': jQuery('#idSearch_Lookup').data('intSkip'),
+					'intLength': 10
 				}
 			});	
 		})
@@ -538,143 +617,165 @@ jQuery(window.document).ready(function() {
 				.end()
 			;
 
-			jQuery('#idSearch_Results')
-				.empty()
-				.append(jQuery('<table></table>')
-					.addClass('table')
-					.addClass('table-sm')
-					.css({
-						'margin': '0px'
-					})
-					.append(jQuery('<thead></thead>')
-						.append(jQuery('<tr></tr>')
-							.append(jQuery('<th></th>')
-								.attr({
-									'width': '1%'
-								})
-								.css({
-									'border-top': 'none'
-								})
-								.text('Time')
-							)
-							.append(jQuery('<th></th>')
-								.css({
-									'border-top': 'none'
-								})
-								.text('Title')
-							)
-							.append(jQuery('<th></th>')
-								.attr({
-									'width': '1%'
-								})
-								.css({
-									'border-top': 'none',
-									'text-align': 'right'
-								})
-								.text('Visits')
-							)
-							.append(jQuery('<th></th>')
-								.css({
-									'border-top': 'none'
-								})
-								.attr({
-									'width': '1%'
-								})
+			if (jQuery('#idSearch_Lookup').data('intSkip') === 0) {
+				jQuery('#idSearch_Results')
+					.empty()
+					.append(jQuery('<table></table>')
+						.addClass('table')
+						.addClass('table-sm')
+						.css({
+							'margin': '0px'
+						})
+						.append(jQuery('<thead></thead>')
+							.append(jQuery('<tr></tr>')
+								.append(jQuery('<th></th>')
+									.attr({
+										'width': '1%'
+									})
+									.css({
+										'border-top': 'none'
+									})
+									.text('Time')
+								)
+								.append(jQuery('<th></th>')
+									.css({
+										'border-top': 'none'
+									})
+									.text('Title')
+								)
+								.append(jQuery('<th></th>')
+									.attr({
+										'width': '1%'
+									})
+									.css({
+										'border-top': 'none',
+										'text-align': 'right'
+									})
+									.text('Visits')
+								)
+								.append(jQuery('<th></th>')
+									.css({
+										'border-top': 'none'
+									})
+									.attr({
+										'width': '1%'
+									})
+								)
 							)
 						)
+						.append(jQuery('<tbody></tbody>'))
 					)
-					.append(jQuery('<tbody></tbody>')
-						.each(function() {
-							for (var objVideo of objData.objResponse.objVideos) {
-								jQuery(this)
-									.append(jQuery('<tr></tr>')
-										.append(jQuery('<td></td>')
-											.append(jQuery('<div></div>')
-												.css({
-													'white-space': 'nowrap'
-												})
-												.text(moment(objVideo.intTimestamp).format('YYYY.MM.DD - HH:mm'))
-											)
-										)
-										.append(jQuery('<td></td>')
-											.css({
-												'position': 'relative'
+				;
+			}
+
+			jQuery('#idSearch_Results').find('tbody')
+				.each(function() {
+					for (var objVideo of objData.objResponse.objVideos) {
+						jQuery(this)
+							.append(jQuery('<tr></tr>')
+								.append(jQuery('<td></td>')
+									.append(jQuery('<div></div>')
+										.css({
+											'white-space': 'nowrap'
+										})
+										.text(moment(objVideo.intTimestamp).format('YYYY.MM.DD - HH:mm'))
+									)
+								)
+								.append(jQuery('<td></td>')
+									.css({
+										'position': 'relative'
+									})
+									.append(jQuery('<div></div>')
+										.css({
+											'left': '8px',
+											'overflow': 'hidden',
+											'position': 'absolute',
+											'right': '-8px',
+											'text-overflow': 'ellipsis',
+											'white-space': 'nowrap'
+										})
+										.append(jQuery('<a></a>')
+											.attr({
+												'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent
 											})
-											.append(jQuery('<div></div>')
-												.css({
-													'left': '8px',
-													'overflow': 'hidden',
-													'position': 'absolute',
-													'right': '-8px',
-													'text-overflow': 'ellipsis',
-													'white-space': 'nowrap'
-												})
-												.append(jQuery('<a></a>')
-													.attr({
-														'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent
-													})
-													.text(objVideo.strTitle)
-												)
-											)
-										)
-										.append(jQuery('<td></td>')
-											.append(jQuery('<div></div>')
-												.css({
-													'white-space': 'nowrap',
-													'text-align': 'right'
-												})
-												.text(objVideo.intCount)
-											)
-										)
-										.append(jQuery('<td></td>')
-											.append(jQuery('<div></div>')
-												.css({
-													'white-space': 'nowrap'
-												})
-												.append(jQuery('<a></a>')
-													.addClass('far')
-													.addClass('fa-trash-alt')
-													.css({
-														'cursor': 'pointer'
-													})
-													.data({
-														'strIdent': objVideo.strIdent
-													})
-													.on('click', function() {
-														jQuery('#idLoading_Container')
-															.css({
-																'display': 'block'
-															})
-														;
-
-														jQuery('#idLoading_Message')
-															.text('exporting database')
-														;
-
-														jQuery('#idLoading_Progress')
-															.text('...')
-														;
-
-														jQuery('#idLoading_Close')
-															.addClass('disabled')
-														;
-
-														objSearch.postMessage({
-															'strMessage': 'searchDelete',
-															'objRequest': {
-																'strIdent': jQuery(this).data('strIdent')
-															}
-														});
-													})
-												)
-											)
+											.text(objVideo.strTitle)
 										)
 									)
-								;
-							}
-						})
-					)
-				)
+								)
+								.append(jQuery('<td></td>')
+									.append(jQuery('<div></div>')
+										.css({
+											'white-space': 'nowrap',
+											'text-align': 'right'
+										})
+										.text(objVideo.intCount)
+									)
+								)
+								.append(jQuery('<td></td>')
+									.append(jQuery('<div></div>')
+										.css({
+											'white-space': 'nowrap'
+										})
+										.append(jQuery('<a></a>')
+											.addClass('far')
+											.addClass('fa-trash-alt')
+											.css({
+												'cursor': 'pointer'
+											})
+											.data({
+												'strIdent': objVideo.strIdent
+											})
+											.on('click', function() {
+												jQuery('#idLoading_Container')
+													.css({
+														'display': 'block'
+													})
+												;
+
+												jQuery('#idLoading_Message')
+													.text('exporting database')
+												;
+
+												jQuery('#idLoading_Progress')
+													.text('...')
+												;
+
+												jQuery('#idLoading_Close')
+													.addClass('disabled')
+												;
+
+												objSearch.postMessage({
+													'strMessage': 'searchDelete',
+													'objRequest': {
+														'strIdent': jQuery(this).data('strIdent')
+													}
+												});
+											})
+										)
+									)
+								)
+							)
+						;
+					}
+				})
+			;
+
+			jQuery('#idSearch_Results').find('tr:last')
+				.each(function() {
+					new IntersectionObserver(function(objEntries, objObserver) {
+						if (objEntries[0].isIntersecting === true) {
+							objObserver.unobserve(objEntries[0].target);
+
+							jQuery('#idSearch_Lookup')
+								.data({
+									'intSkip' : jQuery('#idSearch_Lookup').data('intSkip') + 10
+								})
+							;
+
+							jQuery('#idSearch_Lookup').triggerHandler('click');
+						}
+					}).observe(this)
+				})
 			;
 		}
 

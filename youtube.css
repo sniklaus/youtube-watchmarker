@@ -9,28 +9,3 @@ ytd-thumbnail-overlay-playback-status-renderer {
 ytd-thumbnail-overlay-time-status-renderer {
 	padding:3px 4px 3px 4px !important;
 }
-
-/* youwatch watched fadeout */
-
-.youwatch-mark yt-img-shadow  {
-	background-color:#FFFFFF;
-}
-
-.youwatch-mark yt-img-shadow img  {
-	opacity:0.3;
-}
-
-/* youwatch watched badge */
-
-.youwatch-mark:last-child:after {
-	background-color:#000000;
-	border-radius:2px;
-	color:#FFFFFF;
-	content:"WATCHED";
-	font-size:11px;
-	left:4px;
-	opacity:0.8;
-	padding:3px 4px 3px 4px;
-	position:absolute;
-	top:4px;
-}
