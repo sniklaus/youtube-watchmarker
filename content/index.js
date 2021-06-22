@@ -760,23 +760,25 @@ jQuery(window.document).ready(function() {
 				})
 			;
 
-			jQuery('#idSearch_Results').find('tr:last')
-				.each(function() {
-					new IntersectionObserver(function(objEntries, objObserver) {
-						if (objEntries[0].isIntersecting === true) {
-							objObserver.unobserve(objEntries[0].target);
+			if (objData.objResponse.objVideos.length === 10) {
+				jQuery('#idSearch_Results').find('tr:last')
+					.each(function() {
+						new IntersectionObserver(function(objEntries, objObserver) {
+							if (objEntries[0].isIntersecting === true) {
+								objObserver.unobserve(objEntries[0].target);
 
-							jQuery('#idSearch_Lookup')
-								.data({
-									'intSkip' : jQuery('#idSearch_Lookup').data('intSkip') + 10
-								})
-							;
+								jQuery('#idSearch_Lookup')
+									.data({
+										'intSkip' : jQuery('#idSearch_Lookup').data('intSkip') + 10
+									})
+								;
 
-							jQuery('#idSearch_Lookup').triggerHandler('click');
-						}
-					}).observe(this)
-				})
-			;
+								jQuery('#idSearch_Lookup').triggerHandler('click');
+							}
+						}).observe(this)
+					})
+				;
+			}
 		}
 
 		if (objData.strMessage === 'searchDelete') {
