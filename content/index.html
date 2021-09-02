@@ -37,13 +37,13 @@
 				<button class="btn btn-primary" id="idDatabase_Reset">Reset</button>
 
 				<div class="input-group" style="display:none; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
-					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><button class="btn btn-primary">Reset</button></div>
+					<div style="display:inline-block; vertical-align:top;"><button class="btn btn-primary">Reset</button></div>
 					<div class="form-control" style="display:inline-block; width:auto;">Are you sure?</div>
-					<div class="input-group-append" style="display:inline-block; vertical-align:top;"><button class="btn btn-danger" id="idDatabase_Resyes">Yes</button></div>
+					<div style="display:inline-block; vertical-align:top;"><button class="btn btn-danger" id="idDatabase_Resyes">Yes</button></div>
 				</div>
 
 				<div class="input-group" style="display:inline; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
-					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><span class="input-group-text">Size:</span></div>
+					<div style="display:inline-block; vertical-align:top;"><span class="input-group-text">Size:</span></div>
 					<div class="form-control" id="idDatabase_Size" style="display:inline-block; width:auto;"></div>
 				</div>
 			</div>
@@ -60,7 +60,7 @@
 				<button class="btn btn-primary" id="idHistory_Synchronize">Synchronize</button>
 
 				<div class="input-group" style="display:inline; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
-					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><span class="input-group-text">Timestamp:</span></div>
+					<div style="display:inline-block; vertical-align:top;"><span class="input-group-text">Timestamp:</span></div>
 					<div class="form-control" id="idHistory_Timestamp" style="display:inline-block; width:auto;"></div>
 				</div>
 			</div>
@@ -77,7 +77,7 @@
 				<button class="btn btn-primary" id="idYoutube_Synchronize">Synchronize</button>
 
 				<div class="input-group" style="display:inline; font-size:0px; margin:0px 5px 0px 0px; vertical-align:top;">
-					<div class="input-group-prepend" style="display:inline-block; vertical-align:top;"><span class="input-group-text">Timestamp:</span></div>
+					<div style="display:inline-block; vertical-align:top;"><span class="input-group-text">Timestamp:</span></div>
 					<div class="form-control" id="idYoutube_Timestamp" style="display:inline-block; width:auto;"></div>
 				</div>
 			</div>
@@ -91,42 +91,34 @@
 			<div class="card-body">
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<div class="form-control">Mark a video as watched once it has been opened in the browser.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idCondition_Brownav">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idCondition_Brownav">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<div class="form-control">Mark a video as watched once it appears in the browser's history.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idCondition_Browhist">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idCondition_Browhist">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<div class="form-control">Mark a video as watched once it has the official Youtube watched badge.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idCondition_Youbadge">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idCondition_Youbadge">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 
 				<div class="input-group" style="margin:0px 0px 0px 0px;">
 					<div class="form-control">Mark a video as watched once it appears in Youtube's watch history.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idCondition_Youhist">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idCondition_Youhist">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -139,42 +131,34 @@
 			<div class="card-body">
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<div class="form-control">Mark watched videos by slightly fading the thumbnail out.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idVisualization_Fadeout">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idVisualization_Fadeout">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<div class="form-control">Mark watched videos by converting the thumbnail to grayscale.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="itVisualization_Grayout">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="itVisualization_Grayout">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<div class="form-control">Show a textual badge in addition to graying out watched videos.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idVisualization_Showbadge">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idVisualization_Showbadge">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 
 				<div class="input-group" style="margin:0px 0px 0px 0px;">
 					<div class="form-control">Hide the progressbar that is being shown underneath watched videos.</div>
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idVisualization_Hideprogress">
-							<i class="far fa-square"></i>
-							<i class="far fa-check-square"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idVisualization_Hideprogress">
+						<i class="far fa-square"></i>
+						<i class="far fa-check-square"></i>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -187,12 +171,10 @@
 			<div class="card-body">
 				<div class="input-group" style="margin:0px 0px 17px 0px;">
 					<input class="form-control" id="idSearch_Query" type="text" placeholder="..." />
-					<div class="input-group-append">
-						<button class="btn btn-primary" id="idSearch_Lookup">
-							<i class="fa fa-search" style="display:inline;"></i>
-							<i class="fa fa-cog fa-spin" style="display:none;"></i>
-						</button>
-					</div>
+					<button class="btn btn-primary" id="idSearch_Lookup">
+						<i class="fa fa-search" style="display:inline;"></i>
+						<i class="fa fa-cog fa-spin" style="display:none;"></i>
+					</button>
 				</div>
 
 				<div id="idSearch_Results" style="font-size:14px;"></div>
@@ -203,16 +185,12 @@
 			<div class="card" style="margin:-95px auto 20px auto; max-width:500px; top:50%;">
 				<div class="card-body">
 					<div class="input-group" style="margin:0px 0px 17px 0px;">
-						<div class="input-group-prepend">
-							<span class="input-group-text" style="display:block; text-align:right; width:96px;">Message:</span>
-						</div>
+						<span class="input-group-text" style="display:block; text-align:right; width:96px;">Message:</span>
 						<div class="form-control" id="idLoading_Message"></div>
 					</div>
 
 					<div class="input-group" style="margin:0px 0px 17px 0px;">
-						<div class="input-group-prepend">
-							<span class="input-group-text" style="display:block; text-align:right; width:96px;">Progress:</span>
-						</div>
+						<span class="input-group-text" style="display:block; text-align:right; width:96px;">Progress:</span>
 						<div class="form-control" id="idLoading_Progress"></div>
 					</div>
 
