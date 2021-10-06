@@ -15,7 +15,7 @@ Chrome: [https://chrome.google.com/webstore/detail/watchmarker-for-youtube/](htt
 
 <b>How can I make sure that the database is complete?</b> The automatic synchronization only considers the recent activity. You are thus encouraged to manually initiate a complete synchronization in the settings, which incorporates as much of your history as possible.
 
-<b>Is it possible to import my history from Google Takeout?</b> You can give [this tool](https://github.com/janpaul123/youtube-takeout-to-watchmarker) from JP Posma a try.
+<b>Is it possible to import my history from Google Takeout?</b> You can give [this tool](https://github.com/janpaul123/youtube-takeout-to-watchmarker) from Jan Paul Posma a try.
 
 ## license
 Please refer to the appropriate file within this repository.
