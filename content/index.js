@@ -453,7 +453,7 @@ jQuery(window.document).ready(function() {
 		.end()
 	;
 
-	jQuery('#itVisualization_Grayout')
+	jQuery('#idVisualization_Grayout')
 		.on('click', function() {
 			window.localStorage.setItem('extensions.Youwatch.Visualization.boolGrayout', window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(false));
 
