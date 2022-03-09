@@ -1,40 +1,40 @@
 {
-	"manifest_version": 2,
+    "manifest_version": 2,
 
-	"name": "Youtube Watchmarker",
-	"description": "Automatically mark videos on Youtube that you have already watched.",
-	"homepage_url": "https://sniklaus.com/",
+    "name": "Youtube Watchmarker",
+    "description": "Automatically mark videos on Youtube that you have already watched.",
+    "homepage_url": "https://sniklaus.com/",
 
-	"version": "4.1.0",
+    "version": "4.1.0",
 
-	"permissions": ["alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "*://www.youtube.com/*", "*://*.ytimg.com/vi/*/*"],
+    "permissions": ["alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "*://www.youtube.com/*", "*://*.ytimg.com/vi/*/*"],
 
-	"icons": {
-		"72": "content/icon.png"
-	},
+    "icons": {
+        "72": "content/icon.png"
+    },
 
-	"applications": {
-		"gecko": {
-			"id": "yourect@coderect.com",
-			"strict_min_version": "55.0"
-		}
-	},
+    "applications": {
+        "gecko": {
+            "id": "yourect@coderect.com",
+            "strict_min_version": "55.0"
+        }
+    },
 
-	"background": {
-		"scripts": ["background.js"]
-	},
+    "background": {
+        "scripts": ["background.js"]
+    },
 
-	"content_scripts": [{
-		"matches": ["*://www.youtube.com/*"],
-		"css": ["youtube.css"],
-		"js": ["youtube.js"]
-	}],
+    "content_scripts": [{
+        "matches": ["*://www.youtube.com/*"],
+        "css": ["youtube.css"],
+        "js": ["youtube.js"]
+    }],
 
-	"browser_action": {
-		"browser_style": false,
-		"default_title": "Youtube Watchmarker",
-		"default_icon": {
-			"72" : "content/icon.png"
-		}
-	}
+    "browser_action": {
+        "browser_style": false,
+        "default_title": "Youtube Watchmarker",
+        "default_icon": {
+            "72" : "content/icon.png"
+        }
+    }
 }

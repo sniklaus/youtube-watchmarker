@@ -1,11 +1,11 @@
 /* native watched bage */
 
 ytd-thumbnail-overlay-playback-status-renderer {
-	display:none !important;
+    display:none !important;
 }
 
 /* native time badge */
 
 ytd-thumbnail-overlay-time-status-renderer {
-	padding:3px 4px 3px 4px !important;
+    padding:3px 4px 3px 4px !important;
 }
