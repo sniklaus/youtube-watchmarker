@@ -1192,7 +1192,7 @@ var Search = {
                 });
 
                 chrome.history.search({
-                    'text': objRequest.strIdent,
+                    'text': `${objRequest.strIdent}`,
                     'startTime': 0,
                     'maxResults': 1000000
                 }, function(objResults) {
