@@ -11,11 +11,10 @@ var refresh = function() {
     for (var objProgress of objProgresscache) {
         var objVideo = objProgress.parentNode.parentNode;
 
-        if (objVideo.matches('a.ytd-thumbnail[href^="/watch?v="]') === false) {
-            continue;
-        }
+        if (objVideo.matches('a.ytd-thumbnail') === false) continue;
 
-        var strIdent = objVideo.href.substr(32, 11);
+        const lastSlashIndex = objVideo.href.lastIndexOf('/');
+        const strIdent = objVideo.href.substring(lastSlashIndex).replace('/', '').replace('watch?v=', '');
 
         if (boolMarkcache.hasOwnProperty(strIdent) === false) {
             boolMarkcache[strIdent] = false;
@@ -27,7 +26,7 @@ var refresh = function() {
             chrome.runtime.sendMessage({
                 'strMessage': 'youtubeEnsure',
                 'strIdent': strIdent,
-                'strTitle': document.querySelector('a[title][href^="/watch?v=' + strIdent + '"]').title
+                'strTitle': document.querySelector('a[title][href$="' + strIdent + '"]').title
             });
         }
     }
@@ -63,7 +62,7 @@ chrome.runtime.onMessage.addListener(function(objData) {
     if (objData.strMessage === 'youtubeMark') {
         boolMarkcache[objData.strIdent] = true;
 
-        for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"]')) {
+        for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href$="' + objData.strIdent + '"]')) {
             mark(objVideo, true);
         }
     } 
@@ -76,7 +75,7 @@ window.setInterval(function() {
         return;
     }
 
-    objVideocache = window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="]');
+    objVideocache = window.document.querySelectorAll('a.ytd-thumbnail');
     objProgresscache = window.document.querySelectorAll('ytd-thumbnail-overlay-resume-playback-renderer');
 
     if (strLastchange === window.location.href + ':' + window.document.title + ':' + objVideocache.length + ':' + objProgresscache.length) {

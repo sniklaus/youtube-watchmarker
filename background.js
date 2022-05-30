@@ -453,19 +453,20 @@ var History = {
         Node.series({
             'objVideos': function(objArguments, funcCallback) {
                 chrome.history.search({
-                    'text': 'https://www.youtube.com/watch?v=',
+                    'text': 'https://www.youtube.com',
                     'startTime': objRequest.intTimestamp,
                     'maxResults': 1000000
                 }, function(objResults) {
                     var objVideos = [];
 
                     for (var objResult of objResults) {
-                        if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
-                            continue;
+                        const isVideo = objResult.url.indexOf('https://www.youtube.com/watch?v=') !== -1 ||
+                                        objResult.url.indexOf('https://www.youtube.com/shorts/') !== -1;
 
+                        if (!isVideo) {
+                            continue;
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
-
                         }
 
                         if (objResult.title.indexOf(' - YouTube') === objResult.title.length - 10) {
@@ -1191,17 +1192,18 @@ var Search = {
                 });
 
                 chrome.history.search({
-                    'text': 'https://www.youtube.com/watch?v=' + objRequest.strIdent,
+                    'text': objRequest.strIdent,
                     'startTime': 0,
                     'maxResults': 1000000
                 }, function(objResults) {
                     for (var objResult of objResults) {
-                        if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
-                            continue;
+                        const isVideo = objResult.url.indexOf('https://www.youtube.com/watch?v=') !== -1 ||
+                                        objResult.url.indexOf('https://www.youtube.com/shorts/') !== -1;
 
+                        if (!isVideo) {
+                            continue;
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
-
                         }
 
                         chrome.history.deleteUrl({
@@ -1578,12 +1580,13 @@ Node.series({
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
-                if (objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
-                    return;
+                const isVideo = objTab.url.indexOf('https://www.youtube.com/watch?v=') !== -1 ||
+                                objTab.url.indexOf('https://www.youtube.com/shorts/') !== -1;
 
+                if (!isVideo) {
+                    return;
                 } else if ((objData.title === undefined) || (objData.title === null)) {
                     return;
-
                 }
 
                 if (objData.title.indexOf(' - YouTube') === objData.title.length - 10) {
