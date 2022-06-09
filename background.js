@@ -1327,6 +1327,8 @@ var Search = {
                     // objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history'); // not allowed on chrome
                     // objAjax.setRequestHeader('Origin', 'https://www.youtube.com'); // not allowed on chrome
                     objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
+                    objAjax.setRequestHeader('X-Goog-AuthUser', '0');
+                    objAjax.setRequestHeader('X-Goog-PageId', objArguments.objYtcfg['DELEGATED_SESSION_ID']);
                     objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
 
                     objArguments.objYtctx['client']['screenWidthPoints'] = 1024;
