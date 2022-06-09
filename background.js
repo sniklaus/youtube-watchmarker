@@ -460,10 +460,7 @@ var History = {
                     var objVideos = [];
 
                     for (var objResult of objResults) {
-                        const isVideo = objResult.url.indexOf('https://www.youtube.com/watch?v=') !== -1 ||
-                                        objResult.url.indexOf('https://www.youtube.com/shorts/') !== -1;
-
-                        if (!isVideo) {
+                        if (!Utils.urlIsVideo(objResult.url)) {
                             continue;
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
@@ -474,7 +471,7 @@ var History = {
                         }
 
                         objVideos.push({
-                            'strIdent': objResult.url.substr(32, 11),
+                            'strIdent': Utils.getVideoIdByUrl(objResult.url),
                             'intTimestamp': objResult.lastVisitTime,
                             'strTitle': objResult.title,
                             'intCount': objResult.visitCount
@@ -1197,10 +1194,7 @@ var Search = {
                     'maxResults': 1000000
                 }, function(objResults) {
                     for (var objResult of objResults) {
-                        const isVideo = objResult.url.indexOf('https://www.youtube.com/watch?v=') !== -1 ||
-                                        objResult.url.indexOf('https://www.youtube.com/shorts/') !== -1;
-
-                        if (!isVideo) {
+                        if (!Utils.urlIsVideo(objResult.url)) {
                             continue;
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
@@ -1580,10 +1574,7 @@ Node.series({
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
-                const isVideo = objTab.url.indexOf('https://www.youtube.com/watch?v=') !== -1 ||
-                                objTab.url.indexOf('https://www.youtube.com/shorts/') !== -1;
-
-                if (!isVideo) {
+                if (!Utils.urlIsVideo(objTab.url)) {
                     return;
                 } else if ((objData.title === undefined) || (objData.title === null)) {
                     return;
@@ -1593,7 +1584,7 @@ Node.series({
                     objData.title = objData.title.slice(0, -10)
                 }
 
-                var strIdent = objTab.url.substr(32, 11);
+                var strIdent = Utils.getVideoIdByUrl(objTab.url);
                 var strTitle = objData.title;
 
                 Youtube.mark({

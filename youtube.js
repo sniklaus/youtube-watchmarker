@@ -13,8 +13,7 @@ var refresh = function() {
 
         if (objVideo.matches('a.ytd-thumbnail') === false) continue;
 
-        const lastSlashIndex = objVideo.href.lastIndexOf('/');
-        const strIdent = objVideo.href.substring(lastSlashIndex).replace('/', '').replace('watch?v=', '');
+        const strIdent = Utils.getVideoIdByUrl(objVideo.href);
 
         if (boolMarkcache.hasOwnProperty(strIdent) === false) {
             boolMarkcache[strIdent] = false;
@@ -32,7 +31,7 @@ var refresh = function() {
     }
 
     for (var objVideo of objVideocache) {
-        var strIdent = objVideo.href.substr(32, 11);
+        var strIdent = Utils.getVideoIdByUrl(objVideo.href);
 
         if (boolMarkcache.hasOwnProperty(strIdent) === false) {
             boolMarkcache[strIdent] = false;
