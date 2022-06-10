@@ -7,6 +7,8 @@ const Utils = {
 
   getVideoIdByUrl: (url) => {
     const lastSlashIndex = url.lastIndexOf('/');
-    return url.substring(lastSlashIndex).replace('/', '').replace('watch?v=', '');
+    const idPart = url.substring(lastSlashIndex).replace('/', '').replace('watch?v=', '');
+
+    return idPart.substring(0, 11);
   }
 }
