@@ -21,13 +21,13 @@
     },
 
     "background": {
-        "scripts": ["background.js"]
+        "scripts": ["utils.js", "background.js"]
     },
 
     "content_scripts": [{
         "matches": ["*://www.youtube.com/*"],
         "css": ["youtube.css"],
-        "js": ["youtube.js"]
+        "js": ["utils.js", "youtube.js"]
     }],
 
     "browser_action": {

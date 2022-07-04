@@ -453,19 +453,17 @@ var History = {
         Node.series({
             'objVideos': function(objArguments, funcCallback) {
                 chrome.history.search({
-                    'text': 'https://www.youtube.com/watch?v=',
+                    'text': 'https://www.youtube.com',
                     'startTime': objRequest.intTimestamp,
                     'maxResults': 1000000
                 }, function(objResults) {
                     var objVideos = [];
 
                     for (var objResult of objResults) {
-                        if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
+                        if (!Utils.urlIsVideo(objResult.url)) {
                             continue;
-
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
-
                         }
 
                         if (objResult.title.indexOf(' - YouTube') === objResult.title.length - 10) {
@@ -473,7 +471,7 @@ var History = {
                         }
 
                         objVideos.push({
-                            'strIdent': objResult.url.substr(32, 11),
+                            'strIdent': Utils.getVideoIdByUrl(objResult.url),
                             'intTimestamp': objResult.lastVisitTime,
                             'strTitle': objResult.title,
                             'intCount': objResult.visitCount
@@ -1193,17 +1191,15 @@ var Search = {
                 });
 
                 chrome.history.search({
-                    'text': 'https://www.youtube.com/watch?v=' + objRequest.strIdent,
+                    'text': `${objRequest.strIdent}`,
                     'startTime': 0,
                     'maxResults': 1000000
                 }, function(objResults) {
                     for (var objResult of objResults) {
-                        if (objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
+                        if (!Utils.urlIsVideo(objResult.url)) {
                             continue;
-
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
-
                         }
 
                         chrome.history.deleteUrl({
@@ -1584,19 +1580,17 @@ Node.series({
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
-                if (objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) {
+                if (!Utils.urlIsVideo(objTab.url)) {
                     return;
-
                 } else if ((objData.title === undefined) || (objData.title === null)) {
                     return;
-
                 }
 
                 if (objData.title.indexOf(' - YouTube') === objData.title.length - 10) {
                     objData.title = objData.title.slice(0, -10)
                 }
 
-                var strIdent = objTab.url.substr(32, 11);
+                var strIdent = Utils.getVideoIdByUrl(objTab.url);
                 var strTitle = objData.title;
 
                 Youtube.mark({
