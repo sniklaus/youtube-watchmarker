@@ -698,6 +698,9 @@ jQuery(window.document).ready(function() {
                                             .attr({
                                                 'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent
                                             })
+                                            .css({
+                                                'text-decoration': 'none'
+                                            })
                                             .text(objVideo.strTitle)
                                         )
                                     )

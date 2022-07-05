@@ -453,25 +453,27 @@ var History = {
         Node.series({
             'objVideos': function(objArguments, funcCallback) {
                 chrome.history.search({
-                    'text': 'https://www.youtube.com',
+                    'text': 'https://www.youtube.com/',
                     'startTime': objRequest.intTimestamp,
                     'maxResults': 1000000
                 }, function(objResults) {
                     var objVideos = [];
 
                     for (var objResult of objResults) {
-                        if (!Utils.urlIsVideo(objResult.url)) {
+                        if ((objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objResult.url.indexOf('https://www.youtube.com/shorts/') !== 0)) {
                             continue;
+
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
+
                         }
 
-                        if (objResult.title.indexOf(' - YouTube') === objResult.title.length - 10) {
+                        if (objResult.title.slice(-10) === ' - YouTube') {
                             objResult.title = objResult.title.slice(0, -10)
                         }
 
                         objVideos.push({
-                            'strIdent': Utils.getVideoIdByUrl(objResult.url),
+                            'strIdent': objResult.url.slice(-11),
                             'intTimestamp': objResult.lastVisitTime,
                             'strTitle': objResult.title,
                             'intCount': objResult.visitCount
@@ -1191,15 +1193,17 @@ var Search = {
                 });
 
                 chrome.history.search({
-                    'text': `${objRequest.strIdent}`,
+                    'text': objRequest.strIdent,
                     'startTime': 0,
                     'maxResults': 1000000
                 }, function(objResults) {
                     for (var objResult of objResults) {
-                        if (!Utils.urlIsVideo(objResult.url)) {
+                        if ((objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objResult.url.indexOf('https://www.youtube.com/shorts/') !== 0)) {
                             continue;
+
                         } else if ((objResult.title === undefined) || (objResult.title === null)) {
                             continue;
+
                         }
 
                         chrome.history.deleteUrl({
@@ -1580,17 +1584,19 @@ Node.series({
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
-                if (!Utils.urlIsVideo(objTab.url)) {
+                if ((objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objTab.url.indexOf('https://www.youtube.com/shorts/') !== 0)) {
                     return;
+
                 } else if ((objData.title === undefined) || (objData.title === null)) {
                     return;
+
                 }
 
-                if (objData.title.indexOf(' - YouTube') === objData.title.length - 10) {
+                if (objData.title.slice(-10) === ' - YouTube') {
                     objData.title = objData.title.slice(0, -10)
                 }
 
-                var strIdent = Utils.getVideoIdByUrl(objTab.url);
+                var strIdent = objTab.url.slice(-11);
                 var strTitle = objData.title;
 
                 Youtube.mark({

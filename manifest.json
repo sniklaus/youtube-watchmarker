@@ -5,7 +5,7 @@
     "description": "Automatically mark videos on Youtube that you have already watched.",
     "homepage_url": "https://sniklaus.com/",
 
-    "version": "4.1.0",
+    "version": "4.2.0",
 
     "permissions": ["alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "*://www.youtube.com/*", "*://*.ytimg.com/vi/*/*"],
 
@@ -21,13 +21,13 @@
     },
 
     "background": {
-        "scripts": ["utils.js", "background.js"]
+        "scripts": ["background.js"]
     },
 
     "content_scripts": [{
         "matches": ["*://www.youtube.com/*"],
         "css": ["youtube.css"],
-        "js": ["utils.js", "youtube.js"]
+        "js": ["youtube.js"]
     }],
 
     "browser_action": {
