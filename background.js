@@ -473,7 +473,7 @@ var History = {
                         }
 
                         objVideos.push({
-                            'strIdent': objResult.url.slice(-11),
+                            'strIdent': objResult.url.split('&')[0].slice(-11),
                             'intTimestamp': objResult.lastVisitTime,
                             'strTitle': objResult.title,
                             'intCount': objResult.visitCount
@@ -1596,7 +1596,7 @@ Node.series({
                     objData.title = objData.title.slice(0, -10)
                 }
 
-                var strIdent = objTab.url.slice(-11);
+                var strIdent = objTab.url.split('&')[0].slice(-11);
                 var strTitle = objData.title;
 
                 Youtube.mark({

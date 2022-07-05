@@ -15,7 +15,7 @@ var refresh = function() {
             continue;
         }
 
-        var strIdent = objVideo.href.slice(-11);
+        var strIdent = objVideo.href.split('&')[0].slice(-11);
 
         if (boolMarkcache.hasOwnProperty(strIdent) === false) {
             boolMarkcache[strIdent] = false;
@@ -33,7 +33,7 @@ var refresh = function() {
     }
 
     for (var objVideo of objVideocache) {
-        var strIdent = objVideo.href.slice(-11);
+        var strIdent = objVideo.href.split('&')[0].slice(-11);
 
         if (boolMarkcache.hasOwnProperty(strIdent) === false) {
             boolMarkcache[strIdent] = false;
