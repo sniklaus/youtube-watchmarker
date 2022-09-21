@@ -24,11 +24,16 @@ var refresh = function() {
         if (boolMarkcache[strIdent] === false) {
             boolMarkcache[strIdent] = true;
 
-            chrome.runtime.sendMessage({
-                'strMessage': 'youtubeEnsure',
-                'strIdent': strIdent,
-                'strTitle': document.querySelector('a[title][href^="/watch?v=' + strIdent + '"], a[title][href^="/shorts/' + strIdent + '"]').title
-            });
+            var objTitle = document.querySelector('a[title][href^="/watch?v=' + strIdent + '"], a[title][href^="/shorts/' + strIdent + '"], a[href^="/watch?v=' + strIdent + '"] #video-title[title]');
+            if (objTitle === null) {
+                console.error('could not find title for video', strIdent)
+            } else {
+                chrome.runtime.sendMessage({
+                    'strMessage': 'youtubeEnsure',
+                    'strIdent': strIdent,
+                    'strTitle': objTitle.title
+                });
+            }
         }
     }
 
