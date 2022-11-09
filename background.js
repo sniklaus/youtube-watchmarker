@@ -1561,13 +1561,13 @@ Node.series({
 
             if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true)) {
                 chrome.tabs.insertCSS(objTab.id, {
-                    'code': '.youwatch-mark yt-img-shadow img { opacity:0.3; } .youwatch-mark yt-img-shadow { background-color:#FFFFFF; }'
+                    'code': '.youwatch-mark yt-image img { opacity:0.3; } .youwatch-mark yt-image { background-color:#FFFFFF; }'
                 });
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(true)) {
                 chrome.tabs.insertCSS(objTab.id, {
-                    'code': '.youwatch-mark yt-img-shadow img { filter:grayscale(1.0); }'
+                    'code': '.youwatch-mark yt-image img { filter:grayscale(1.0); }'
                 });
             }
 
