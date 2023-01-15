@@ -710,24 +710,24 @@ var Youtube = {
                     }
 
                     var strRegex = null;
-                    var objContinuation = new RegExp('("continuationCommand":)([^"]*)("token":)([^"]*)(")([^"]*)(")', 'g');
-                    var objClicktrack = new RegExp('("continuationEndpoint":)([^"]*)("clickTrackingParams":)([^"]*)(")([^"]*)(")', 'g');
-                    var objVideo = new RegExp('("videoRenderer":)([^"]*)("videoId":)([^"]*)(")([^"]{11})(")(.*?)("text")([^"]*)(")([^"]*)(")', 'g');
+                    var reContinuation = /"continuationCommand":[^"]*"token":[^"]*"([^"]*)"/g;
+                    var reClicktrack = /"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"/g;
+                    var reVideo = /"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"/g;
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-                    if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-                        objArguments.strContinuation = strRegex[6];
+                    if ((strRegex = reContinuation.exec(strUnescaped)) !== null) {
+                        objArguments.strContinuation = strRegex[1];
                     }
 
-                    if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
-                        objArguments.strClicktrack = strRegex[6];
+                    if ((strRegex = reClicktrack.exec(strUnescaped)) !== null) {
+                        objArguments.strClicktrack = strRegex[1];
                     }
 
                     var objVideos = [];
 
-                    while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                        var strIdent = strRegex[6];
-                        var strTitle = strRegex[12];
+                    while ((strRegex = reVideo.exec(strUnescaped)) !== null) {
+                        var strIdent = strRegex[1];
+                        var strTitle = strRegex[2];
 
                         strTitle = strTitle.split('\\u0022').join('"');
                         strTitle = strTitle.split('\\u0026').join('&');
@@ -1281,23 +1281,23 @@ var Search = {
                     }
 
                     var strRegex = null;
-                    var objContinuation = new RegExp('("continuationCommand":)([^"]*)("token":)([^"]*)(")([^"]*)(")', 'g');
-                    var objClicktrack = new RegExp('("continuationEndpoint":)([^"]*)("clickTrackingParams":)([^"]*)(")([^"]*)(")', 'g');
-                    var objVideo = new RegExp('("videoRenderer":)([^"]*)("videoId":)([^"]*)(")([^"]{11})(")(.*?)("topLevelButtons")(.*?)("clickTrackingParams")([^"]*)(")([^"]*)(")(.*?)("feedbackToken")([^"]*)(")([^"]*)(")', 'g');
+                    var reContinuation = /"continuationCommand":[^"]*"token":[^"]*"([^"]*)"/g;
+                    var reClicktrack = /"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"/g;
+                    var reVideo = /"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"/g;
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-                    if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-                        objArguments.strContinuation = strRegex[6];
+                    if ((strRegex = reContinuation.exec(strUnescaped)) !== null) {
+                        objArguments.strContinuation = strRegex[1];
                     }
 
-                    if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
-                        objArguments.strClicktrack = strRegex[6];
+                    if ((strRegex = reClicktrack.exec(strUnescaped)) !== null) {
+                        objArguments.strClicktrack = strRegex[1];
                     }
 
-                    while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                        var strIdent = strRegex[6];
-                        var strClicktrack = strRegex[14];
-                        var strFeedback = strRegex[20];
+                    while ((strRegex = reVideo.exec(strUnescaped)) !== null) {
+                        var strIdent = strRegex[1];
+                        var strClicktrack = strRegex[2];
+                        var strFeedback = strRegex[3];
 
                         if (strIdent !== objRequest.strIdent) {
                             continue;
@@ -1629,7 +1629,7 @@ Node.series({
 
             }
 
-            var strIdent = new RegExp('(\\/vi\\/)([^ ]*)(\\/)', 'g').exec(objData.url)[2];
+            var strIdent = /\/vi\/([^ ]*)\//g.exec(objData.url)[1];
             var strTitle = undefined;
 
             Youtube.lookup({
