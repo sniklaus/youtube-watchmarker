@@ -41,7 +41,14 @@ var refresh = function() {
         var strIdent = objVideo.href.split('&')[0].slice(-11);
 
         if (boolMarkcache.hasOwnProperty(strIdent) === false) {
+            // Initialize to false for now, but fire youtubeLookup message to background,
+            // which will reply with youtubeMark message if it's actually already watched.
             boolMarkcache[strIdent] = false;
+
+            chrome.runtime.sendMessage({
+                'strMessage': 'youtubeLookup',
+                'strIdent': strIdent
+            });
         }
 
         mark(objVideo, boolMarkcache[strIdent]);
@@ -66,6 +73,8 @@ chrome.runtime.onMessage.addListener(function(objData, sender, sendResponse) {
     }
 
     if (objData.strMessage === 'youtubeMark') {
+        console.debug('youtubeMark:', objData.strIdent);
+
         boolMarkcache[objData.strIdent] = true;
 
         for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objData.strIdent + '"]')) {

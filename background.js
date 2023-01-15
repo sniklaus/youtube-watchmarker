@@ -1541,7 +1541,26 @@ Node.series({
                         console.log('ensured video', objRequest);
                     });
                 }
+
+            } else if (objRequest.strMessage === 'youtubeLookup') {
+                if (objSender.tab && objSender.tab.id >= 0) {
+                    Youtube.lookup({
+                        'strIdent': objRequest.strIdent
+                    }, function(objResponse) {
+                        if (objResponse !== null) {
+                            console.debug('lookup video', objRequest.strIdent, 'already watched');
+                            funcSendmessage(objSender.tab.id, {
+                                'strMessage': 'youtubeMark',
+                                'strIdent': objRequest.strIdent
+                            });
+                        } else {
+                            console.debug('lookup video', objRequest.strIdent, 'not yet watched');
+                        }
+                    });
+                }
+
             }
+
             funcResponse(null);
         });
 
@@ -1549,7 +1568,7 @@ Node.series({
     },
     'objTabhook': function(objArguments, funcCallback) {
         chrome.tabs.onUpdated.addListener(function(intTab, objData, objTab) {
-            if (objData.tabId < 0) {
+            if (objTab.id < 0) {
                 return;
 
             } else if (objTab.url.indexOf('https://www.youtube.com') !== 0) {
@@ -1620,33 +1639,6 @@ Node.series({
         return funcCallback({});
     },
     'objReqhook': function(objArguments, funcCallback) {
-        chrome.webRequest.onCompleted.addListener(function(objData) {
-            if (objData.tabId < 0) {
-                return;
-
-            } else if (objData.url.indexOf('/vi/') === -1) {
-                return;
-
-            }
-
-            var strIdent = /\/vi\/([^ ]*)\//g.exec(objData.url)[1];
-            var strTitle = undefined;
-
-            Youtube.lookup({
-                'strIdent': strIdent,
-                'strTitle': strTitle
-            }, function(objResponse) {
-                if (objResponse !== null) {
-                    funcSendmessage(objData.tabId, {
-                        'strMessage': 'youtubeMark',
-                        'strIdent': strIdent
-                    });
-                }
-            });
-        }, {
-            'urls': ['*://*.ytimg.com/vi/*/*']
-        });
-
         if (funcBrowser() === 'firefox') {
             chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
                 objData.requestHeaders.push({
