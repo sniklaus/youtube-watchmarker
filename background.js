@@ -1538,10 +1538,11 @@ Node.series({
                         'strIdent': objRequest.strIdent,
                         'strTitle': objRequest.strTitle
                     }, function(objResponse) {
-                        console.log('ensured video');
+                        console.log('ensured video', objRequest);
                     });
                 }
             }
+            funcResponse(null);
         });
 
         return funcCallback({});

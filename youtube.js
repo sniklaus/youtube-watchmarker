@@ -60,7 +60,7 @@ var mark = function(objVideo, boolMark) {
 
 // ##########################################################
 
-chrome.runtime.onMessage.addListener(function(objData) {
+chrome.runtime.onMessage.addListener(function(objData, sender, sendResponse) {
     if (objData.strMessage === 'youtubeRefresh') {
         refresh();
     }
@@ -71,7 +71,10 @@ chrome.runtime.onMessage.addListener(function(objData) {
         for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objData.strIdent + '"]')) {
             mark(objVideo, true);
         }
-    } 
+    }
+
+    // synchronous response to prevent "The message port closed before a response was received."
+    sendResponse(null);
 });
 
 // ##########################################################
