@@ -182,9 +182,8 @@ var Database = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'databaseImport') {
+                            } else if (objData.strMessage === 'databaseImport') {
                                 Database.import(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'databaseImport',
@@ -196,15 +195,15 @@ var Database = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'databaseReset') {
+                            } else if (objData.strMessage === 'databaseReset') {
                                 Database.reset(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'databaseReset',
                                         'objResponse': objResponse
                                     });
                                 });
+
                             }
                         });
                     }
@@ -604,33 +603,31 @@ var Youtube = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'youtubeLookup') {
+                            } else if (objData.strMessage === 'youtubeLookup') {
                                 Youtube.lookup(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'youtubeLookup',
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'youtubeEnsure') {
+                            } else if (objData.strMessage === 'youtubeEnsure') {
                                 Youtube.ensure(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'youtubeEnsure',
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'youtubeMark') {
+                            } else if (objData.strMessage === 'youtubeMark') {
                                 Youtube.mark(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'youtubeMark',
                                         'objResponse': objResponse
                                     });
                                 });
+
                             }
                         });
                     }
@@ -1079,9 +1076,8 @@ var Search = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'searchDelete') {
+                            } else if (objData.strMessage === 'searchDelete') {
                                 Search.delete(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'searchDelete',
@@ -1093,6 +1089,7 @@ var Search = {
                                         'objResponse': objResponse
                                     });
                                 });
+
                             }
                         });
                     }
