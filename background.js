@@ -930,7 +930,7 @@ var Youtube = {
                 funcResponse(null);
 
             } else if (objArguments !== null) {
-                funcResponse({});
+                funcResponse(objArguments.objGet);
 
             }
         });
@@ -1539,7 +1539,9 @@ Node.series({
                         'strTitle': objRequest.strTitle
                     }, function(objResponse) {
                         console.log('ensured video', objRequest);
+                        funcResponse(null);
                     });
+                    return true; // indicate asynchronous response
                 }
 
             } else if (objRequest.strMessage === 'youtubeLookup') {
@@ -1547,16 +1549,10 @@ Node.series({
                     Youtube.lookup({
                         'strIdent': objRequest.strIdent
                     }, function(objResponse) {
-                        if (objResponse !== null) {
-                            console.debug('lookup video', objRequest.strIdent, 'already watched');
-                            funcSendmessage(objSender.tab.id, {
-                                'strMessage': 'youtubeMark',
-                                'strIdent': objRequest.strIdent
-                            });
-                        } else {
-                            console.debug('lookup video', objRequest.strIdent, 'not yet watched');
-                        }
+                        console.debug('lookup video', objRequest.strIdent, '=>', objResponse);
+                        funcResponse(objResponse);
                     });
+                    return true; // indicate asynchronous response
                 }
 
             }

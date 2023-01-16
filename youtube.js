@@ -48,14 +48,28 @@ var refresh = function() {
             chrome.runtime.sendMessage({
                 'strMessage': 'youtubeLookup',
                 'strIdent': strIdent
+            }, function(objResponse) {
+                if (objResponse) {
+                    mark(objResponse.strIdent, true);
+                }
             });
         }
 
-        mark(objVideo, boolMarkcache[strIdent]);
+        markStyle(objVideo, boolMarkcache[strIdent]);
     }
 };
 
-var mark = function(objVideo, boolMark) {
+var mark = function(strIdent, boolMark) {
+    console.debug('markForIdent:', strIdent, '=>', boolMark);
+
+    boolMarkcache[strIdent] = boolMark;
+
+    for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + strIdent + '"]')) {
+        markStyle(objVideo, boolMark);
+    }
+};
+
+var markStyle = function(objVideo, boolMark) {
     if ((boolMark === true) && (objVideo.classList.contains('youwatch-mark') === false)) {
         objVideo.classList.add('youwatch-mark');
 
@@ -73,13 +87,7 @@ chrome.runtime.onMessage.addListener(function(objData, sender, sendResponse) {
     }
 
     if (objData.strMessage === 'youtubeMark') {
-        console.debug('youtubeMark:', objData.strIdent);
-
-        boolMarkcache[objData.strIdent] = true;
-
-        for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objData.strIdent + '"]')) {
-            mark(objVideo, true);
-        }
+        mark(objData.strIdent, true);
     }
 
     // synchronous response to prevent "The message port closed before a response was received."
