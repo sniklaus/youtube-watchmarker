@@ -378,7 +378,7 @@ var Database = {
             }
         });
     },
-    
+
     reset: function(objRequest, funcResponse) {
         Node.series({
             'objDatabase': function(objArguments, funcCallback) {
@@ -1110,7 +1110,7 @@ var Search = {
             }
         });
     },
-    
+
     lookup: function(objRequest, funcResponse) {
         Node.series({
             'objDatabase': function(objArguments, funcCallback) {
@@ -1131,7 +1131,7 @@ var Search = {
                         return funcCallback(objQuery.results);
                     }
 
-                    if (objQuery.result.value.strTitle.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1) {
+                    if ((objQuery.result.value.strTitle.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1) || (objQuery.result.value.strIdent.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1)) {
                         if (objQuery.skip !== 0) {
                             objQuery.skip -= 1;
 
@@ -1161,7 +1161,7 @@ var Search = {
             }
         });
     },
-    
+
     delete: function(objRequest, funcResponse, funcProgress) {
         Node.series({
             'objDatabase': function(objArguments, funcCallback) {
