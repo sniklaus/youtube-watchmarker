@@ -24,11 +24,16 @@ var refresh = function() {
         if (boolMarkcache[strIdent] === false) {
             boolMarkcache[strIdent] = true;
 
-            chrome.runtime.sendMessage({
-                'strMessage': 'youtubeEnsure',
-                'strIdent': strIdent,
-                'strTitle': document.querySelector('a[title][href^="/watch?v=' + strIdent + '"], a[title][href^="/shorts/' + strIdent + '"]').title
-            });
+            var objTitle = document.querySelector('a[title][href^="/watch?v=' + strIdent + '"], a[title][href^="/shorts/' + strIdent + '"], a[href^="/watch?v=' + strIdent + '"] #video-title[title]');
+            if (objTitle === null) {
+                console.error('could not find title for video', strIdent)
+            } else {
+                chrome.runtime.sendMessage({
+                    'strMessage': 'youtubeEnsure',
+                    'strIdent': strIdent,
+                    'strTitle': objTitle.title
+                });
+            }
         }
     }
 
@@ -36,14 +41,35 @@ var refresh = function() {
         var strIdent = objVideo.href.split('&')[0].slice(-11);
 
         if (boolMarkcache.hasOwnProperty(strIdent) === false) {
+            // Initialize to false for now, but fire youtubeLookup message to background,
+            // which will reply with youtubeMark message if it's actually already watched.
             boolMarkcache[strIdent] = false;
+
+            chrome.runtime.sendMessage({
+                'strMessage': 'youtubeLookup',
+                'strIdent': strIdent
+            }, function(objResponse) {
+                if (objResponse) {
+                    mark(objResponse.strIdent, true);
+                }
+            });
         }
 
-        mark(objVideo, boolMarkcache[strIdent]);
+        markStyle(objVideo, boolMarkcache[strIdent]);
     }
 };
 
-var mark = function(objVideo, boolMark) {
+var mark = function(strIdent, boolMark) {
+    console.debug('markForIdent:', strIdent, '=>', boolMark);
+
+    boolMarkcache[strIdent] = boolMark;
+
+    for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + strIdent + '"]')) {
+        markStyle(objVideo, boolMark);
+    }
+};
+
+var markStyle = function(objVideo, boolMark) {
     if ((boolMark === true) && (objVideo.classList.contains('youwatch-mark') === false)) {
         objVideo.classList.add('youwatch-mark');
 
@@ -55,18 +81,17 @@ var mark = function(objVideo, boolMark) {
 
 // ##########################################################
 
-chrome.runtime.onMessage.addListener(function(objData) {
+chrome.runtime.onMessage.addListener(function(objData, sender, sendResponse) {
     if (objData.strMessage === 'youtubeRefresh') {
         refresh();
     }
 
     if (objData.strMessage === 'youtubeMark') {
-        boolMarkcache[objData.strIdent] = true;
+        mark(objData.strIdent, true);
+    }
 
-        for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objData.strIdent + '"]')) {
-            mark(objVideo, true);
-        }
-    } 
+    // synchronous response to prevent "The message port closed before a response was received."
+    sendResponse(null);
 });
 
 // ##########################################################

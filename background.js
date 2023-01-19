@@ -182,9 +182,8 @@ var Database = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'databaseImport') {
+                            } else if (objData.strMessage === 'databaseImport') {
                                 Database.import(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'databaseImport',
@@ -196,15 +195,15 @@ var Database = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'databaseReset') {
+                            } else if (objData.strMessage === 'databaseReset') {
                                 Database.reset(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'databaseReset',
                                         'objResponse': objResponse
                                     });
                                 });
+
                             }
                         });
                     }
@@ -604,33 +603,31 @@ var Youtube = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'youtubeLookup') {
+                            } else if (objData.strMessage === 'youtubeLookup') {
                                 Youtube.lookup(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'youtubeLookup',
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'youtubeEnsure') {
+                            } else if (objData.strMessage === 'youtubeEnsure') {
                                 Youtube.ensure(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'youtubeEnsure',
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'youtubeMark') {
+                            } else if (objData.strMessage === 'youtubeMark') {
                                 Youtube.mark(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'youtubeMark',
                                         'objResponse': objResponse
                                     });
                                 });
+
                             }
                         });
                     }
@@ -713,24 +710,24 @@ var Youtube = {
                     }
 
                     var strRegex = null;
-                    var objContinuation = new RegExp('("continuationCommand":)([^"]*)("token":)([^"]*)(")([^"]*)(")', 'g');
-                    var objClicktrack = new RegExp('("continuationEndpoint":)([^"]*)("clickTrackingParams":)([^"]*)(")([^"]*)(")', 'g');
-                    var objVideo = new RegExp('("videoRenderer":)([^"]*)("videoId":)([^"]*)(")([^"]{11})(")(.*?)("text")([^"]*)(")([^"]*)(")', 'g');
+                    var reContinuation = /"continuationCommand":[^"]*"token":[^"]*"([^"]*)"/g;
+                    var reClicktrack = /"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"/g;
+                    var reVideo = /"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"/g;
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-                    if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-                        objArguments.strContinuation = strRegex[6];
+                    if ((strRegex = reContinuation.exec(strUnescaped)) !== null) {
+                        objArguments.strContinuation = strRegex[1];
                     }
 
-                    if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
-                        objArguments.strClicktrack = strRegex[6];
+                    if ((strRegex = reClicktrack.exec(strUnescaped)) !== null) {
+                        objArguments.strClicktrack = strRegex[1];
                     }
 
                     var objVideos = [];
 
-                    while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                        var strIdent = strRegex[6];
-                        var strTitle = strRegex[12];
+                    while ((strRegex = reVideo.exec(strUnescaped)) !== null) {
+                        var strIdent = strRegex[1];
+                        var strTitle = strRegex[2];
 
                         strTitle = strTitle.split('\\u0022').join('"');
                         strTitle = strTitle.split('\\u0026').join('&');
@@ -933,7 +930,7 @@ var Youtube = {
                 funcResponse(null);
 
             } else if (objArguments !== null) {
-                funcResponse({});
+                funcResponse(objArguments.objGet);
 
             }
         });
@@ -1079,9 +1076,8 @@ var Search = {
                                         'objResponse': objResponse
                                     });
                                 });
-                            }
 
-                            if (objData.strMessage === 'searchDelete') {
+                            } else if (objData.strMessage === 'searchDelete') {
                                 Search.delete(objData.objRequest, function(objResponse) {
                                     objPort.postMessage({
                                         'strMessage': 'searchDelete',
@@ -1093,6 +1089,7 @@ var Search = {
                                         'objResponse': objResponse
                                     });
                                 });
+
                             }
                         });
                     }
@@ -1284,23 +1281,23 @@ var Search = {
                     }
 
                     var strRegex = null;
-                    var objContinuation = new RegExp('("continuationCommand":)([^"]*)("token":)([^"]*)(")([^"]*)(")', 'g');
-                    var objClicktrack = new RegExp('("continuationEndpoint":)([^"]*)("clickTrackingParams":)([^"]*)(")([^"]*)(")', 'g');
-                    var objVideo = new RegExp('("videoRenderer":)([^"]*)("videoId":)([^"]*)(")([^"]{11})(")(.*?)("topLevelButtons")(.*?)("clickTrackingParams")([^"]*)(")([^"]*)(")(.*?)("feedbackToken")([^"]*)(")([^"]*)(")', 'g');
+                    var reContinuation = /"continuationCommand":[^"]*"token":[^"]*"([^"]*)"/g;
+                    var reClicktrack = /"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"/g;
+                    var reVideo = /"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"/g;
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-                    if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-                        objArguments.strContinuation = strRegex[6];
+                    if ((strRegex = reContinuation.exec(strUnescaped)) !== null) {
+                        objArguments.strContinuation = strRegex[1];
                     }
 
-                    if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
-                        objArguments.strClicktrack = strRegex[6];
+                    if ((strRegex = reClicktrack.exec(strUnescaped)) !== null) {
+                        objArguments.strClicktrack = strRegex[1];
                     }
 
-                    while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                        var strIdent = strRegex[6];
-                        var strClicktrack = strRegex[14];
-                        var strFeedback = strRegex[20];
+                    while ((strRegex = reVideo.exec(strUnescaped)) !== null) {
+                        var strIdent = strRegex[1];
+                        var strClicktrack = strRegex[2];
+                        var strFeedback = strRegex[3];
 
                         if (strIdent !== objRequest.strIdent) {
                             continue;
@@ -1541,17 +1538,33 @@ Node.series({
                         'strIdent': objRequest.strIdent,
                         'strTitle': objRequest.strTitle
                     }, function(objResponse) {
-                        console.log('ensured video');
+                        console.log('ensured video', objRequest);
+                        funcResponse(null);
                     });
+                    return true; // indicate asynchronous response
                 }
+
+            } else if (objRequest.strMessage === 'youtubeLookup') {
+                if (objSender.tab && objSender.tab.id >= 0) {
+                    Youtube.lookup({
+                        'strIdent': objRequest.strIdent
+                    }, function(objResponse) {
+                        console.debug('lookup video', objRequest.strIdent, '=>', objResponse);
+                        funcResponse(objResponse);
+                    });
+                    return true; // indicate asynchronous response
+                }
+
             }
+
+            funcResponse(null);
         });
 
         return funcCallback({});
     },
     'objTabhook': function(objArguments, funcCallback) {
         chrome.tabs.onUpdated.addListener(function(intTab, objData, objTab) {
-            if (objData.tabId < 0) {
+            if (objTab.id < 0) {
                 return;
 
             } else if (objTab.url.indexOf('https://www.youtube.com') !== 0) {
@@ -1622,33 +1635,6 @@ Node.series({
         return funcCallback({});
     },
     'objReqhook': function(objArguments, funcCallback) {
-        chrome.webRequest.onCompleted.addListener(function(objData) {
-            if (objData.tabId < 0) {
-                return;
-
-            } else if (objData.url.indexOf('/vi/') === -1) {
-                return;
-
-            }
-
-            var strIdent = new RegExp('(\\/vi\\/)([^ ]*)(\\/)', 'g').exec(objData.url)[2];
-            var strTitle = undefined;
-
-            Youtube.lookup({
-                'strIdent': strIdent,
-                'strTitle': strTitle
-            }, function(objResponse) {
-                if (objResponse !== null) {
-                    funcSendmessage(objData.tabId, {
-                        'strMessage': 'youtubeMark',
-                        'strIdent': strIdent
-                    });
-                }
-            });
-        }, {
-            'urls': ['*://*.ytimg.com/vi/*/*']
-        });
-
         if (funcBrowser() === 'firefox') {
             chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
                 objData.requestHeaders.push({
