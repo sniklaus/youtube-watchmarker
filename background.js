@@ -710,22 +710,22 @@ var Youtube = {
                     }
 
                     var strRegex = null;
-                    var reContinuation = /"continuationCommand":[^"]*"token":[^"]*"([^"]*)"/g;
-                    var reClicktrack = /"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"/g;
-                    var reVideo = /"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"/g;
+                    var objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
+                    var objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
+                    var objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"', 'g');
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-                    if ((strRegex = reContinuation.exec(strUnescaped)) !== null) {
+                    if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
                         objArguments.strContinuation = strRegex[1];
                     }
 
-                    if ((strRegex = reClicktrack.exec(strUnescaped)) !== null) {
+                    if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
                         objArguments.strClicktrack = strRegex[1];
                     }
 
                     var objVideos = [];
 
-                    while ((strRegex = reVideo.exec(strUnescaped)) !== null) {
+                    while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
                         var strIdent = strRegex[1];
                         var strTitle = strRegex[2];
 
@@ -989,7 +989,7 @@ var Youtube = {
                 funcResponse(null);
 
             } else if (objArguments !== null) {
-                funcResponse({});
+                funcResponse(objArguments.objGet);
 
             }
         });
@@ -1055,7 +1055,7 @@ var Youtube = {
                 funcResponse(null);
 
             } else if (objArguments !== null) {
-                funcResponse({});
+                funcResponse(objArguments.objGet);
 
             }
         });
@@ -1128,7 +1128,7 @@ var Search = {
                         return funcCallback(objQuery.results);
                     }
 
-                    if ((objQuery.result.value.strTitle.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1) || (objQuery.result.value.strIdent.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1)) {
+                    if ((objQuery.result.value.strIdent.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1) || (objQuery.result.value.strTitle.toLowerCase().indexOf(objRequest.strQuery.toLowerCase()) !== -1)) {
                         if (objQuery.skip !== 0) {
                             objQuery.skip -= 1;
 
@@ -1281,20 +1281,20 @@ var Search = {
                     }
 
                     var strRegex = null;
-                    var reContinuation = /"continuationCommand":[^"]*"token":[^"]*"([^"]*)"/g;
-                    var reClicktrack = /"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"/g;
-                    var reVideo = /"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"/g;
+                    var objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
+                    var objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
+                    var objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"', 'g');
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-                    if ((strRegex = reContinuation.exec(strUnescaped)) !== null) {
+                    if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
                         objArguments.strContinuation = strRegex[1];
                     }
 
-                    if ((strRegex = reClicktrack.exec(strUnescaped)) !== null) {
+                    if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
                         objArguments.strClicktrack = strRegex[1];
                     }
 
-                    while ((strRegex = reVideo.exec(strUnescaped)) !== null) {
+                    while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
                         var strIdent = strRegex[1];
                         var strClicktrack = strRegex[2];
                         var strFeedback = strRegex[3];
@@ -1532,26 +1532,28 @@ Node.series({
     },
     'objMessage': function(objArguments, funcCallback) {
         chrome.runtime.onMessage.addListener(function(objRequest, objSender, funcResponse) {
-            if (objRequest.strMessage === 'youtubeEnsure') {
+            if (objRequest.strMessage === 'youtubeLookup') {
+                Youtube.lookup({
+                    'strIdent': objRequest.strIdent
+                }, function(objResponse) {
+                    console.debug('lookup video', objRequest, objResponse);
+
+                    funcResponse(objResponse);
+                });
+
+                return true; // indicate asynchronous response
+
+            } else if (objRequest.strMessage === 'youtubeEnsure') {
                 if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true)) {
                     Youtube.ensure({
                         'strIdent': objRequest.strIdent,
                         'strTitle': objRequest.strTitle
                     }, function(objResponse) {
-                        console.log('ensured video', objRequest);
+                        console.debug('ensure video', objRequest, objResponse);
+
                         funcResponse(null);
                     });
-                    return true; // indicate asynchronous response
-                }
 
-            } else if (objRequest.strMessage === 'youtubeLookup') {
-                if (objSender.tab && objSender.tab.id >= 0) {
-                    Youtube.lookup({
-                        'strIdent': objRequest.strIdent
-                    }, function(objResponse) {
-                        console.debug('lookup video', objRequest.strIdent, '=>', objResponse);
-                        funcResponse(objResponse);
-                    });
                     return true; // indicate asynchronous response
                 }
 
@@ -1563,7 +1565,7 @@ Node.series({
         return funcCallback({});
     },
     'objTabhook': function(objArguments, funcCallback) {
-        chrome.tabs.onUpdated.addListener(function(intTab, objData, objTab) {
+        chrome.tabs.onUpdated.addListener(function(intTab, objChange, objTab) {
             if (objTab.id < 0) {
                 return;
 
@@ -1600,23 +1602,23 @@ Node.series({
                 if ((objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objTab.url.indexOf('https://www.youtube.com/shorts/') !== 0)) {
                     return;
 
-                } else if ((objData.title === undefined) || (objData.title === null)) {
+                } else if ((objChange.title === undefined) || (objChange.title === null)) {
                     return;
 
                 }
 
-                if (objData.title.slice(-10) === ' - YouTube') {
-                    objData.title = objData.title.slice(0, -10)
+                if (objChange.title.slice(-10) === ' - YouTube') {
+                    objChange.title = objChange.title.slice(0, -10)
                 }
 
                 var strIdent = objTab.url.split('&')[0].slice(-11);
-                var strTitle = objData.title;
+                var strTitle = objChange.title;
 
                 Youtube.mark({
                     'strIdent': strIdent,
                     'strTitle': strTitle
                 }, function(objResponse) {
-                    console.log('mark video');
+                    console.debug('mark video');
                 });
 
                 chrome.tabs.query({
@@ -1695,7 +1697,7 @@ Node.series({
                     History.synchronize({
                         'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
                     }, function(objResponse) {
-                        console.log('synchronized history');
+                        console.debug('synchronized history');
                     }, function(objResponse) {
                         // ...
                     });
@@ -1705,7 +1707,7 @@ Node.series({
                     Youtube.synchronize({
                         'intThreshold': 512
                     }, function(objResponse) {
-                        console.log('synchronized youtube');
+                        console.debug('synchronized youtube');
                     }, function(objResponse) {
                         // ...
                     });
@@ -1717,10 +1719,10 @@ Node.series({
     }
 }, function(objArguments) {
     if (objArguments === null) {
-        console.log('error initializing commons');
+        console.debug('error initializing commons');
 
     } else if (objArguments !== null) {
-        console.log('initialized commons succesfully');
+        console.debug('initialized commons succesfully');
 
     }
 });
