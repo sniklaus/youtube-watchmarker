@@ -1551,7 +1551,7 @@ Node.series({
                     }, function(objResponse) {
                         console.debug('ensure video', objRequest, objResponse);
 
-                        funcResponse(null);
+                        funcResponse(objResponse);
                     });
 
                     return true; // indicate asynchronous response
