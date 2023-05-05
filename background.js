@@ -1644,10 +1644,11 @@ Node.series({
                     'value': 'https://www.youtube.com/feed/history'
                 });
 
-                objData.requestHeaders.push({
-                    'name': 'Origin',
-                    'value': 'https://www.youtube.com'
-                });
+                for (const header of objData.requestHeaders) {
+                    if (header.name.toLowerCase() === "origin") {
+                        header.value = 'https://www.youtube.com'
+                    }
+                }
 
                 return {
                     'requestHeaders': objData.requestHeaders
@@ -1666,10 +1667,11 @@ Node.series({
                     'value': 'https://www.youtube.com/feed/history'
                 });
 
-                objData.requestHeaders.push({
-                    'name': 'Origin',
-                    'value': 'https://www.youtube.com'
-                });
+                for (const header of objData.requestHeaders) {
+                    if (header.name.toLowerCase() === "origin") {
+                        header.value = 'https://www.youtube.com'
+                    }
+                }
 
                 return {
                     'requestHeaders': objData.requestHeaders
