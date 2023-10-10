@@ -254,7 +254,7 @@ var Database = {
             'objDownload': function(objArguments, funcCallback) {
                 chrome.downloads.download({
                     'url' : URL.createObjectURL(new Blob([btoa(unescape(encodeURIComponent(JSON.stringify(objArguments.objGet))))], {
-                        'type': 'text/plain'
+                        'type': 'application/octet-stream'
                     })),
                     'filename': new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.database',
                     'saveAs': true
@@ -757,8 +757,6 @@ var Youtube = {
 
                     objAjax.setRequestHeader('Authorization', objArguments.objContauth.strAuth);
                     objAjax.setRequestHeader('Content-Type', 'application/json');
-                    // objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history'); // not allowed on chrome
-                    // objAjax.setRequestHeader('Origin', 'https://www.youtube.com'); // not allowed on chrome
                     objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
                     objAjax.setRequestHeader('X-Goog-AuthUser', '0');
                     objAjax.setRequestHeader('X-Goog-PageId', objArguments.objYtcfg['DELEGATED_SESSION_ID']);
@@ -1323,8 +1321,6 @@ var Search = {
 
                     objAjax.setRequestHeader('Authorization', objArguments.objContauth.strAuth);
                     objAjax.setRequestHeader('Content-Type', 'application/json');
-                    // objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history'); // not allowed on chrome
-                    // objAjax.setRequestHeader('Origin', 'https://www.youtube.com'); // not allowed on chrome
                     objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
                     objAjax.setRequestHeader('X-Goog-AuthUser', '0');
                     objAjax.setRequestHeader('X-Goog-PageId', objArguments.objYtcfg['DELEGATED_SESSION_ID']);
@@ -1385,8 +1381,6 @@ var Search = {
 
                 objAjax.setRequestHeader('Authorization', objArguments.objFeedauth.strAuth);
                 objAjax.setRequestHeader('Content-Type', 'application/json');
-                // objAjax.setRequestHeader('Referer', 'https://www.youtube.com/feed/history'); // not allowed on chrome
-                // objAjax.setRequestHeader('Origin', 'https://www.youtube.com'); // not allowed on chrome
                 objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
                 objAjax.setRequestHeader('X-Goog-AuthUser', '0');
                 objAjax.setRequestHeader('X-Goog-PageId', objArguments.objYtcfg['DELEGATED_SESSION_ID']);
@@ -1471,8 +1465,32 @@ Node.series({
             window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowbadge', String(true));
         }
 
+        if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowdate') === null) {
+            window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowdate', String(true));
+        }
+
         if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === null) {
             window.localStorage.setItem('extensions.Youwatch.Visualization.boolHideprogress', String(true));
+        }
+
+        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strFadeout') === null) {
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strFadeout', '.youwatch-mark yt-img-shadow img { opacity:0.3; }' + ' ' + '.youwatch-mark yt-image img { opacity:0.3; }');
+        }
+
+        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strGrayout') === null) {
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strGrayout', '.youwatch-mark yt-img-shadow img { filter:grayscale(1.0); }' + ' ' + '.youwatch-mark yt-image img { filter:grayscale(1.0); }');
+        }
+
+        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowbadge') === null) {
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowbadge', '.youwatch-mark:last-child:after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }');
+        }
+
+        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowdate') === null) {
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowdate', '.youwatch-mark:last-child:after { content:"WATCHED" attr(watchdate); white-space:nowrap; }');
+        }
+
+        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strHideprogress') === null) {
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strHideprogress', 'ytd-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
         }
 
         return funcCallback({});
@@ -1576,25 +1594,31 @@ Node.series({
 
             if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true)) {
                 chrome.tabs.insertCSS(objTab.id, {
-                    'code': '.youwatch-mark yt-img-shadow img { opacity:0.3; }' + '.youwatch-mark yt-image img { opacity:0.3; }'
+                    'code': window.localStorage.getItem('extensions.Youwatch.Stylesheet.strFadeout')
                 });
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolGrayout') === String(true)) {
                 chrome.tabs.insertCSS(objTab.id, {
-                    'code': '.youwatch-mark yt-img-shadow img { filter:grayscale(1.0); }' + '.youwatch-mark yt-image img { filter:grayscale(1.0); }'
+                    'code': window.localStorage.getItem('extensions.Youwatch.Stylesheet.strGrayout')
                 });
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowbadge') === String(true)) {
                 chrome.tabs.insertCSS(objTab.id, {
-                    'code': '.youwatch-mark:last-child:after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }'
+                    'code': window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowbadge')
+                });
+            }
+
+            if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowdate') === String(true)) {
+                chrome.tabs.insertCSS(objTab.id, {
+                    'code': window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowdate')
                 });
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
                 chrome.tabs.insertCSS(objTab.id, {
-                    'code': 'ytd-thumbnail-overlay-resume-playback-renderer { display:none !important; }'
+                    'code': window.localStorage.getItem('extensions.Youwatch.Stylesheet.strHideprogress')
                 });
             }
 
@@ -1639,15 +1663,32 @@ Node.series({
     'objReqhook': function(objArguments, funcCallback) {
         if (funcBrowser() === 'firefox') {
             chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
-                objData.requestHeaders.push({
+                var objHeaders = [];
+
+                for (var objHeader of objData.requestHeaders) {
+                    if (objHeader.name === 'Referer') {
+                        continue;
+
+                    } else if (objHeader.name === 'Origin') {
+                        continue;
+
+                    }
+
+                    objHeaders.push(objHeader);
+                }
+
+                objHeaders.push({
                     'name': 'Referer',
                     'value': 'https://www.youtube.com/feed/history'
                 });
 
-                objData.requestHeaders.push({
+                objHeaders.push({
                     'name': 'Origin',
                     'value': 'https://www.youtube.com'
                 });
+
+                objData.requestHeaders.splice(0);
+                objData.requestHeaders.push(...objHeaders);
 
                 return {
                     'requestHeaders': objData.requestHeaders
@@ -1661,15 +1702,32 @@ Node.series({
 
         } else if (funcBrowser() === 'chrome') {
             chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
-                objData.requestHeaders.push({
+                var objHeaders = [];
+
+                for (var objHeader of objData.requestHeaders) {
+                    if (objHeader.name === 'Referer') {
+                        continue;
+
+                    } else if (objHeader.name === 'Origin') {
+                        continue;
+
+                    }
+
+                    objHeaders.push(objHeader);
+                }
+
+                objHeaders.push({
                     'name': 'Referer',
                     'value': 'https://www.youtube.com/feed/history'
                 });
 
-                objData.requestHeaders.push({
+                objHeaders.push({
                     'name': 'Origin',
                     'value': 'https://www.youtube.com'
                 });
+
+                objData.requestHeaders.splice(0);
+                objData.requestHeaders.push(...objHeaders);
 
                 return {
                     'requestHeaders': objData.requestHeaders

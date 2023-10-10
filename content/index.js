@@ -167,7 +167,7 @@ jQuery(window.document).ready(function() {
     });
 
     jQuery('#idDatabase_Size')
-        .text(parseInt(window.localStorage.getItem('extensions.Youwatch.Database.intSize'), 10))
+        .text(parseInt(window.localStorage.getItem('extensions.Youwatch.Database.intSize')))
     ;
 
     jQuery('#idHistory_Synchronize')
@@ -226,7 +226,7 @@ jQuery(window.document).ready(function() {
     });
 
     jQuery('#idHistory_Timestamp')
-        .text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.History.intTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
+        .text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.History.intTimestamp'))).format('YYYY.MM.DD - HH:mm:ss'))
     ;
 
     jQuery('#idYoutube_Synchronize')
@@ -285,7 +285,7 @@ jQuery(window.document).ready(function() {
     });
 
     jQuery('#idYoutube_Timestamp')
-        .text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.Youtube.intTimestamp'), 10)).format('YYYY.MM.DD - HH:mm:ss'))
+        .text(moment(parseInt(window.localStorage.getItem('extensions.Youwatch.Youtube.intTimestamp'))).format('YYYY.MM.DD - HH:mm:ss'))
     ;
 
     jQuery('#idCondition_Brownav')
@@ -519,6 +519,39 @@ jQuery(window.document).ready(function() {
         .end()
     ;
 
+    jQuery('#idVisualization_Showdate')
+        .on('click', function() {
+            window.localStorage.setItem('extensions.Youwatch.Visualization.boolShowdate', window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowdate') === String(false));
+
+            jQuery(this)
+                .find('i')
+                    .eq(0)
+                        .css({
+                            'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'none' : 'block'
+                        })
+                    .end()
+                    .eq(1)
+                        .css({
+                            'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'block' : 'none'
+                        })
+                    .end()
+                .end()
+            ;
+        })
+        .find('i')
+            .eq(0)
+                .css({
+                    'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'none' : 'block'
+                })
+            .end()
+            .eq(1)
+                .css({
+                    'display': window.localStorage.getItem('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'block' : 'none'
+                })
+            .end()
+        .end()
+    ;
+
     jQuery('#idVisualization_Hideprogress')
         .on('click', function() {
             window.localStorage.setItem('extensions.Youwatch.Visualization.boolHideprogress', window.localStorage.getItem('extensions.Youwatch.Visualization.boolHideprogress') === String(false));
@@ -632,15 +665,9 @@ jQuery(window.document).ready(function() {
                                     .attr({
                                         'width': '1%'
                                     })
-                                    .css({
-                                        'border-top': 'none'
-                                    })
                                     .text('Time')
                                 )
                                 .append(jQuery('<th></th>')
-                                    .css({
-                                        'border-top': 'none'
-                                    })
                                     .text('Title')
                                 )
                                 .append(jQuery('<th></th>')
@@ -648,15 +675,11 @@ jQuery(window.document).ready(function() {
                                         'width': '1%'
                                     })
                                     .css({
-                                        'border-top': 'none',
                                         'text-align': 'right'
                                     })
                                     .text('Visits')
                                 )
                                 .append(jQuery('<th></th>')
-                                    .css({
-                                        'border-top': 'none'
-                                    })
                                     .attr({
                                         'width': '1%'
                                     })
