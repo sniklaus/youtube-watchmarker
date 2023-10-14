@@ -1651,7 +1651,10 @@ Node.series({
                     for (var objTab of objTabs) {
                         funcSendmessage(objTab.id, {
                             'strMessage': 'youtubeMark',
-                            'strIdent': strIdent
+                            'strIdent': strIdent,
+                            'intTimestamp': 0,
+                            'strTitle': strTitle,
+                            'intCount': 0
                         });
                     }
                 });

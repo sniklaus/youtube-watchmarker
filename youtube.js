@@ -81,7 +81,7 @@ chrome.runtime.onMessage.addListener(function(objData, objSender, funcResponse) 
         refresh();
 
     } else if (objData.strMessage === 'youtubeMark') {
-        boolMarkcache[objData.strIdent] = objData.intTimestamp;
+        intMarkcache[objData.strIdent] = objData.intTimestamp;
 
         for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objData.strIdent + '"]')) {
             mark(objVideo, objData.strIdent);
