@@ -1562,18 +1562,16 @@ Node.series({
                 return true; // indicate asynchronous response
 
             } else if (objRequest.strMessage === 'youtubeEnsure') {
-                if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true)) {
-                    Youtube.ensure({
-                        'strIdent': objRequest.strIdent,
-                        'strTitle': objRequest.strTitle
-                    }, function(objResponse) {
-                        console.debug('ensure video', objRequest, objResponse);
+                Youtube.ensure({
+                    'strIdent': objRequest.strIdent,
+                    'strTitle': objRequest.strTitle
+                }, function(objResponse) {
+                    console.debug('ensure video', objRequest, objResponse);
 
-                        funcResponse(objResponse);
-                    });
+                    funcResponse(objResponse);
+                });
 
-                    return true; // indicate asynchronous response
-                }
+                return true; // indicate asynchronous response
 
             }
 
@@ -1589,6 +1587,138 @@ Node.series({
 
             } else if (objTab.url.indexOf('https://www.youtube.com') !== 0) {
                 return;
+
+            }
+
+            if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true)) {
+                chrome.tabs.executeScript(objTab.id, {
+                    'code': `
+                        var objScript = document.createElement('script');
+
+                        objScript.text = \`
+                            if (typeof objOrigxmlreq === 'undefined') {
+                                let objOrigxmlreq = window.XMLHttpRequest.prototype.open;
+
+                                window.XMLHttpRequest.prototype.open = function() {
+                                    this.addEventListener('load', function() {
+                                        if (this.responseURL.indexOf('://www.youtube.com/youtubei/v1/') === -1) {
+                                            return;
+                                        }
+
+                                        var strData = this.responseText;
+
+                                        try {
+                                            for (var strWatched of strData.split('"percentDurationWatched"').slice(0, -1)) {
+                                                var strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
+                                                var strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+
+                                                if (strIdent.length !== 11) {
+                                                    continue;
+                                                }
+
+                                                document.dispatchEvent(new CustomEvent('youwatch-message', {
+                                                    'detail': {
+                                                        'strMessage': 'youtubeEnsure',
+                                                        'strIdent': strIdent,
+                                                        'strTitle': strTitle
+                                                    }
+                                                }));
+                                            }
+                                        } catch (objError) {
+                                            console.log(objError);
+                                        }
+                                    });
+
+                                    return objOrigxmlreq.apply(this, arguments);
+                                };
+                            }
+
+                            if (typeof objOrigfetchreq === 'undefined') {
+                                let objOrigfetchreq = window.fetch;
+
+                                window.fetch = async function(objRequest, objOptions) {
+                                    var objResponse = await objOrigfetchreq(objRequest, objOptions);
+
+                                    if (objRequest.url.indexOf('://www.youtube.com/youtubei/v1/') === -1) {
+                                        return objResponse;
+                                    }
+
+                                    var strData = await objResponse.text();
+
+                                    try {
+                                        for (var strWatched of strData.split('"percentDurationWatched"').slice(0, -1)) {
+                                            var strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
+                                            var strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+
+                                            if (strIdent.length !== 11) {
+                                                continue;
+                                            }
+
+                                            document.dispatchEvent(new CustomEvent('youwatch-message', {
+                                                'detail': {
+                                                    'strMessage': 'youtubeEnsure',
+                                                    'strIdent': strIdent,
+                                                    'strTitle': strTitle
+                                                }
+                                            }));
+                                        }
+                                    } catch (objError) {
+                                        console.log(objError);
+                                    }
+
+                                    return new Response(strData, {
+                                        'status': objResponse.status,
+                                        'statusText': objResponse.statusText,
+                                        'headers': objResponse.headers
+                                    });
+                                };
+                            }
+                        \`;
+
+                        objScript.onload = function() {
+                            this.remove();
+                        };
+
+                        document.head.appendChild(objScript);
+                    `,
+                    'runAt': 'document_start'
+                });
+
+                chrome.tabs.executeScript(objTab.id, {
+                    'code': `
+                        var objScript = document.createElement('script');
+
+                        objScript.text = \`
+                            if (typeof strInitialdata === 'undefined') {
+                                let strInitialdata = document.documentElement.outerHTML.split('var ytInitialData = ').slice(-1)[0].split(';</script>')[0];
+
+                                for (var strWatched of strInitialdata.split('"percentDurationWatched"').slice(0, -1)) {
+                                    var strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
+                                    var strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+
+                                    if (strIdent.length !== 11) {
+                                        continue;
+                                    }
+
+                                    document.dispatchEvent(new CustomEvent('youwatch-message', {
+                                        'detail': {
+                                            'strMessage': 'youtubeEnsure',
+                                            'strIdent': strIdent,
+                                            'strTitle': strTitle
+                                        }
+                                    }));
+                                }
+                            }
+                        \`;
+
+                        objScript.onload = function() {
+                            this.remove();
+                        };
+
+                        document.head.appendChild(objScript);
+                    `,
+                    'runAt': 'document_end'
+                });
 
             }
 

@@ -2,7 +2,6 @@
 
 var strLastchange = null;
 var objVideocache = [];
-var objProgresscache = [];
 var intMarkcache = {};
 
 // ##########################################################
@@ -20,34 +19,6 @@ var refresh = function() {
         chrome.runtime.sendMessage({
             'strMessage': 'youtubeLookup',
             'strIdent': strIdent
-        }, function(objResponse) {
-            if (objResponse !== null) {
-                intMarkcache[objResponse.strIdent] = objResponse.intTimestamp;
-
-                for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objResponse.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objResponse.strIdent + '"]')) {
-                    mark(objVideo, objResponse.strIdent);
-                }
-            }
-        });
-    }
-
-    for (var objProgress of objProgresscache) {
-        var objVideo = objProgress.parentNode.parentNode;
-
-        if (objVideo.matches('a.ytd-thumbnail[href^="/watch?v="], a.ytd-thumbnail[href^="/shorts/"]') === false) {
-            continue;
-        }
-
-        var strIdent = objVideo.href.split('&')[0].slice(-11);
-
-        if (intMarkcache.hasOwnProperty(strIdent) === true) {
-            continue;
-        }
-
-        chrome.runtime.sendMessage({
-            'strMessage': 'youtubeEnsure',
-            'strIdent': strIdent,
-            'strTitle': document.querySelector('a[title][href^="/watch?v=' + strIdent + '"], a[title][href^="/shorts/' + strIdent + '"], a[href^="/watch?v=' + strIdent + '"] #video-title[title]').title
         }, function(objResponse) {
             if (objResponse !== null) {
                 intMarkcache[objResponse.strIdent] = objResponse.intTimestamp;
@@ -94,6 +65,14 @@ chrome.runtime.onMessage.addListener(function(objData, objSender, funcResponse) 
 
 // ##########################################################
 
+document.addEventListener('youwatch-message', function(objEvent) {
+    chrome.runtime.sendMessage(objEvent.detail, function(objResponse) {
+        // ...
+    });
+});
+
+// ##########################################################
+
 document.addEventListener('yt-service-request-completed', function() {
     strLastchange = null; // there is a chance that this is not sufficient, the page may not be updated yet so if the interval function triggers it may have been too soon
 });
@@ -108,13 +87,12 @@ window.setInterval(function() {
     }
 
     objVideocache = window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="], a.ytd-thumbnail[href^="/shorts/"]');
-    objProgresscache = window.document.querySelectorAll('ytd-thumbnail-overlay-resume-playback-renderer');
 
-    if (strLastchange === window.location.href + ':' + window.document.title + ':' + objVideocache.length + ':' + objProgresscache.length) {
+    if (strLastchange === window.location.href + ':' + window.document.title + ':' + objVideocache.length) {
         return;
     }
 
-    strLastchange = window.location.href + ':' + window.document.title + ':' + objVideocache.length + ':' + objProgresscache.length;
+    strLastchange = window.location.href + ':' + window.document.title + ':' + objVideocache.length;
 
     refresh();
 }, 300);
