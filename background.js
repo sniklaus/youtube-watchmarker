@@ -50,12 +50,12 @@ var Node = {
 
         var objWorkspace = {};
 
-        var funcNext = function(objArguments, objOverwrite) {
-            if (objArguments === null) {
+        var funcNext = function(objArgs, objOverwrite) {
+            if (objArgs === null) {
                 return funcCallback(null);
             }
 
-            objWorkspace[strFunctions[0]] = objArguments;
+            objWorkspace[strFunctions[0]] = objArgs;
 
             strFunctions.shift();
 
@@ -99,7 +99,7 @@ var Database = {
 
     init: function(objRequest, funcResponse) {
         Node.series({
-            'objOpen': function(objArguments, funcCallback) {
+            'objOpen': function(objArgs, funcCallback) {
                 var objOpen = window.indexedDB.open('Database', 401);
 
                 objOpen.onupgradeneeded = function() {
@@ -144,7 +144,7 @@ var Database = {
                     return funcCallback({});
                 };
             },
-            'objLegacy': function(objArguments, funcCallback) {
+            'objLegacy': function(objArgs, funcCallback) {
                 var objStore = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
 
                 var objQuery = objStore.openCursor();
@@ -166,7 +166,7 @@ var Database = {
                     objQuery.result.continue();
                 };
             },
-            'objMessaging': function(objArguments, funcCallback) {
+            'objMessaging': function(objArgs, funcCallback) {
                 chrome.runtime.onConnect.addListener(function(objPort) {
                     if (objPort.name === 'database') {
                         objPort.onMessage.addListener(function(objData) {
@@ -211,11 +211,11 @@ var Database = {
 
                 return funcCallback({});
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -224,11 +224,11 @@ var Database = {
 
     export: function(objRequest, funcResponse, funcProgress) {
         Node.series({
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.openCursor();
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.openCursor();
 
                 objQuery.results = [];
 
@@ -251,9 +251,9 @@ var Database = {
                     objQuery.result.continue();
                 };
             },
-            'objDownload': function(objArguments, funcCallback) {
+            'objDownload': function(objArgs, funcCallback) {
                 chrome.downloads.download({
-                    'url' : URL.createObjectURL(new Blob([btoa(unescape(encodeURIComponent(JSON.stringify(objArguments.objGet))))], {
+                    'url' : URL.createObjectURL(new Blob([btoa(unescape(encodeURIComponent(JSON.stringify(objArgs.objGet))))], {
                         'type': 'application/octet-stream'
                     })),
                     'filename': new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.database',
@@ -262,11 +262,11 @@ var Database = {
 
                 return funcCallback({});
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -275,91 +275,91 @@ var Database = {
 
     import: function(objRequest, funcResponse, funcProgress) {
         Node.series({
-            'objVideos': function(objArguments, funcCallback) {
+            'objVideos': function(objArgs, funcCallback) {
                 return funcCallback(objRequest.objVideos);
             },
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
-            'objVideo': function(objArguments, funcCallback) {
-                if (objArguments.hasOwnProperty('intVideo') === false) {
-                    objArguments.intVideo = 0;
+            'objVideo': function(objArgs, funcCallback) {
+                if (objArgs.hasOwnProperty('intVideo') === false) {
+                    objArgs.intVideo = 0;
                 }
 
-                if (objArguments.intVideo >= objArguments.objVideos.length) {
+                if (objArgs.intVideo >= objArgs.objVideos.length) {
                     return funcCallback({}, 'objVideo-Next');
                 }
 
-                return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+                return funcCallback(objArgs.objVideos[objArgs.intVideo]);
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
-                    if (objArguments.intNew === undefined) {
-                        objArguments.intNew = 0;
-                        objArguments.intExisting = 0;
+                    if (objArgs.intNew === undefined) {
+                        objArgs.intNew = 0;
+                        objArgs.intExisting = 0;
                     }
 
                     funcProgress({
-                        'strProgress': 'imported ' + (objArguments.intNew + objArguments.intExisting) + ' videos - ' + objArguments.intNew + ' were new'
+                        'strProgress': 'imported ' + (objArgs.intNew + objArgs.intExisting) + ' videos - ' + objArgs.intNew + ' were new'
                     });
 
-                    if (objArguments.objVideo.intTimestamp === undefined) {
-                        objArguments.objVideo.intTimestamp = objArguments.objVideo.longTimestamp; // legacy
+                    if (objArgs.objVideo.intTimestamp === undefined) {
+                        objArgs.objVideo.intTimestamp = objArgs.objVideo.longTimestamp; // legacy
                     }
 
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
-                        objArguments.intNew += 1;
+                        objArgs.intNew += 1;
 
                         return funcCallback({
-                            'strIdent': objArguments.objVideo.strIdent,
-                            'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
-                            'strTitle': objArguments.objVideo.strTitle || '',
-                            'intCount': objArguments.objVideo.intCount || 1
+                            'strIdent': objArgs.objVideo.strIdent,
+                            'intTimestamp': objArgs.objVideo.intTimestamp || new Date().getTime(),
+                            'strTitle': objArgs.objVideo.strTitle || '',
+                            'intCount': objArgs.objVideo.intCount || 1
                         });
 
                     } else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
-                        objArguments.intExisting += 1;
+                        objArgs.intExisting += 1;
 
                         return funcCallback({
                             'strIdent': objQuery.result.strIdent,
-                            'intTimestamp': Math.max(objQuery.result.intTimestamp, objArguments.objVideo.intTimestamp) || new Date().getTime(),
-                            'strTitle': objQuery.result.strTitle || objArguments.objVideo.strTitle || '',
-                            'intCount': Math.max(objQuery.result.intCount, objArguments.objVideo.intCount) || 1
+                            'intTimestamp': Math.max(objQuery.result.intTimestamp, objArgs.objVideo.intTimestamp) || new Date().getTime(),
+                            'strTitle': objQuery.result.strTitle || objArgs.objVideo.strTitle || '',
+                            'intCount': Math.max(objQuery.result.intCount, objArgs.objVideo.intCount) || 1
                         });
 
                     }
                 };
             },
-            'objPut': function(objArguments, funcCallback) {
-                if (objArguments.objGet.strIdent.trim() === '') {
+            'objPut': function(objArgs, funcCallback) {
+                if (objArgs.objGet.strIdent.trim() === '') {
                     return funcCallback({});
 
-                } else if (objArguments.objGet.strTitle.trim() === '') {
+                } else if (objArgs.objGet.strTitle.trim() === '') {
                     return funcCallback({});
 
                 }
 
-                var objQuery = objArguments.objDatabase.put(objArguments.objGet);
+                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
-            'objVideo-Next': function(objArguments, funcCallback) {
-                objArguments.intVideo += 1;
+            'objVideo-Next': function(objArgs, funcCallback) {
+                objArgs.intVideo += 1;
 
-                if (objArguments.intVideo < objArguments.objVideos.length) {
+                if (objArgs.intVideo < objArgs.objVideos.length) {
                     return funcCallback({}, 'objVideo');
                 }
 
-                objArguments.intVideo = 0;
+                objArgs.intVideo = 0;
 
                 return funcCallback({});
             },
-            'objCount': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.count();
+            'objCount': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -367,11 +367,11 @@ var Database = {
                     return funcCallback({});
                 };
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -380,18 +380,18 @@ var Database = {
 
     reset: function(objRequest, funcResponse) {
         Node.series({
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
-            'objClear': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.clear();
+            'objClear': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.clear();
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
-            'objCount': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.count();
+            'objCount': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -399,11 +399,11 @@ var Database = {
                     return funcCallback({});
                 };
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -414,7 +414,7 @@ var Database = {
 var History = {
     init: function(objRequest, funcResponse) {
         Node.series({
-            'objMessaging': function(objArguments, funcCallback) {
+            'objMessaging': function(objArgs, funcCallback) {
                 chrome.runtime.onConnect.addListener(function(objPort) {
                     if (objPort.name === 'history') {
                         objPort.onMessage.addListener(function(objData) {
@@ -437,11 +437,11 @@ var History = {
 
                 return funcCallback({});
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -450,7 +450,7 @@ var History = {
 
     synchronize: function(objRequest, funcResponse, funcProgress) {
         Node.series({
-            'objVideos': function(objArguments, funcCallback) {
+            'objVideos': function(objArgs, funcCallback) {
                 chrome.history.search({
                     'text': 'https://www.youtube.com/',
                     'startTime': objRequest.intTimestamp,
@@ -482,84 +482,84 @@ var History = {
                     return funcCallback(objVideos);
                 });
             },
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
-            'objVideo': function(objArguments, funcCallback) {
-                if (objArguments.hasOwnProperty('intVideo') === false) {
-                    objArguments.intVideo = 0;
+            'objVideo': function(objArgs, funcCallback) {
+                if (objArgs.hasOwnProperty('intVideo') === false) {
+                    objArgs.intVideo = 0;
                 }
 
-                if (objArguments.intVideo >= objArguments.objVideos.length) {
+                if (objArgs.intVideo >= objArgs.objVideos.length) {
                     return funcCallback({}, 'objVideo-Next');
                 }
 
-                return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+                return funcCallback(objArgs.objVideos[objArgs.intVideo]);
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
-                    if (objArguments.intNew === undefined) {
-                        objArguments.intNew = 0;
-                        objArguments.intExisting = 0;
+                    if (objArgs.intNew === undefined) {
+                        objArgs.intNew = 0;
+                        objArgs.intExisting = 0;
                     }
 
                     funcProgress({
-                        'strProgress': 'imported ' + (objArguments.intNew + objArguments.intExisting) + ' videos - ' + objArguments.intNew + ' were new'
+                        'strProgress': 'imported ' + (objArgs.intNew + objArgs.intExisting) + ' videos - ' + objArgs.intNew + ' were new'
                     });
 
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
-                        objArguments.intNew += 1;
+                        objArgs.intNew += 1;
 
                         return funcCallback({
-                            'strIdent': objArguments.objVideo.strIdent,
-                            'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
-                            'strTitle': objArguments.objVideo.strTitle || '',
-                            'intCount': objArguments.objVideo.intCount || 1
+                            'strIdent': objArgs.objVideo.strIdent,
+                            'intTimestamp': objArgs.objVideo.intTimestamp || new Date().getTime(),
+                            'strTitle': objArgs.objVideo.strTitle || '',
+                            'intCount': objArgs.objVideo.intCount || 1
                         });
 
                     } else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
-                        objArguments.intExisting += 1;
+                        objArgs.intExisting += 1;
 
                         return funcCallback({
                             'strIdent': objQuery.result.strIdent,
-                            'intTimestamp': Math.max(objQuery.result.intTimestamp, objArguments.objVideo.intTimestamp) || new Date().getTime(),
-                            'strTitle': objQuery.result.strTitle || objArguments.objVideo.strTitle || '',
-                            'intCount': Math.max(objQuery.result.intCount, objArguments.objVideo.intCount) || 1
+                            'intTimestamp': Math.max(objQuery.result.intTimestamp, objArgs.objVideo.intTimestamp) || new Date().getTime(),
+                            'strTitle': objQuery.result.strTitle || objArgs.objVideo.strTitle || '',
+                            'intCount': Math.max(objQuery.result.intCount, objArgs.objVideo.intCount) || 1
                         });
 
                     }
                 };
             },
-            'objPut': function(objArguments, funcCallback) {
-                if (objArguments.objGet.strIdent.trim() === '') {
+            'objPut': function(objArgs, funcCallback) {
+                if (objArgs.objGet.strIdent.trim() === '') {
                     return funcCallback({});
 
-                } else if (objArguments.objGet.strTitle.trim() === '') {
+                } else if (objArgs.objGet.strTitle.trim() === '') {
                     return funcCallback({});
 
                 }
 
-                var objQuery = objArguments.objDatabase.put(objArguments.objGet);
+                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
-            'objVideo-Next': function(objArguments, funcCallback) {
-                objArguments.intVideo += 1;
+            'objVideo-Next': function(objArgs, funcCallback) {
+                objArgs.intVideo += 1;
 
-                if (objArguments.intVideo < objArguments.objVideos.length) {
+                if (objArgs.intVideo < objArgs.objVideos.length) {
                     return funcCallback({}, 'objVideo');
                 }
 
-                objArguments.intVideo = 0;
+                objArgs.intVideo = 0;
 
                 return funcCallback({});
             },
-            'objCount': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.count();
+            'objCount': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -567,16 +567,16 @@ var History = {
                     return funcCallback({});
                 };
             },
-            'objTime': function(objArguments, funcCallback) {
+            'objTime': function(objArgs, funcCallback) {
                 window.localStorage.setItem('extensions.Youwatch.History.intTimestamp', String(new Date().getTime()));
 
                 return funcCallback({});
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -587,7 +587,7 @@ var History = {
 var Youtube = {
     init: function(objRequest, funcResponse) {
         Node.series({
-            'objMessaging': function(objArguments, funcCallback) {
+            'objMessaging': function(objArgs, funcCallback) {
                 chrome.runtime.onConnect.addListener(function(objPort) {
                     if (objPort.name === 'youtube') {
                         objPort.onMessage.addListener(function(objData) {
@@ -635,11 +635,11 @@ var Youtube = {
 
                 return funcCallback({});
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -648,7 +648,7 @@ var Youtube = {
 
     synchronize: function(objRequest, funcResponse, funcProgress) {
         Node.series({
-            'objCookies': function(objArguments, funcCallback) {
+            'objCookies': function(objArgs, funcCallback) {
                 var strCookies = ['SAPISID', '__Secure-3PAPISID'];
                 var objCookies = {};
 
@@ -677,9 +677,9 @@ var Youtube = {
 
                 funcCookie();
             },
-            'objContauth': function(objArguments, funcCallback) {
+            'objContauth': function(objArgs, funcCallback) {
                 var intTime = Math.round(new Date().getTime() / 1000.0);
-                var strCookie = objArguments.objCookies['SAPISID'] || objArguments.objCookies['__Secure-3PAPISID'];
+                var strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
                 var strOrigin = 'https://www.youtube.com';
 
                 // https://stackoverflow.com/a/32065323
@@ -690,23 +690,23 @@ var Youtube = {
                     });
                 });
             },
-            'objVideos': function(objArguments, funcCallback) {
-                if (objArguments.strContinuation === undefined) {
-                    objArguments.strContinuation = null;
-                    objArguments.strClicktrack = null;
-                    objArguments.objYtcfg = null;
-                    objArguments.objYtctx = null;
+            'objVideos': function(objArgs, funcCallback) {
+                if (objArgs.strContinuation === undefined) {
+                    objArgs.strContinuation = null;
+                    objArgs.strClicktrack = null;
+                    objArgs.objYtcfg = null;
+                    objArgs.objYtctx = null;
                 }
 
                 var objAjax = new XMLHttpRequest();
 
                 objAjax.onload = function() {
-                    if (objArguments.objYtcfg === null) {
-                        objArguments.objYtcfg = funcHackyparse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_API_KEY') !== -1; }).slice(0, -2));
+                    if (objArgs.objYtcfg === null) {
+                        objArgs.objYtcfg = funcHackyparse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_API_KEY') !== -1; }).slice(0, -2));
                     }
 
-                    if (objArguments.objYtctx === null) {
-                        objArguments.objYtctx = funcHackyparse(objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1]);
+                    if (objArgs.objYtctx === null) {
+                        objArgs.objYtctx = funcHackyparse(objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1]);
                     }
 
                     var strRegex = null;
@@ -716,11 +716,11 @@ var Youtube = {
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
                     if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-                        objArguments.strContinuation = strRegex[1];
+                        objArgs.strContinuation = strRegex[1];
                     }
 
                     if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
-                        objArguments.strClicktrack = strRegex[1];
+                        objArgs.strClicktrack = strRegex[1];
                     }
 
                     var objVideos = [];
@@ -747,126 +747,126 @@ var Youtube = {
                     return funcCallback(objVideos);
                 };
 
-                if ((objArguments.strContinuation === null) || (objArguments.strClicktrack === null) || (objArguments.objYtcfg === null) || (objArguments.objYtctx === null)) {
+                if ((objArgs.strContinuation === null) || (objArgs.strClicktrack === null) || (objArgs.objYtcfg === null) || (objArgs.objYtctx === null)) {
                     objAjax.open('GET', 'https://www.youtube.com/feed/history');
 
                     objAjax.send();
 
-                } else if ((objArguments.strContinuation !== null) && (objArguments.strClicktrack !== null) && (objArguments.objYtcfg !== null) && (objArguments.objYtctx !== null)) {
-                    objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/browse?key=' + objArguments.objYtcfg['INNERTUBE_API_KEY']);
+                } else if ((objArgs.strContinuation !== null) && (objArgs.strClicktrack !== null) && (objArgs.objYtcfg !== null) && (objArgs.objYtctx !== null)) {
+                    objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/browse?key=' + objArgs.objYtcfg['INNERTUBE_API_KEY']);
 
-                    objAjax.setRequestHeader('Authorization', objArguments.objContauth.strAuth);
+                    objAjax.setRequestHeader('Authorization', objArgs.objContauth.strAuth);
                     objAjax.setRequestHeader('Content-Type', 'application/json');
                     objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
                     objAjax.setRequestHeader('X-Goog-AuthUser', '0');
-                    objAjax.setRequestHeader('X-Goog-PageId', objArguments.objYtcfg['DELEGATED_SESSION_ID']);
-                    objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
+                    objAjax.setRequestHeader('X-Goog-PageId', objArgs.objYtcfg['DELEGATED_SESSION_ID']);
+                    objAjax.setRequestHeader('X-Goog-Visitor-Id', objArgs.objYtctx['client']['visitorData']);
 
-                    objArguments.objYtctx['client']['screenWidthPoints'] = 1024;
-                    objArguments.objYtctx['client']['screenHeightPoints'] = 768;
-                    objArguments.objYtctx['client']['screenPixelDensity'] = 1;
-                    objArguments.objYtctx['client']['utcOffsetMinutes'] = -420;
-                    objArguments.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
+                    objArgs.objYtctx['client']['screenWidthPoints'] = 1024;
+                    objArgs.objYtctx['client']['screenHeightPoints'] = 768;
+                    objArgs.objYtctx['client']['screenPixelDensity'] = 1;
+                    objArgs.objYtctx['client']['utcOffsetMinutes'] = -420;
+                    objArgs.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
 
-                    objArguments.objYtctx['request']['internalExperimentFlags'] = [];
-                    objArguments.objYtctx['request']['consistencyTokenJars'] = [];
+                    objArgs.objYtctx['request']['internalExperimentFlags'] = [];
+                    objArgs.objYtctx['request']['consistencyTokenJars'] = [];
 
                     objAjax.send(JSON.stringify({
                         'context': {
-                            'client': objArguments.objYtctx['client'],
-                            'request': objArguments.objYtctx['request'],
+                            'client': objArgs.objYtctx['client'],
+                            'request': objArgs.objYtctx['request'],
                             'user': {},
                             'clickTracking': {
-                                'clickTrackingParams': objArguments.strClicktrack
+                                'clickTrackingParams': objArgs.strClicktrack
                             }
                         },
-                        'continuation': objArguments.strContinuation
+                        'continuation': objArgs.strContinuation
                     }));
 
                 }
 
-                if (objArguments.strContinuation !== null) {
-                    objArguments.strContinuation = null;
+                if (objArgs.strContinuation !== null) {
+                    objArgs.strContinuation = null;
                 }
             },
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
-            'objVideo': function(objArguments, funcCallback) {
-                if (objArguments.hasOwnProperty('intVideo') === false) {
-                    objArguments.intVideo = 0;
+            'objVideo': function(objArgs, funcCallback) {
+                if (objArgs.hasOwnProperty('intVideo') === false) {
+                    objArgs.intVideo = 0;
                 }
 
-                if (objArguments.intVideo >= objArguments.objVideos.length) {
+                if (objArgs.intVideo >= objArgs.objVideos.length) {
                     return funcCallback({}, 'objVideo-Next');
                 }
 
-                return funcCallback(objArguments.objVideos[objArguments.intVideo]);
+                return funcCallback(objArgs.objVideos[objArgs.intVideo]);
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
-                    if (objArguments.intNew === undefined) {
-                        objArguments.intNew = 0;
-                        objArguments.intExisting = 0;
+                    if (objArgs.intNew === undefined) {
+                        objArgs.intNew = 0;
+                        objArgs.intExisting = 0;
                     }
 
                     funcProgress({
-                        'strProgress': 'imported ' + (objArguments.intNew + objArguments.intExisting) + ' videos - ' + objArguments.intNew + ' were new'
+                        'strProgress': 'imported ' + (objArgs.intNew + objArgs.intExisting) + ' videos - ' + objArgs.intNew + ' were new'
                     });
 
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
-                        objArguments.intNew += 1;
+                        objArgs.intNew += 1;
 
                         return funcCallback({
-                            'strIdent': objArguments.objVideo.strIdent,
-                            'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
-                            'strTitle': objArguments.objVideo.strTitle || '',
-                            'intCount': objArguments.objVideo.intCount || 1
+                            'strIdent': objArgs.objVideo.strIdent,
+                            'intTimestamp': objArgs.objVideo.intTimestamp || new Date().getTime(),
+                            'strTitle': objArgs.objVideo.strTitle || '',
+                            'intCount': objArgs.objVideo.intCount || 1
                         });
 
                     } else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
-                        objArguments.intExisting += 1;
+                        objArgs.intExisting += 1;
 
                         return funcCallback({
                             'strIdent': objQuery.result.strIdent,
-                            'intTimestamp': objArguments.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),
-                            'strTitle': objArguments.objVideo.strTitle || objQuery.result.strTitle || '',
-                            'intCount': objArguments.objVideo.intCount || objQuery.result.intCount || 1
+                            'intTimestamp': objArgs.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),
+                            'strTitle': objArgs.objVideo.strTitle || objQuery.result.strTitle || '',
+                            'intCount': objArgs.objVideo.intCount || objQuery.result.intCount || 1
                         });
 
                     }
                 };
             },
-            'objPut': function(objArguments, funcCallback) {
-                if (objArguments.objGet.strIdent.trim() === '') {
+            'objPut': function(objArgs, funcCallback) {
+                if (objArgs.objGet.strIdent.trim() === '') {
                     return funcCallback({});
 
-                } else if (objArguments.objGet.strTitle.trim() === '') {
+                } else if (objArgs.objGet.strTitle.trim() === '') {
                     return funcCallback({});
 
                 }
 
-                var objQuery = objArguments.objDatabase.put(objArguments.objGet);
+                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
-            'objVideo-Next': function(objArguments, funcCallback) {
-                objArguments.intVideo += 1;
+            'objVideo-Next': function(objArgs, funcCallback) {
+                objArgs.intVideo += 1;
 
-                if (objArguments.intVideo < objArguments.objVideos.length) {
+                if (objArgs.intVideo < objArgs.objVideos.length) {
                     return funcCallback({}, 'objVideo');
                 }
 
-                objArguments.intVideo = 0;
+                objArgs.intVideo = 0;
 
                 return funcCallback({});
             },
-            'objCount': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.count();
+            'objCount': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -874,25 +874,25 @@ var Youtube = {
                     return funcCallback({});
                 };
             },
-            'objTime': function(objArguments, funcCallback) {
+            'objTime': function(objArgs, funcCallback) {
                 window.localStorage.setItem('extensions.Youwatch.Youtube.intTimestamp', String(new Date().getTime()));
 
                 return funcCallback({});
             },
-            'objContinuation': function(objArguments, funcCallback) {
-                if (objArguments.intExisting < objRequest.intThreshold) {
-                    if (objArguments.strContinuation !== null) {
+            'objContinuation': function(objArgs, funcCallback) {
+                if (objArgs.intExisting < objRequest.intThreshold) {
+                    if (objArgs.strContinuation !== null) {
                         return funcCallback({}, 'objContauth');
                     }
                 }
 
                 return funcCallback({});
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -901,14 +901,14 @@ var Youtube = {
 
     lookup: function(objRequest, funcResponse) {
         Node.series({
-            'objVideo': function(objArguments, funcCallback) {
+            'objVideo': function(objArgs, funcCallback) {
                 return funcCallback(objRequest);
             },
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
@@ -923,12 +923,12 @@ var Youtube = {
                     return funcCallback(null);
                 };
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
-                funcResponse(objArguments.objGet);
+            } else if (objArgs !== null) {
+                funcResponse(objArgs.objGet);
 
             }
         });
@@ -936,45 +936,45 @@ var Youtube = {
 
     ensure: function(objRequest, funcResponse) {
         Node.series({
-            'objVideo': function(objArguments, funcCallback) {
+            'objVideo': function(objArgs, funcCallback) {
                 return funcCallback(objRequest);
             },
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
                         return funcCallback({
-                            'strIdent': objArguments.objVideo.strIdent,
-                            'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
-                            'strTitle': objArguments.objVideo.strTitle || '',
-                            'intCount': objArguments.objVideo.intCount || 1
+                            'strIdent': objArgs.objVideo.strIdent,
+                            'intTimestamp': objArgs.objVideo.intTimestamp || new Date().getTime(),
+                            'strTitle': objArgs.objVideo.strTitle || '',
+                            'intCount': objArgs.objVideo.intCount || 1
                         });
                     }
 
                     return funcCallback(null);
                 };
             },
-            'objPut': function(objArguments, funcCallback) {
-                if (objArguments.objGet.strIdent.trim() === '') {
+            'objPut': function(objArgs, funcCallback) {
+                if (objArgs.objGet.strIdent.trim() === '') {
                     return funcCallback({});
 
-                } else if (objArguments.objGet.strTitle.trim() === '') {
+                } else if (objArgs.objGet.strTitle.trim() === '') {
                     return funcCallback({});
 
                 }
 
-                var objQuery = objArguments.objDatabase.put(objArguments.objGet);
+                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
-            'objCount': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.count();
+            'objCount': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -982,12 +982,12 @@ var Youtube = {
                     return funcCallback({});
                 };
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
-                funcResponse(objArguments.objGet);
+            } else if (objArgs !== null) {
+                funcResponse(objArgs.objGet);
 
             }
         });
@@ -995,52 +995,52 @@ var Youtube = {
 
     mark: function(objRequest, funcResponse) {
         Node.series({
-            'objVideo': function(objArguments, funcCallback) {
+            'objVideo': function(objArgs, funcCallback) {
                 return funcCallback(objRequest);
             },
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.index('strIdent').get(objArguments.objVideo.strIdent);
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
                         return funcCallback({
-                            'strIdent': objArguments.objVideo.strIdent,
-                            'intTimestamp': objArguments.objVideo.intTimestamp || new Date().getTime(),
-                            'strTitle': objArguments.objVideo.strTitle || '',
-                            'intCount': objArguments.objVideo.intCount || 1
+                            'strIdent': objArgs.objVideo.strIdent,
+                            'intTimestamp': objArgs.objVideo.intTimestamp || new Date().getTime(),
+                            'strTitle': objArgs.objVideo.strTitle || '',
+                            'intCount': objArgs.objVideo.intCount || 1
                         });
 
                     } else if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
                         return funcCallback({
                             'strIdent': objQuery.result.strIdent,
-                            'intTimestamp': objArguments.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),
-                            'strTitle': objArguments.objVideo.strTitle || objQuery.result.strTitle || '',
+                            'intTimestamp': objArgs.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),
+                            'strTitle': objArgs.objVideo.strTitle || objQuery.result.strTitle || '',
                             'intCount': objQuery.result.intCount + 1 || 1
                         });
 
                     }
                 };
             },
-            'objPut': function(objArguments, funcCallback) {
-                if (objArguments.objGet.strIdent.trim() === '') {
+            'objPut': function(objArgs, funcCallback) {
+                if (objArgs.objGet.strIdent.trim() === '') {
                     return funcCallback({});
 
-                } else if (objArguments.objGet.strTitle.trim() === '') {
+                } else if (objArgs.objGet.strTitle.trim() === '') {
                     return funcCallback({});
 
                 }
 
-                var objQuery = objArguments.objDatabase.put(objArguments.objGet);
+                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
-            'objCount': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.count();
+            'objCount': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -1048,12 +1048,12 @@ var Youtube = {
                     return funcCallback({});
                 };
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
-                funcResponse(objArguments.objGet);
+            } else if (objArgs !== null) {
+                funcResponse(objArgs.objGet);
 
             }
         });
@@ -1063,7 +1063,7 @@ var Youtube = {
 var Search = {
     init: function(objRequest, funcResponse) {
         Node.series({
-            'objMessaging': function(objArguments, funcCallback) {
+            'objMessaging': function(objArgs, funcCallback) {
                 chrome.runtime.onConnect.addListener(function(objPort) {
                     if (objPort.name === 'search') {
                         objPort.onMessage.addListener(function(objData) {
@@ -1095,11 +1095,11 @@ var Search = {
 
                 return funcCallback({});
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -1108,11 +1108,11 @@ var Search = {
 
     lookup: function(objRequest, funcResponse) {
         Node.series({
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
             },
-            'objGet': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.index('intTimestamp').openCursor(null, 'prev');
+            'objGet': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.index('intTimestamp').openCursor(null, 'prev');
 
                 objQuery.skip = objRequest.intSkip;
                 objQuery.results = [];
@@ -1144,13 +1144,13 @@ var Search = {
                     objQuery.result.continue();
                 };
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({
-                    'objVideos': objArguments.objGet
+                    'objVideos': objArgs.objGet
                 });
 
             }
@@ -1159,22 +1159,22 @@ var Search = {
 
     delete: function(objRequest, funcResponse, funcProgress) {
         Node.series({
-            'objDatabase': function(objArguments, funcCallback) {
+            'objDatabase': function(objArgs, funcCallback) {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
-            'objDelete': function(objArguments, funcCallback) {
+            'objDelete': function(objArgs, funcCallback) {
                 funcProgress({
                     'strProgress': '1/4 - deleting it from the database'
                 });
 
-                var objQuery = objArguments.objDatabase.delete(objRequest.strIdent);
+                var objQuery = objArgs.objDatabase.delete(objRequest.strIdent);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
-            'objCount': function(objArguments, funcCallback) {
-                var objQuery = objArguments.objDatabase.count();
+            'objCount': function(objArgs, funcCallback) {
+                var objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -1182,7 +1182,7 @@ var Search = {
                     return funcCallback({});
                 };
             },
-            'objHistory': function(objArguments, funcCallback) {
+            'objHistory': function(objArgs, funcCallback) {
                 funcProgress({
                     'strProgress': '2/4 - deleting it from the history in the browser'
                 });
@@ -1209,7 +1209,7 @@ var Search = {
                     return funcCallback({});
                 });
             },
-            'objCookies': function(objArguments, funcCallback) {
+            'objCookies': function(objArgs, funcCallback) {
                 var strCookies = ['SAPISID', '__Secure-3PAPISID'];
                 var objCookies = {};
 
@@ -1238,9 +1238,9 @@ var Search = {
 
                 funcCookie();
             },
-            'objContauth': function(objArguments, funcCallback) {
+            'objContauth': function(objArgs, funcCallback) {
                 var intTime = Math.round(new Date().getTime() / 1000.0);
-                var strCookie = objArguments.objCookies['SAPISID'] || objArguments.objCookies['__Secure-3PAPISID'];
+                var strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
                 var strOrigin = 'https://www.youtube.com';
 
                 // https://stackoverflow.com/a/32065323
@@ -1251,31 +1251,31 @@ var Search = {
                     });
                 });
             },
-            'objYoulookup': function(objArguments, funcCallback) {
+            'objYoulookup': function(objArgs, funcCallback) {
                 funcProgress({
                     'strProgress': '3/4 - locating it in the history on youtube'
                 });
 
-                if ((objArguments.intRetry = (objArguments.intRetry || 10) - 1) === 0) {
+                if ((objArgs.intRetry = (objArgs.intRetry || 10) - 1) === 0) {
                     return funcCallback(null);
                 }
 
-                if (objArguments.strContinuation === undefined) {
-                    objArguments.strContinuation = null;
-                    objArguments.strClicktrack = null;
-                    objArguments.objYtcfg = null;
-                    objArguments.objYtctx = null;
+                if (objArgs.strContinuation === undefined) {
+                    objArgs.strContinuation = null;
+                    objArgs.strClicktrack = null;
+                    objArgs.objYtcfg = null;
+                    objArgs.objYtctx = null;
                 }
 
                 var objAjax = new XMLHttpRequest();
 
                 objAjax.onload = function() {
-                    if (objArguments.objYtcfg === null) {
-                        objArguments.objYtcfg = funcHackyparse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_API_KEY') !== -1; }).slice(0, -2));
+                    if (objArgs.objYtcfg === null) {
+                        objArgs.objYtcfg = funcHackyparse(objAjax.responseText.split('ytcfg.set(').find(function(strData) { return strData.indexOf('INNERTUBE_API_KEY') !== -1; }).slice(0, -2));
                     }
 
-                    if (objArguments.objYtctx === null) {
-                        objArguments.objYtctx = funcHackyparse(objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1]);
+                    if (objArgs.objYtctx === null) {
+                        objArgs.objYtctx = funcHackyparse(objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1]);
                     }
 
                     var strRegex = null;
@@ -1285,11 +1285,11 @@ var Search = {
                     var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
                     if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
-                        objArguments.strContinuation = strRegex[1];
+                        objArgs.strContinuation = strRegex[1];
                     }
 
                     if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
-                        objArguments.strClicktrack = strRegex[1];
+                        objArgs.strClicktrack = strRegex[1];
                     }
 
                     while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
@@ -1311,51 +1311,51 @@ var Search = {
                     return funcCallback({}, 'objContauth');
                 };
 
-                if ((objArguments.strContinuation === null) || (objArguments.strClicktrack === null) || (objArguments.objYtcfg === null) || (objArguments.objYtctx === null)) {
+                if ((objArgs.strContinuation === null) || (objArgs.strClicktrack === null) || (objArgs.objYtcfg === null) || (objArgs.objYtctx === null)) {
                     objAjax.open('GET', 'https://www.youtube.com/feed/history');
 
                     objAjax.send();
 
-                } else if ((objArguments.strContinuation !== null) && (objArguments.strClicktrack !== null) && (objArguments.objYtcfg !== null) && (objArguments.objYtctx !== null)) {
-                    objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/browse?key=' + objArguments.objYtcfg['INNERTUBE_API_KEY']);
+                } else if ((objArgs.strContinuation !== null) && (objArgs.strClicktrack !== null) && (objArgs.objYtcfg !== null) && (objArgs.objYtctx !== null)) {
+                    objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/browse?key=' + objArgs.objYtcfg['INNERTUBE_API_KEY']);
 
-                    objAjax.setRequestHeader('Authorization', objArguments.objContauth.strAuth);
+                    objAjax.setRequestHeader('Authorization', objArgs.objContauth.strAuth);
                     objAjax.setRequestHeader('Content-Type', 'application/json');
                     objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
                     objAjax.setRequestHeader('X-Goog-AuthUser', '0');
-                    objAjax.setRequestHeader('X-Goog-PageId', objArguments.objYtcfg['DELEGATED_SESSION_ID']);
-                    objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
+                    objAjax.setRequestHeader('X-Goog-PageId', objArgs.objYtcfg['DELEGATED_SESSION_ID']);
+                    objAjax.setRequestHeader('X-Goog-Visitor-Id', objArgs.objYtctx['client']['visitorData']);
 
-                    objArguments.objYtctx['client']['screenWidthPoints'] = 1024;
-                    objArguments.objYtctx['client']['screenHeightPoints'] = 768;
-                    objArguments.objYtctx['client']['screenPixelDensity'] = 1;
-                    objArguments.objYtctx['client']['utcOffsetMinutes'] = -420;
-                    objArguments.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
+                    objArgs.objYtctx['client']['screenWidthPoints'] = 1024;
+                    objArgs.objYtctx['client']['screenHeightPoints'] = 768;
+                    objArgs.objYtctx['client']['screenPixelDensity'] = 1;
+                    objArgs.objYtctx['client']['utcOffsetMinutes'] = -420;
+                    objArgs.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
 
-                    objArguments.objYtctx['request']['internalExperimentFlags'] = [];
-                    objArguments.objYtctx['request']['consistencyTokenJars'] = [];
+                    objArgs.objYtctx['request']['internalExperimentFlags'] = [];
+                    objArgs.objYtctx['request']['consistencyTokenJars'] = [];
 
                     objAjax.send(JSON.stringify({
                         'context': {
-                            'client': objArguments.objYtctx['client'],
-                            'request': objArguments.objYtctx['request'],
+                            'client': objArgs.objYtctx['client'],
+                            'request': objArgs.objYtctx['request'],
                             'user': {},
                             'clickTracking': {
-                                'clickTrackingParams': objArguments.strClicktrack
+                                'clickTrackingParams': objArgs.strClicktrack
                             }
                         },
-                        'continuation': objArguments.strContinuation
+                        'continuation': objArgs.strContinuation
                     }));
 
                 }
 
-                if (objArguments.strContinuation !== null) {
-                    objArguments.strContinuation = null;
+                if (objArgs.strContinuation !== null) {
+                    objArgs.strContinuation = null;
                 }
             },
-            'objFeedauth': function(objArguments, funcCallback) {
+            'objFeedauth': function(objArgs, funcCallback) {
                 var intTime = Math.round(new Date().getTime() / 1000.0);
-                var strCookie = objArguments.objCookies['SAPISID'] || objArguments.objCookies['__Secure-3PAPISID'];
+                var strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
                 var strOrigin = 'https://www.youtube.com';
 
                 // https://stackoverflow.com/a/32065323
@@ -1366,7 +1366,7 @@ var Search = {
                     });
                 });
             },
-            'objYoudelete': function(objArguments, funcCallback) {
+            'objYoudelete': function(objArgs, funcCallback) {
                 funcProgress({
                     'strProgress': '4/4 - deleting it from the history on youtube'
                 });
@@ -1377,43 +1377,43 @@ var Search = {
                     funcResponse({});
                 };
 
-                objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/feedback?key=' + objArguments.objYtcfg['INNERTUBE_API_KEY']);
+                objAjax.open('POST', 'https://www.youtube.com/youtubei/v1/feedback?key=' + objArgs.objYtcfg['INNERTUBE_API_KEY']);
 
-                objAjax.setRequestHeader('Authorization', objArguments.objFeedauth.strAuth);
+                objAjax.setRequestHeader('Authorization', objArgs.objFeedauth.strAuth);
                 objAjax.setRequestHeader('Content-Type', 'application/json');
                 objAjax.setRequestHeader('X-Origin', 'https://www.youtube.com');
                 objAjax.setRequestHeader('X-Goog-AuthUser', '0');
-                objAjax.setRequestHeader('X-Goog-PageId', objArguments.objYtcfg['DELEGATED_SESSION_ID']);
-                objAjax.setRequestHeader('X-Goog-Visitor-Id', objArguments.objYtctx['client']['visitorData']);
+                objAjax.setRequestHeader('X-Goog-PageId', objArgs.objYtcfg['DELEGATED_SESSION_ID']);
+                objAjax.setRequestHeader('X-Goog-Visitor-Id', objArgs.objYtctx['client']['visitorData']);
 
-                objArguments.objYtctx['client']['screenWidthPoints'] = 1024;
-                objArguments.objYtctx['client']['screenHeightPoints'] = 768;
-                objArguments.objYtctx['client']['screenPixelDensity'] = 1;
-                objArguments.objYtctx['client']['utcOffsetMinutes'] = -420;
-                objArguments.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
+                objArgs.objYtctx['client']['screenWidthPoints'] = 1024;
+                objArgs.objYtctx['client']['screenHeightPoints'] = 768;
+                objArgs.objYtctx['client']['screenPixelDensity'] = 1;
+                objArgs.objYtctx['client']['utcOffsetMinutes'] = -420;
+                objArgs.objYtctx['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
 
-                objArguments.objYtctx['request']['internalExperimentFlags'] = [];
-                objArguments.objYtctx['request']['consistencyTokenJars'] = [];
+                objArgs.objYtctx['request']['internalExperimentFlags'] = [];
+                objArgs.objYtctx['request']['consistencyTokenJars'] = [];
 
                 objAjax.send(JSON.stringify({
                     'context': {
-                        'client': objArguments.objYtctx['client'],
-                        'request': objArguments.objYtctx['request'],
+                        'client': objArgs.objYtctx['client'],
+                        'request': objArgs.objYtctx['request'],
                         'user': {},
                         'clickTracking': {
-                            'clickTrackingParams': objArguments.objYoulookup.strClicktrack
+                            'clickTrackingParams': objArgs.objYoulookup.strClicktrack
                         }
                     },
-                    'feedbackTokens': [objArguments.objYoulookup.strFeedback],
+                    'feedbackTokens': [objArgs.objYoulookup.strFeedback],
                     'isFeedbackTokenUnencrypted': false,
                     'shouldMerge': false
                 }));
             }
-        }, function(objArguments) {
-            if (objArguments === null) {
+        }, function(objArgs) {
+            if (objArgs === null) {
                 funcResponse(null);
 
-            } else if (objArguments !== null) {
+            } else if (objArgs !== null) {
                 funcResponse({});
 
             }
@@ -1424,7 +1424,7 @@ var Search = {
 // ##########################################################
 
 Node.series({
-    'objSettings': function(objArguments, funcCallback) {
+    'objSettings': function(objArgs, funcCallback) {
         if (window.localStorage.getItem('extensions.Youwatch.Database.intSize') === null) {
             window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(0));
         }
@@ -1495,7 +1495,7 @@ Node.series({
 
         return funcCallback({});
     },
-    'objDatabase': function(objArguments, funcCallback) {
+    'objDatabase': function(objArgs, funcCallback) {
         Database.init({}, function(objResponse) {
             if (objResponse === null) {
                 funcCallback(null);
@@ -1506,7 +1506,7 @@ Node.series({
             }
         });
     },
-    'objHistory': function(objArguments, funcCallback) {
+    'objHistory': function(objArgs, funcCallback) {
         History.init({}, function(objResponse) {
             if (objResponse === null) {
                 funcCallback(null);
@@ -1517,7 +1517,7 @@ Node.series({
             }
         });
     },
-    'objYoutube': function(objArguments, funcCallback) {
+    'objYoutube': function(objArgs, funcCallback) {
         Youtube.init({}, function(objResponse) {
             if (objResponse === null) {
                 funcCallback(null);
@@ -1528,7 +1528,7 @@ Node.series({
             }
         });
     },
-    'objSearch': function(objArguments, funcCallback) {
+    'objSearch': function(objArgs, funcCallback) {
         Search.init({}, function(objResponse) {
             if (objResponse === null) {
                 funcCallback(null);
@@ -1539,7 +1539,7 @@ Node.series({
             }
         });
     },
-    'objAction': function(objArguments, funcCallback) {
+    'objAction': function(objArgs, funcCallback) {
         chrome.browserAction.onClicked.addListener(function() {
             chrome.tabs.create({
                 'url': 'content/index.html'
@@ -1548,7 +1548,7 @@ Node.series({
 
         return funcCallback({});
     },
-    'objMessage': function(objArguments, funcCallback) {
+    'objMessage': function(objArgs, funcCallback) {
         chrome.runtime.onMessage.addListener(function(objRequest, objSender, funcResponse) {
             if (objRequest.strMessage === 'youtubeLookup') {
                 Youtube.lookup({
@@ -1582,7 +1582,7 @@ Node.series({
 
         return funcCallback({});
     },
-    'objTabhook': function(objArguments, funcCallback) {
+    'objTabhook': function(objArgs, funcCallback) {
         chrome.tabs.onUpdated.addListener(function(intTab, objChange, objTab) {
             if (objTab.id < 0) {
                 return;
@@ -1747,7 +1747,7 @@ Node.series({
 
         return funcCallback({});
     },
-    'objSynchronize': function(objArguments, funcCallback) {
+    'objSynchronize': function(objArgs, funcCallback) {
         chrome.alarms.create('synchronize', {
             'periodInMinutes': 60
         });
@@ -1778,11 +1778,11 @@ Node.series({
 
         return funcCallback({});
     }
-}, function(objArguments) {
-    if (objArguments === null) {
+}, function(objArgs) {
+    if (objArgs === null) {
         console.debug('error initializing commons');
 
-    } else if (objArguments !== null) {
+    } else if (objArgs !== null) {
         console.debug('initialized commons succesfully');
 
     }
