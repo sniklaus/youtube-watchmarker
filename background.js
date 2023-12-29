@@ -1663,87 +1663,54 @@ Node.series({
 
         return funcCallback({});
     },
-    'objReqhook': function(objArguments, funcCallback) {
-        if (funcBrowser() === 'firefox') {
-            chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
-                var objHeaders = [];
+    'objReqhook': function(objArgs, funcCallback) {
+        var strInfospec = [
+            'requestHeaders',
+            'blocking'
+        ];
 
-                for (var objHeader of objData.requestHeaders) {
-                    if (objHeader.name === 'Referer') {
-                        continue;
-
-                    } else if (objHeader.name === 'Origin') {
-                        continue;
-
-                    }
-
-                    objHeaders.push(objHeader);
-                }
-
-                objHeaders.push({
-                    'name': 'Referer',
-                    'value': 'https://www.youtube.com/feed/history'
-                });
-
-                objHeaders.push({
-                    'name': 'Origin',
-                    'value': 'https://www.youtube.com'
-                });
-
-                objData.requestHeaders.splice(0);
-                objData.requestHeaders.push(...objHeaders);
-
-                return {
-                    'requestHeaders': objData.requestHeaders
-                };
-            },{
-                'urls': ['*://www.youtube.com/youtubei/v1/*']
-            }, [
-                'requestHeaders',
-                'blocking'
-            ]);
-
-        } else if (funcBrowser() === 'chrome') {
-            chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
-                var objHeaders = [];
-
-                for (var objHeader of objData.requestHeaders) {
-                    if (objHeader.name === 'Referer') {
-                        continue;
-
-                    } else if (objHeader.name === 'Origin') {
-                        continue;
-
-                    }
-
-                    objHeaders.push(objHeader);
-                }
-
-                objHeaders.push({
-                    'name': 'Referer',
-                    'value': 'https://www.youtube.com/feed/history'
-                });
-
-                objHeaders.push({
-                    'name': 'Origin',
-                    'value': 'https://www.youtube.com'
-                });
-
-                objData.requestHeaders.splice(0);
-                objData.requestHeaders.push(...objHeaders);
-
-                return {
-                    'requestHeaders': objData.requestHeaders
-                };
-            },{
-                'urls': ['*://www.youtube.com/youtubei/v1/*']
-            }, [
+        if (funcBrowser() === 'chrome') {
+            strInfospec = [
                 'requestHeaders',
                 'blocking',
                 'extraHeaders'
-            ]);
-
+            ];
         }
+
+        chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
+            var objHeaders = [];
+
+            for (var objHeader of objData.requestHeaders) {
+                if (objHeader.name === 'Referer') {
+                    continue;
+
+                } else if (objHeader.name === 'Origin') {
+                    continue;
+
+                }
+
+                objHeaders.push(objHeader);
+            }
+
+            objHeaders.push({
+                'name': 'Referer',
+                'value': 'https://www.youtube.com/feed/history'
+            });
+
+            objHeaders.push({
+                'name': 'Origin',
+                'value': 'https://www.youtube.com'
+            });
+
+            objData.requestHeaders.splice(0);
+            objData.requestHeaders.push(...objHeaders);
+
+            return {
+                'requestHeaders': objData.requestHeaders
+            };
+        }, {
+            'urls': ['*://www.youtube.com/youtubei/v1/*']
+        }, strInfospec);
 
         return funcCallback({});
     },
