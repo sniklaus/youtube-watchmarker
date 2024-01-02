@@ -1,18 +1,17 @@
 'use strict';
 
-var strLastchange = null;
-var objVideocache = [];
-var intMarkcache = {};
+let strLastchange = null;
+let intWatchdate = {};
 
 // ##########################################################
 
-var refresh = function() {
-    for (var objVideo of objVideocache) {
-        var strIdent = objVideo.href.split('&')[0].slice(-11);
+let refresh = function() {
+    for (let objVideo of window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="], a.ytd-thumbnail[href^="/shorts/"]')) {
+        let strIdent = objVideo.href.split('&')[0].slice(-11);
 
         mark(objVideo, strIdent);
 
-        if (intMarkcache.hasOwnProperty(strIdent) === true) {
+        if (intWatchdate.hasOwnProperty(strIdent) === true) {
             continue;
         }
 
@@ -21,25 +20,27 @@ var refresh = function() {
             'strIdent': strIdent
         }, function(objResponse) {
             if (objResponse !== null) {
-                intMarkcache[objResponse.strIdent] = objResponse.intTimestamp;
+                intWatchdate[objResponse.strIdent] = objResponse.intTimestamp;
 
-                for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objResponse.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objResponse.strIdent + '"]')) {
+                for (let objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objResponse.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objResponse.strIdent + '"]')) {
                     mark(objVideo, objResponse.strIdent);
                 }
             }
         });
     }
+    
+    strLastchange = window.location.href + ':' + window.document.title + ':' + window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="], a.ytd-thumbnail[href^="/shorts/"]').length;
 };
 
-var mark = function(objVideo, strIdent) {
-    if ((intMarkcache.hasOwnProperty(strIdent) === true) && (objVideo.classList.contains('youwatch-mark') === false)) {
+let mark = function(objVideo, strIdent) {
+    if ((intWatchdate.hasOwnProperty(strIdent) === true) && (objVideo.classList.contains('youwatch-mark') === false)) {
         objVideo.classList.add('youwatch-mark');
 
-        if (intMarkcache[strIdent] !== 0) {
-            objVideo.setAttribute('watchdate', ' - ' + new Date(intMarkcache[strIdent]).toISOString().split('T')[0].split('-').join('.'));
+        if (intWatchdate[strIdent] !== 0) {
+            objVideo.setAttribute('watchdate', ' - ' + new Date(intWatchdate[strIdent]).toISOString().split('T')[0].split('-').join('.'));
         }
 
-    } else if ((intMarkcache.hasOwnProperty(strIdent) !== true) && (objVideo.classList.contains('youwatch-mark') !== false)) {
+    } else if ((intWatchdate.hasOwnProperty(strIdent) !== true) && (objVideo.classList.contains('youwatch-mark') !== false)) {
         objVideo.classList.remove('youwatch-mark');
 
     }
@@ -52,23 +53,15 @@ chrome.runtime.onMessage.addListener(function(objData, objSender, funcResponse) 
         refresh();
 
     } else if (objData.strMessage === 'youtubeMark') {
-        intMarkcache[objData.strIdent] = objData.intTimestamp;
+        intWatchdate[objData.strIdent] = objData.intTimestamp;
 
-        for (var objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objData.strIdent + '"]')) {
+        for (let objVideo of document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v=' + objData.strIdent + '"], a.ytd-thumbnail[href^="/shorts/' + objData.strIdent + '"]')) {
             mark(objVideo, objData.strIdent);
         }
 
     }
 
     funcResponse(null);
-});
-
-// ##########################################################
-
-document.addEventListener('youwatch-message', function(objEvent) {
-    chrome.runtime.sendMessage(objEvent.detail, function(objResponse) {
-        // ...
-    });
 });
 
 // ##########################################################
@@ -84,15 +77,11 @@ document.addEventListener('yt-navigate-finish', function() {
 window.setInterval(function() {
     if (document.hidden === true) {
         return;
-    }
 
-    objVideocache = window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="], a.ytd-thumbnail[href^="/shorts/"]');
-
-    if (strLastchange === window.location.href + ':' + window.document.title + ':' + objVideocache.length) {
+    } else if (strLastchange === window.location.href + ':' + window.document.title + ':' + window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="], a.ytd-thumbnail[href^="/shorts/"]').length) {
         return;
-    }
 
-    strLastchange = window.location.href + ':' + window.document.title + ':' + objVideocache.length;
+    }
 
     refresh();
 }, 300);

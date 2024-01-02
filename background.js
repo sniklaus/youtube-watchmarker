@@ -1,6 +1,6 @@
 'use strict';
 
-var funcBrowser = function() {
+let funcBrowser = function() {
     if (typeof(browser) !== 'undefined') {
         return 'firefox';
     }
@@ -12,8 +12,8 @@ var funcBrowser = function() {
     return null;
 }
 
-var funcHackyparse = function(strJson) {
-    for (var intLength = 1; intLength < strJson.length; intLength += 1) {
+let funcHackyparse = function(strJson) {
+    for (let intLength = 1; intLength < strJson.length; intLength += 1) {
         if (strJson[intLength - 1] !== '}') {
             continue;
         }
@@ -28,7 +28,7 @@ var funcHackyparse = function(strJson) {
     return null;
 }
 
-var funcSendmessage = function(intTab, objMessage, intRetry) {
+let funcSendmessage = function(intTab, objMessage, intRetry) {
     if (intRetry === 0) {
         return;
 
@@ -44,13 +44,13 @@ var funcSendmessage = function(intTab, objMessage, intRetry) {
     });
 };
 
-var Node = {
+let Node = {
     series: function(objFunctions, funcCallback) {
-        var strFunctions = Object.keys(objFunctions);
+        let strFunctions = Object.keys(objFunctions);
 
-        var objWorkspace = {};
+        let objWorkspace = {};
 
-        var funcNext = function(objArgs, objOverwrite) {
+        let funcNext = function(objArgs, objOverwrite) {
             if (objArgs === null) {
                 return funcCallback(null);
             }
@@ -94,16 +94,16 @@ var Node = {
 
 // ##########################################################
 
-var Database = {
+let Database = {
     objDatabase: null,
 
     init: function(objRequest, funcResponse) {
         Node.series({
             'objOpen': function(objArgs, funcCallback) {
-                var objOpen = window.indexedDB.open('Database', 401);
+                let objOpen = window.indexedDB.open('Database', 401);
 
                 objOpen.onupgradeneeded = function() {
-                    var objStore = null;
+                    let objStore = null;
 
                     if (objOpen.result.objectStoreNames.contains('storeDatabase') === true) {
                         objStore = objOpen.transaction.objectStore('storeDatabase');
@@ -145,9 +145,9 @@ var Database = {
                 };
             },
             'objLegacy': function(objArgs, funcCallback) {
-                var objStore = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
+                let objStore = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
 
-                var objQuery = objStore.openCursor();
+                let objQuery = objStore.openCursor();
 
                 objQuery.onsuccess = function() {
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
@@ -228,7 +228,7 @@ var Database = {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.openCursor();
+                let objQuery = objArgs.objDatabase.openCursor();
 
                 objQuery.results = [];
 
@@ -293,7 +293,7 @@ var Database = {
                 return funcCallback(objArgs.objVideos[objArgs.intVideo]);
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
+                let objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if (objArgs.intNew === undefined) {
@@ -341,7 +341,7 @@ var Database = {
 
                 }
 
-                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
+                let objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
@@ -359,7 +359,7 @@ var Database = {
                 return funcCallback({});
             },
             'objCount': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.count();
+                let objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -384,14 +384,14 @@ var Database = {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
             'objClear': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.clear();
+                let objQuery = objArgs.objDatabase.clear();
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
             'objCount': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.count();
+                let objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -411,7 +411,7 @@ var Database = {
     }
 };
 
-var History = {
+let History = {
     init: function(objRequest, funcResponse) {
         Node.series({
             'objMessaging': function(objArgs, funcCallback) {
@@ -456,9 +456,9 @@ var History = {
                     'startTime': objRequest.intTimestamp,
                     'maxResults': 1000000
                 }, function(objResults) {
-                    var objVideos = [];
+                    let objVideos = [];
 
-                    for (var objResult of objResults) {
+                    for (let objResult of objResults) {
                         if ((objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objResult.url.indexOf('https://www.youtube.com/shorts/') !== 0)) {
                             continue;
 
@@ -497,7 +497,7 @@ var History = {
                 return funcCallback(objArgs.objVideos[objArgs.intVideo]);
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
+                let objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if (objArgs.intNew === undefined) {
@@ -541,7 +541,7 @@ var History = {
 
                 }
 
-                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
+                let objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
@@ -559,7 +559,7 @@ var History = {
                 return funcCallback({});
             },
             'objCount': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.count();
+                let objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -584,7 +584,7 @@ var History = {
     }
 };
 
-var Youtube = {
+let Youtube = {
     init: function(objRequest, funcResponse) {
         Node.series({
             'objMessaging': function(objArgs, funcCallback) {
@@ -649,15 +649,15 @@ var Youtube = {
     synchronize: function(objRequest, funcResponse, funcProgress) {
         Node.series({
             'objCookies': function(objArgs, funcCallback) {
-                var strCookies = ['SAPISID', '__Secure-3PAPISID'];
-                var objCookies = {};
+                let strCookies = ['SAPISID', '__Secure-3PAPISID'];
+                let objCookies = {};
 
-                var funcCookie = function() {
+                let funcCookie = function() {
                     if (strCookies.length === 0) {
                         return funcCallback(objCookies);
                     }
 
-                    var strCookie = strCookies.shift();
+                    let strCookie = strCookies.shift();
 
                     chrome.cookies.get({
                         'url': 'https://www.youtube.com',
@@ -678,9 +678,9 @@ var Youtube = {
                 funcCookie();
             },
             'objContauth': function(objArgs, funcCallback) {
-                var intTime = Math.round(new Date().getTime() / 1000.0);
-                var strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
-                var strOrigin = 'https://www.youtube.com';
+                let intTime = Math.round(new Date().getTime() / 1000.0);
+                let strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
+                let strOrigin = 'https://www.youtube.com';
 
                 // https://stackoverflow.com/a/32065323
 
@@ -698,7 +698,7 @@ var Youtube = {
                     objArgs.objYtctx = null;
                 }
 
-                var objAjax = new XMLHttpRequest();
+                let objAjax = new XMLHttpRequest();
 
                 objAjax.onload = function() {
                     if (objArgs.objYtcfg === null) {
@@ -709,11 +709,11 @@ var Youtube = {
                         objArgs.objYtctx = funcHackyparse(objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1]);
                     }
 
-                    var strRegex = null;
-                    var objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
-                    var objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
-                    var objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"', 'g');
-                    var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
+                    let strRegex = null;
+                    let objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
+                    let objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
+                    let objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"', 'g');
+                    let strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
                     if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
                         objArgs.strContinuation = strRegex[1];
@@ -723,11 +723,11 @@ var Youtube = {
                         objArgs.strClicktrack = strRegex[1];
                     }
 
-                    var objVideos = [];
+                    let objVideos = [];
 
                     while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                        var strIdent = strRegex[1];
-                        var strTitle = strRegex[2];
+                        let strIdent = strRegex[1];
+                        let strTitle = strRegex[2];
 
                         strTitle = strTitle.split('\\u0022').join('"');
                         strTitle = strTitle.split('\\u0026').join('&');
@@ -804,7 +804,7 @@ var Youtube = {
                 return funcCallback(objArgs.objVideos[objArgs.intVideo]);
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
+                let objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if (objArgs.intNew === undefined) {
@@ -848,7 +848,7 @@ var Youtube = {
 
                 }
 
-                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
+                let objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
@@ -866,7 +866,7 @@ var Youtube = {
                 return funcCallback({});
             },
             'objCount': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.count();
+                let objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -908,7 +908,7 @@ var Youtube = {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
+                let objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if ((objQuery.result !== undefined) && (objQuery.result !== null)) {
@@ -943,7 +943,7 @@ var Youtube = {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
+                let objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
@@ -967,14 +967,14 @@ var Youtube = {
 
                 }
 
-                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
+                let objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
             'objCount': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.count();
+                let objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -1002,7 +1002,7 @@ var Youtube = {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase'));
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
+                let objQuery = objArgs.objDatabase.index('strIdent').get(objArgs.objVideo.strIdent);
 
                 objQuery.onsuccess = function() {
                     if ((objQuery.result === undefined) || (objQuery.result === null)) {
@@ -1033,14 +1033,14 @@ var Youtube = {
 
                 }
 
-                var objQuery = objArgs.objDatabase.put(objArgs.objGet);
+                let objQuery = objArgs.objDatabase.put(objArgs.objGet);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
             'objCount': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.count();
+                let objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -1060,7 +1060,7 @@ var Youtube = {
     }
 };
 
-var Search = {
+let Search = {
     init: function(objRequest, funcResponse) {
         Node.series({
             'objMessaging': function(objArgs, funcCallback) {
@@ -1112,7 +1112,7 @@ var Search = {
                 return funcCallback(Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase'));
             },
             'objGet': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.index('intTimestamp').openCursor(null, 'prev');
+                let objQuery = objArgs.objDatabase.index('intTimestamp').openCursor(null, 'prev');
 
                 objQuery.skip = objRequest.intSkip;
                 objQuery.results = [];
@@ -1167,14 +1167,14 @@ var Search = {
                     'strProgress': '1/4 - deleting it from the database'
                 });
 
-                var objQuery = objArgs.objDatabase.delete(objRequest.strIdent);
+                let objQuery = objArgs.objDatabase.delete(objRequest.strIdent);
 
                 objQuery.onsuccess = function() {
                     return funcCallback({});
                 };
             },
             'objCount': function(objArgs, funcCallback) {
-                var objQuery = objArgs.objDatabase.count();
+                let objQuery = objArgs.objDatabase.count();
 
                 objQuery.onsuccess = function() {
                     window.localStorage.setItem('extensions.Youwatch.Database.intSize', String(objQuery.result));
@@ -1192,7 +1192,7 @@ var Search = {
                     'startTime': 0,
                     'maxResults': 1000000
                 }, function(objResults) {
-                    for (var objResult of objResults) {
+                    for (let objResult of objResults) {
                         if ((objResult.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objResult.url.indexOf('https://www.youtube.com/shorts/') !== 0)) {
                             continue;
 
@@ -1210,15 +1210,15 @@ var Search = {
                 });
             },
             'objCookies': function(objArgs, funcCallback) {
-                var strCookies = ['SAPISID', '__Secure-3PAPISID'];
-                var objCookies = {};
+                let strCookies = ['SAPISID', '__Secure-3PAPISID'];
+                let objCookies = {};
 
-                var funcCookie = function() {
+                let funcCookie = function() {
                     if (strCookies.length === 0) {
                         return funcCallback(objCookies);
                     }
 
-                    var strCookie = strCookies.shift();
+                    let strCookie = strCookies.shift();
 
                     chrome.cookies.get({
                         'url': 'https://www.youtube.com',
@@ -1239,9 +1239,9 @@ var Search = {
                 funcCookie();
             },
             'objContauth': function(objArgs, funcCallback) {
-                var intTime = Math.round(new Date().getTime() / 1000.0);
-                var strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
-                var strOrigin = 'https://www.youtube.com';
+                let intTime = Math.round(new Date().getTime() / 1000.0);
+                let strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
+                let strOrigin = 'https://www.youtube.com';
 
                 // https://stackoverflow.com/a/32065323
 
@@ -1267,7 +1267,7 @@ var Search = {
                     objArgs.objYtctx = null;
                 }
 
-                var objAjax = new XMLHttpRequest();
+                let objAjax = new XMLHttpRequest();
 
                 objAjax.onload = function() {
                     if (objArgs.objYtcfg === null) {
@@ -1278,11 +1278,11 @@ var Search = {
                         objArgs.objYtctx = funcHackyparse(objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1]);
                     }
 
-                    var strRegex = null;
-                    var objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
-                    var objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
-                    var objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"', 'g');
-                    var strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
+                    let strRegex = null;
+                    let objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
+                    let objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
+                    let objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"', 'g');
+                    let strUnescaped = objAjax.responseText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
                     if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
                         objArgs.strContinuation = strRegex[1];
@@ -1293,9 +1293,9 @@ var Search = {
                     }
 
                     while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                        var strIdent = strRegex[1];
-                        var strClicktrack = strRegex[2];
-                        var strFeedback = strRegex[3];
+                        let strIdent = strRegex[1];
+                        let strClicktrack = strRegex[2];
+                        let strFeedback = strRegex[3];
 
                         if (strIdent !== objRequest.strIdent) {
                             continue;
@@ -1354,9 +1354,9 @@ var Search = {
                 }
             },
             'objFeedauth': function(objArgs, funcCallback) {
-                var intTime = Math.round(new Date().getTime() / 1000.0);
-                var strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
-                var strOrigin = 'https://www.youtube.com';
+                let intTime = Math.round(new Date().getTime() / 1000.0);
+                let strCookie = objArgs.objCookies['SAPISID'] || objArgs.objCookies['__Secure-3PAPISID'];
+                let strOrigin = 'https://www.youtube.com';
 
                 // https://stackoverflow.com/a/32065323
 
@@ -1371,7 +1371,7 @@ var Search = {
                     'strProgress': '4/4 - deleting it from the history on youtube'
                 });
 
-                var objAjax = new XMLHttpRequest();
+                let objAjax = new XMLHttpRequest();
 
                 objAjax.onload = function() {
                     funcResponse({});
@@ -1590,35 +1590,91 @@ Node.series({
 
             }
 
+            if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
+                if ((objTab.url.indexOf('https://www.youtube.com/watch?v=') === 0) || (objTab.url.indexOf('https://www.youtube.com/shorts/') === 0)) {
+                    if ((objChange.title !== undefined) && (objChange.title !== null)) {
+                        if (objChange.title.slice(-10) === ' - YouTube') {
+                            objChange.title = objChange.title.slice(0, -10)
+                        }
+
+                        let strIdent = objTab.url.split('&')[0].slice(-11);
+                        let strTitle = objChange.title;
+
+                        Youtube.mark({
+                            'strIdent': strIdent,
+                            'strTitle': strTitle
+                        }, function(objResponse) {
+                            console.debug('mark video');
+                        });
+
+                        chrome.tabs.query({
+                            'url': '*://www.youtube.com/*'
+                        }, function(objTabs) {
+                            for (let objTab of objTabs) {
+                                funcSendmessage(objTab.id, {
+                                    'strMessage': 'youtubeMark',
+                                    'strIdent': strIdent,
+                                    'intTimestamp': 0,
+                                    'strTitle': strTitle,
+                                    'intCount': 0
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
             if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(true)) {
                 chrome.tabs.executeScript(objTab.id, {
                     'code': `
-                        var objScript = document.createElement('script');
+                        if ((document.head !== null) && (document.getElementById('youwatch-progresshook') === null)) {
+                            let objScript = document.createElement('script');
 
-                        objScript.text = \`
-                            if (typeof objOrigxmlreq === 'undefined') {
+                            objScript.id = 'youwatch-progresshook';
+
+                            objScript.text = \`
                                 let objOrigxmlreq = window.XMLHttpRequest.prototype.open;
+                                let objOrigfetchreq = window.fetch;
+
+                                window.addEventListener('DOMContentLoaded', function() {
+                                    let strInitialdata = document.body.innerHTML.split('var ytInitialData = ').slice(-1)[0].split(';</script>')[0];
+
+                                    for (let strWatched of strInitialdata.split('"percentDurationWatched"').slice(0, -1)) {
+                                        let strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
+                                        let strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+
+                                        if (strIdent.length !== 11) {
+                                            continue;
+                                        }
+
+                                        document.dispatchEvent(new CustomEvent('youwatch-progresshook', {
+                                            'detail': {
+                                                'strIdent': strIdent,
+                                                'strTitle': strTitle
+                                            }
+                                        }));
+                                    }
+                                });
 
                                 window.XMLHttpRequest.prototype.open = function() {
                                     this.addEventListener('load', function() {
-                                        if (this.responseURL.indexOf('://www.youtube.com/youtubei/v1/') === -1) {
+                                        if (this.responseURL.indexOf('https://www.youtube.com/youtubei/v1/') === -1) {
                                             return;
                                         }
 
-                                        var strData = this.responseText;
+                                        let strResponse = this.responseText;
 
                                         try {
-                                            for (var strWatched of strData.split('"percentDurationWatched"').slice(0, -1)) {
-                                                var strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
-                                                var strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+                                            for (let strWatched of strResponse.split('"percentDurationWatched"').slice(0, -1)) {
+                                                let strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
+                                                let strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
 
                                                 if (strIdent.length !== 11) {
                                                     continue;
                                                 }
 
-                                                document.dispatchEvent(new CustomEvent('youwatch-message', {
+                                                document.dispatchEvent(new CustomEvent('youwatch-progresshook', {
                                                     'detail': {
-                                                        'strMessage': 'youtubeEnsure',
                                                         'strIdent': strIdent,
                                                         'strTitle': strTitle
                                                     }
@@ -1631,32 +1687,31 @@ Node.series({
 
                                     return objOrigxmlreq.apply(this, arguments);
                                 };
-                            }
-
-                            if (typeof objOrigfetchreq === 'undefined') {
-                                let objOrigfetchreq = window.fetch;
 
                                 window.fetch = async function(objRequest, objOptions) {
-                                    var objResponse = await objOrigfetchreq(objRequest, objOptions);
+                                    let objResponse = await objOrigfetchreq(objRequest, objOptions);
 
-                                    if (objRequest.url.indexOf('://www.youtube.com/youtubei/v1/') === -1) {
+                                    if ((typeof(objRequest) === 'string') && (objRequest.indexOf('https://www.youtube.com/youtubei/v1/') === -1)) {
                                         return objResponse;
+
+                                    } else if ((typeof(objRequest) === 'object') && (objRequest.url.indexOf('https://www.youtube.com/youtubei/v1/') === -1)) {
+                                        return objResponse;
+
                                     }
 
-                                    var strData = await objResponse.text();
+                                    let strResponse = await objResponse.text();
 
                                     try {
-                                        for (var strWatched of strData.split('"percentDurationWatched"').slice(0, -1)) {
-                                            var strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
-                                            var strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+                                        for (let strWatched of strResponse.split('"percentDurationWatched"').slice(0, -1)) {
+                                            let strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
+                                            let strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
 
                                             if (strIdent.length !== 11) {
                                                 continue;
                                             }
 
-                                            document.dispatchEvent(new CustomEvent('youwatch-message', {
+                                            document.dispatchEvent(new CustomEvent('youwatch-progresshook', {
                                                 'detail': {
-                                                    'strMessage': 'youtubeEnsure',
                                                     'strIdent': strIdent,
                                                     'strTitle': strTitle
                                                 }
@@ -1666,60 +1721,29 @@ Node.series({
                                         console.log(objError);
                                     }
 
-                                    return new Response(strData, {
+                                    return new Response(strResponse, {
                                         'status': objResponse.status,
                                         'statusText': objResponse.statusText,
                                         'headers': objResponse.headers
                                     });
                                 };
-                            }
-                        \`;
+                            \`;
 
-                        objScript.onload = function() {
-                            this.remove();
-                        };
+                            document.addEventListener('youwatch-progresshook', function(objEvent) {
+                                chrome.runtime.sendMessage({
+                                    'strMessage': 'youtubeEnsure',
+                                    'strIdent': objEvent.detail['strIdent'],
+                                    'strTitle': objEvent.detail['strTitle']
+                                }, function(objResponse) {
+                                    // ...
+                                });
+                            });
 
-                        document.head.appendChild(objScript);
+                            document.head.prepend(objScript);
+                        }
                     `,
                     'runAt': 'document_start'
                 });
-
-                chrome.tabs.executeScript(objTab.id, {
-                    'code': `
-                        var objScript = document.createElement('script');
-
-                        objScript.text = \`
-                            if (typeof strInitialdata === 'undefined') {
-                                let strInitialdata = document.documentElement.outerHTML.split('var ytInitialData = ').slice(-1)[0].split(';</script>')[0];
-
-                                for (var strWatched of strInitialdata.split('"percentDurationWatched"').slice(0, -1)) {
-                                    var strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
-                                    var strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
-
-                                    if (strIdent.length !== 11) {
-                                        continue;
-                                    }
-
-                                    document.dispatchEvent(new CustomEvent('youwatch-message', {
-                                        'detail': {
-                                            'strMessage': 'youtubeEnsure',
-                                            'strIdent': strIdent,
-                                            'strTitle': strTitle
-                                        }
-                                    }));
-                                }
-                            }
-                        \`;
-
-                        objScript.onload = function() {
-                            this.remove();
-                        };
-
-                        document.head.appendChild(objScript);
-                    `,
-                    'runAt': 'document_end'
-                });
-
             }
 
             if (window.localStorage.getItem('extensions.Youwatch.Visualization.boolFadeout') === String(true)) {
@@ -1751,66 +1775,24 @@ Node.series({
                     'code': window.localStorage.getItem('extensions.Youwatch.Stylesheet.strHideprogress')
                 });
             }
-
-            if (window.localStorage.getItem('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
-                if ((objTab.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objTab.url.indexOf('https://www.youtube.com/shorts/') !== 0)) {
-                    return;
-
-                } else if ((objChange.title === undefined) || (objChange.title === null)) {
-                    return;
-
-                }
-
-                if (objChange.title.slice(-10) === ' - YouTube') {
-                    objChange.title = objChange.title.slice(0, -10)
-                }
-
-                var strIdent = objTab.url.split('&')[0].slice(-11);
-                var strTitle = objChange.title;
-
-                Youtube.mark({
-                    'strIdent': strIdent,
-                    'strTitle': strTitle
-                }, function(objResponse) {
-                    console.debug('mark video');
-                });
-
-                chrome.tabs.query({
-                    'url': '*://www.youtube.com/*'
-                }, function(objTabs) {
-                    for (var objTab of objTabs) {
-                        funcSendmessage(objTab.id, {
-                            'strMessage': 'youtubeMark',
-                            'strIdent': strIdent,
-                            'intTimestamp': 0,
-                            'strTitle': strTitle,
-                            'intCount': 0
-                        });
-                    }
-                });
-            }
         });
 
         return funcCallback({});
     },
     'objReqhook': function(objArgs, funcCallback) {
-        var strInfospec = [
+        let strInfospec = [
             'requestHeaders',
             'blocking'
         ];
 
         if (funcBrowser() === 'chrome') {
-            strInfospec = [
-                'requestHeaders',
-                'blocking',
-                'extraHeaders'
-            ];
+            strInfospec.push('extraHeaders');
         }
 
         chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
-            var objHeaders = [];
+            let objHeaders = [];
 
-            for (var objHeader of objData.requestHeaders) {
+            for (let objHeader of objData.requestHeaders) {
                 if (objHeader.name === 'Referer') {
                     continue;
 
@@ -1839,7 +1821,7 @@ Node.series({
                 'requestHeaders': objData.requestHeaders
             };
         }, {
-            'urls': ['*://www.youtube.com/youtubei/v1/*']
+            'urls': ['https://www.youtube.com/youtubei/v1/*']
         }, strInfospec);
 
         return funcCallback({});

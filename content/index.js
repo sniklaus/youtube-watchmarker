@@ -1,18 +1,18 @@
 'use strict';
 
-var objDatabase = chrome.runtime.connect({
+let objDatabase = chrome.runtime.connect({
     'name': 'database'
 });
 
-var objHistory = chrome.runtime.connect({
+let objHistory = chrome.runtime.connect({
     'name': 'history'
 });
 
-var objYoutube = chrome.runtime.connect({
+let objYoutube = chrome.runtime.connect({
     'name': 'youtube'
 });
 
-var objSearch = chrome.runtime.connect({
+let objSearch = chrome.runtime.connect({
     'name': 'search'
 });
 
@@ -90,7 +90,7 @@ jQuery(window.document).ready(function() {
                 .addClass('disabled')
             ;
 
-            var objFilereader = new FileReader();
+            let objFilereader = new FileReader();
 
             objFilereader.onload = function(objEvent) {
                 objDatabase.postMessage({
@@ -693,7 +693,7 @@ jQuery(window.document).ready(function() {
 
             jQuery('#idSearch_Results').find('tbody')
                 .each(function() {
-                    for (var objVideo of objData.objResponse.objVideos) {
+                    for (let objVideo of objData.objResponse.objVideos) {
                         jQuery(this)
                             .append(jQuery('<tr></tr>')
                                 .append(jQuery('<td></td>')
