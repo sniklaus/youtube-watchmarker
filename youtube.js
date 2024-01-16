@@ -8,6 +8,7 @@ let intWatchdate = {};
 let refresh = function() {
     for (let objVideo of window.document.querySelectorAll('a.ytd-thumbnail[href^="/watch?v="], a.ytd-thumbnail[href^="/shorts/"]')) {
         let strIdent = objVideo.href.split('&')[0].slice(-11);
+        let strTitle = '';
 
         mark(objVideo, strIdent);
 
@@ -15,9 +16,16 @@ let refresh = function() {
             continue;
         }
 
+        for (let intTitle = 0, objTitle = objVideo.parentNode; intTitle < 5; intTitle += 1, objTitle = objTitle.parentNode) {
+            if (objTitle.querySelector('#video-title') !== null) {
+                strTitle = objTitle.querySelector('#video-title').innerText.trim(); break;
+            }
+        }
+
         chrome.runtime.sendMessage({
             'strMessage': 'youtubeLookup',
-            'strIdent': strIdent
+            'strIdent': strIdent,
+            'strTitle': strTitle
         }, function(objResponse) {
             if (objResponse !== null) {
                 intWatchdate[objResponse.strIdent] = objResponse.intTimestamp;

@@ -10,23 +10,33 @@ let funcBrowser = function() {
     }
 
     return null;
-}
+};
 
 let funcHackyparse = function(strJson) {
-    for (let intLength = 1; intLength < strJson.length; intLength += 1) {
-        if (strJson[intLength - 1] !== '}') {
-            continue;
+    let intLength = 1;
+
+    for (let intCount = 0; intLength < strJson.length; intLength += 1) {
+        if (strJson[intLength - 1] === '{') {
+            intCount += 1;
+
+        } else if (strJson[intLength - 1] === '}') {
+            intCount -= 1;
+
         }
 
-        try {
-            return JSON.parse(strJson.substr(0, intLength));
-        } catch (objError) {
-            // ...
+        if (intCount === 0) {
+            break;
         }
     }
 
+    try {
+        return JSON.parse(strJson.substr(0, intLength));
+    } catch (objError) {
+        // ...
+    }
+
     return null;
-}
+};
 
 let funcSendmessage = function(intTab, objMessage, intRetry) {
     if (intRetry === 0) {
@@ -91,6 +101,10 @@ let Node = {
         objFunctions[strFunctions[0]](objWorkspace, funcNext);
     }
 };
+
+// ##########################################################
+
+let strTitlecache = {};
 
 // ##########################################################
 
@@ -1445,6 +1459,10 @@ Node.series({
             window.localStorage.setItem('extensions.Youwatch.Condition.boolBrowhist', String(true));
         }
 
+        if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYouprog') === null) {
+            window.localStorage.setItem('extensions.Youwatch.Condition.boolYouprog', String(true));
+        }
+
         if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === null) {
             window.localStorage.setItem('extensions.Youwatch.Condition.boolYoubadge', String(true));
         }
@@ -1551,8 +1569,13 @@ Node.series({
     'objMessage': function(objArgs, funcCallback) {
         chrome.runtime.onMessage.addListener(function(objRequest, objSender, funcResponse) {
             if (objRequest.strMessage === 'youtubeLookup') {
+                if (objRequest.strTitle !== '') {
+                    strTitlecache[objRequest.strIdent] = objRequest.strTitle;
+                }
+
                 Youtube.lookup({
-                    'strIdent': objRequest.strIdent
+                    'strIdent': objRequest.strIdent,
+                    'strTitle': objRequest.strTitle
                 }, function(objResponse) {
                     console.debug('lookup video', objRequest, objResponse);
 
@@ -1562,6 +1585,10 @@ Node.series({
                 return true; // indicate asynchronous response
 
             } else if (objRequest.strMessage === 'youtubeEnsure') {
+                if (objRequest.strTitle !== '') {
+                    strTitlecache[objRequest.strIdent] = objRequest.strTitle;
+                }
+
                 Youtube.ensure({
                     'strIdent': objRequest.strIdent,
                     'strTitle': objRequest.strTitle
@@ -1633,15 +1660,51 @@ Node.series({
                             objScript.id = 'youwatch-progresshook';
 
                             objScript.text = \`
+                                let funcHackyparse = function(strJson) {
+                                    let intLength = 1;
+
+                                    for (let intCount = 0; intLength < strJson.length; intLength += 1) {
+                                        if (strJson[intLength - 1] === '{') {
+                                            intCount += 1;
+
+                                        } else if (strJson[intLength - 1] === '}') {
+                                            intCount -= 1;
+
+                                        }
+
+                                        if (intCount === 0) {
+                                            break;
+                                        }
+                                    }
+
+                                    try {
+                                        return JSON.parse(strJson.substr(0, intLength));
+                                    } catch (objError) {
+                                        // ...
+                                    }
+
+                                    return null;
+                                };
+
                                 let objOrigxmlreq = window.XMLHttpRequest.prototype.open;
                                 let objOrigfetchreq = window.fetch;
 
                                 window.addEventListener('DOMContentLoaded', function() {
-                                    let strInitialdata = document.body.innerHTML.split('var ytInitialData = ').slice(-1)[0].split(';</script>')[0];
+                                    let strResponse = document.body.innerHTML.split('var ytInitialData = ').slice(-1)[0].split(';</script>')[0];
 
-                                    for (let strWatched of strInitialdata.split('"percentDurationWatched"').slice(0, -1)) {
-                                        let strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
-                                        let strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+                                    for (let strVideo of strResponse.split('{"videoRenderer":{"videoId":"').slice(1)) {
+                                        let objVideo = funcHackyparse('{"videoRenderer":{"videoId":"' + strVideo);
+
+                                        if (objVideo === null) {
+                                            continue;
+
+                                        } else if (JSON.stringify(objVideo).indexOf('"percentDurationWatched"') === -1) {
+                                            continue;
+
+                                        }
+
+                                        let strIdent = objVideo['videoRenderer']['videoId'];
+                                        let strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
 
                                         if (strIdent.length !== 11) {
                                             continue;
@@ -1658,53 +1721,27 @@ Node.series({
 
                                 window.XMLHttpRequest.prototype.open = function() {
                                     this.addEventListener('load', function() {
-                                        if (this.responseURL.indexOf('https://www.youtube.com/youtubei/v1/') === -1) {
+                                        let strLink = this.responseURL;
+
+                                        if (strLink.indexOf('https://www.youtube.com/youtubei/v1/') === -1) {
                                             return;
                                         }
 
                                         let strResponse = this.responseText;
 
-                                        try {
-                                            for (let strWatched of strResponse.split('"percentDurationWatched"').slice(0, -1)) {
-                                                let strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
-                                                let strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+                                        for (let strVideo of strResponse.split('{"videoRenderer":{"videoId":"').slice(1)) {
+                                            let objVideo = funcHackyparse('{"videoRenderer":{"videoId":"' + strVideo);
 
-                                                if (strIdent.length !== 11) {
-                                                    continue;
-                                                }
+                                            if (objVideo === null) {
+                                                continue;
 
-                                                document.dispatchEvent(new CustomEvent('youwatch-progresshook', {
-                                                    'detail': {
-                                                        'strIdent': strIdent,
-                                                        'strTitle': strTitle
-                                                    }
-                                                }));
+                                            } else if (JSON.stringify(objVideo).indexOf('"percentDurationWatched"') === -1) {
+                                                continue;
+
                                             }
-                                        } catch (objError) {
-                                            console.log(objError);
-                                        }
-                                    });
 
-                                    return objOrigxmlreq.apply(this, arguments);
-                                };
-
-                                window.fetch = async function(objRequest, objOptions) {
-                                    let objResponse = await objOrigfetchreq(objRequest, objOptions);
-
-                                    if ((typeof(objRequest) === 'string') && (objRequest.indexOf('https://www.youtube.com/youtubei/v1/') === -1)) {
-                                        return objResponse;
-
-                                    } else if ((typeof(objRequest) === 'object') && (objRequest.url.indexOf('https://www.youtube.com/youtubei/v1/') === -1)) {
-                                        return objResponse;
-
-                                    }
-
-                                    let strResponse = await objResponse.text();
-
-                                    try {
-                                        for (let strWatched of strResponse.split('"percentDurationWatched"').slice(0, -1)) {
-                                            let strIdent = strWatched.slice(strWatched.lastIndexOf('"videoRenderer":{"videoId":"') + ('"videoRenderer":{"videoId":"').length).split('"')[0];
-                                            let strTitle = strWatched.slice(strWatched.lastIndexOf('"title":{"runs":[{"text":"') + ('"title":{"runs":[{"text":"').length).split('"')[0];
+                                            let strIdent = objVideo['videoRenderer']['videoId'];
+                                            let strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
 
                                             if (strIdent.length !== 11) {
                                                 continue;
@@ -1717,8 +1754,46 @@ Node.series({
                                                 }
                                             }));
                                         }
-                                    } catch (objError) {
-                                        console.log(objError);
+                                    });
+
+                                    return objOrigxmlreq.apply(this, arguments);
+                                };
+
+                                window.fetch = async function(objRequest, objOptions) {
+                                    let objResponse = await objOrigfetchreq(objRequest, objOptions);
+
+                                    let strLink = typeof(objRequest) === 'string' ? objRequest : objRequest.url;
+
+                                    if (strLink.indexOf('https://www.youtube.com/youtubei/v1/') === -1) {
+                                        return objResponse;
+                                    }
+
+                                    let strResponse = await objResponse.text();
+
+                                    for (let strVideo of strResponse.split('{"videoRenderer":{"videoId":"').slice(1)) {
+                                        let objVideo = funcHackyparse('{"videoRenderer":{"videoId":"' + strVideo);
+
+                                        if (objVideo === null) {
+                                            continue;
+
+                                        } else if (JSON.stringify(objVideo).indexOf('"percentDurationWatched"') === -1) {
+                                            continue;
+
+                                        }
+
+                                        let strIdent = objVideo['videoRenderer']['videoId'];
+                                        let strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
+
+                                        if (strIdent.length !== 11) {
+                                            continue;
+                                        }
+
+                                        document.dispatchEvent(new CustomEvent('youwatch-progresshook', {
+                                            'detail': {
+                                                'strIdent': strIdent,
+                                                'strTitle': strTitle
+                                            }
+                                        }));
                                     }
 
                                     return new Response(strResponse, {
@@ -1780,49 +1855,99 @@ Node.series({
         return funcCallback({});
     },
     'objReqhook': function(objArgs, funcCallback) {
-        let strInfospec = [
-            'requestHeaders',
-            'blocking'
-        ];
+        {
+            let strInfospec = [
+                'requestHeaders',
+                'blocking'
+            ];
 
-        if (funcBrowser() === 'chrome') {
-            strInfospec.push('extraHeaders');
-        }
-
-        chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
-            let objHeaders = [];
-
-            for (let objHeader of objData.requestHeaders) {
-                if (objHeader.name === 'Referer') {
-                    continue;
-
-                } else if (objHeader.name === 'Origin') {
-                    continue;
-
-                }
-
-                objHeaders.push(objHeader);
+            if (funcBrowser() === 'chrome') {
+                strInfospec.push('extraHeaders');
             }
 
-            objHeaders.push({
-                'name': 'Referer',
-                'value': 'https://www.youtube.com/feed/history'
+            chrome.webRequest.onBeforeSendHeaders.addListener(function(objData) {
+                let objHeaders = [];
+
+                for (let objHeader of objData.requestHeaders) {
+                    if (objHeader.name === 'Referer') {
+                        continue;
+
+                    } else if (objHeader.name === 'Origin') {
+                        continue;
+
+                    }
+
+                    objHeaders.push(objHeader);
+                }
+
+                objHeaders.push({
+                    'name': 'Referer',
+                    'value': 'https://www.youtube.com/feed/history'
+                });
+
+                objHeaders.push({
+                    'name': 'Origin',
+                    'value': 'https://www.youtube.com'
+                });
+
+                objData.requestHeaders.splice(0);
+                objData.requestHeaders.push(...objHeaders);
+
+                return {
+                    'requestHeaders': objData.requestHeaders
+                };
+            }, {
+                'urls': ['https://www.youtube.com/youtubei/v1/*']
+            }, strInfospec);
+        }
+
+        if (window.localStorage.getItem('extensions.Youwatch.Condition.boolYouprog') === String(true)) {
+            chrome.webRequest.onSendHeaders.addListener(function(objData) {
+                if (objData.url.indexOf('muted=1') !== -1) {
+                    return;
+                }
+
+                for (let strElapsed of objData.url.split('&et=')[1].split('&')[0].split(',')) {
+                    if (parseFloat(strElapsed) < 60.0) {
+                        continue;
+                    }
+
+                    let strIdent = objData.url.split('&docid=')[1].split('&')[0];
+                    let strTitle = strTitlecache.hasOwnProperty(strIdent) === true ? strTitlecache[strIdent] : '';
+
+                    if (strIdent.length !== 11) {
+                        continue;
+
+                    } else if (strTitle === '') {
+                        continue;
+
+                    }
+
+                    Youtube.ensure({
+                        'strIdent': strIdent,
+                        'strTitle': strTitle
+                    }, function(objResponse) {
+                        console.debug('ensure video');
+                    });
+
+                    chrome.tabs.query({
+                        'url': '*://www.youtube.com/*'
+                    }, function(objTabs) {
+                        for (let objTab of objTabs) {
+                            funcSendmessage(objTab.id, {
+                                'strMessage': 'youtubeMark',
+                                'strIdent': strIdent,
+                                'intTimestamp': 0,
+                                'strTitle': strTitle,
+                                'intCount': 0
+                            });
+                        }
+                    });
+                }
+            }, {
+                'urls': ['https://www.youtube.com/api/stats/watchtime*']
             });
-
-            objHeaders.push({
-                'name': 'Origin',
-                'value': 'https://www.youtube.com'
-            });
-
-            objData.requestHeaders.splice(0);
-            objData.requestHeaders.push(...objHeaders);
-
-            return {
-                'requestHeaders': objData.requestHeaders
-            };
-        }, {
-            'urls': ['https://www.youtube.com/youtubei/v1/*']
-        }, strInfospec);
+        }
 
         return funcCallback({});
     },

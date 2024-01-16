@@ -354,6 +354,39 @@ jQuery(window.document).ready(function() {
         .end()
     ;
 
+    jQuery('#idCondition_Youprog')
+        .on('click', function() {
+            window.localStorage.setItem('extensions.Youwatch.Condition.boolYouprog', window.localStorage.getItem('extensions.Youwatch.Condition.boolYouprog') === String(false));
+
+            jQuery(this)
+                .find('i')
+                    .eq(0)
+                        .css({
+                            'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouprog') === String(true) ? 'none' : 'block'
+                        })
+                    .end()
+                    .eq(1)
+                        .css({
+                            'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouprog') === String(true) ? 'block' : 'none'
+                        })
+                    .end()
+                .end()
+            ;
+        })
+        .find('i')
+            .eq(0)
+                .css({
+                    'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouprog') === String(true) ? 'none' : 'block'
+                })
+            .end()
+            .eq(1)
+                .css({
+                    'display': window.localStorage.getItem('extensions.Youwatch.Condition.boolYouprog') === String(true) ? 'block' : 'none'
+                })
+            .end()
+        .end()
+    ;
+
     jQuery('#idCondition_Youbadge')
         .on('click', function() {
             window.localStorage.setItem('extensions.Youwatch.Condition.boolYoubadge', window.localStorage.getItem('extensions.Youwatch.Condition.boolYoubadge') === String(false));
@@ -759,7 +792,7 @@ jQuery(window.document).ready(function() {
                                                 ;
 
                                                 jQuery('#idLoading_Message')
-                                                    .text('exporting database')
+                                                    .text('deleting video')
                                                 ;
 
                                                 jQuery('#idLoading_Progress')
