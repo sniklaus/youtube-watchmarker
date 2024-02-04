@@ -1908,7 +1908,7 @@ Node.series({
                 }
 
                 for (let strElapsed of objData.url.split('&et=')[1].split('&')[0].split(',')) {
-                    if (parseFloat(strElapsed) < 60.0) {
+                    if (parseFloat(strElapsed) < 3.0) {
                         continue;
                     }
 
