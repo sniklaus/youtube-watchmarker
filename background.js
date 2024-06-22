@@ -1500,11 +1500,11 @@ Node.series({
         }
 
         if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowbadge') === null) {
-            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowbadge', '.youwatch-mark:last-child:after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }');
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowbadge', '.youwatch-mark::after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }');
         }
 
         if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowdate') === null) {
-            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowdate', '.youwatch-mark:last-child:after { content:"WATCHED" attr(watchdate); white-space:nowrap; }');
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowdate', '.youwatch-mark::after { content:"WATCHED" attr(watchdate); white-space:nowrap; }');
         }
 
         if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strHideprogress') === null) {
