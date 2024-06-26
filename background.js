@@ -1492,11 +1492,11 @@ Node.series({
         }
 
         if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strFadeout') === null) {
-            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strFadeout', '.youwatch-mark yt-img-shadow img { opacity:0.3; }' + ' ' + '.youwatch-mark yt-image img { opacity:0.3; }');
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strFadeout', '.youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }');
         }
 
         if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strGrayout') === null) {
-            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strGrayout', '.youwatch-mark yt-img-shadow img { filter:grayscale(1.0); }' + ' ' + '.youwatch-mark yt-image img { filter:grayscale(1.0); }');
+            window.localStorage.setItem('extensions.Youwatch.Stylesheet.strGrayout', '.youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }');
         }
 
         if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowbadge') === null) {
