@@ -12,6 +12,7 @@ function getVideos(id = "") {
         // Regular thumbnails.
         "a.ytd-thumbnail[href^=\"/watch?v=" + id + "\"]",
         "a.yt-lockup-view-model-wiz__content-image[href^=\"/watch?v=" + id + "\"]",
+        "ytd-compact-video-renderer a.yt-simple-endpoint[href^=\"/watch?v=" + id + "\"]",
 
         // Video overlays.
         "a.ytp-ce-covering-overlay[href*=\"/watch?v=" + id + "\"]",
