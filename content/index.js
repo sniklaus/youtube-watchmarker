@@ -57,7 +57,7 @@ jQuery(window.document).ready(function() {
                 ;
 
             }
-            
+
             jQuery('#idLoading_Close')
                 .removeClass('disabled')
             ;
@@ -122,7 +122,7 @@ jQuery(window.document).ready(function() {
                 ;
 
             }
-            
+
             jQuery('#idLoading_Close')
                 .removeClass('disabled')
             ;
@@ -655,7 +655,7 @@ jQuery(window.document).ready(function() {
                     'intSkip': jQuery('#idSearch_Lookup').data('intSkip'),
                     'intLength': 10
                 }
-            }); 
+            });
         })
         .each(function() {
             jQuery(this).triggerHandler('click');
@@ -866,7 +866,7 @@ jQuery(window.document).ready(function() {
                 ;
 
             }
-            
+
             jQuery('#idLoading_Close')
                 .removeClass('disabled')
             ;
@@ -885,3 +885,24 @@ jQuery(window.document).ready(function() {
         })
     ;
 });
+
+// adapted from https://getbootstrap.com/docs/5.3/customize/color-modes/#javascript
+window.addEventListener('DOMContentLoaded', () => {
+    const getPreferredTheme = () => {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+
+    const setTheme = function (theme) {
+        if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-bs-theme', 'dark')
+        } else {
+            document.documentElement.setAttribute('data-bs-theme', theme)
+        }
+    }
+
+    setTheme(getPreferredTheme())
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        setTheme(getPreferredTheme())
+    })
+})
