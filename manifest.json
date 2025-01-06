@@ -7,7 +7,7 @@
 
     "version": "4.6.1",
 
-    "permissions": ["alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "https://www.youtube.com/*"],
+    "permissions": ["alarms", "downloads", "history", "tabs", "cookies", "webRequest", "webRequestBlocking", "https://www.youtube.com/*", "https://m.youtube.com/*"],
 
     "options_ui": {
         "page": "content/index.html",
@@ -30,7 +30,7 @@
     },
 
     "content_scripts": [{
-        "matches": ["*://www.youtube.com/*"],
+        "matches": ["*://www.youtube.com/*", "*://m.youtube.com/*"],
         "css": [],
         "js": ["youtube.js"]
     }],
