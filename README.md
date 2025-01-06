@@ -1,7 +1,7 @@
 # youtube-watchmarker
 Youtube keeps track of your watch history and automatically marks videos that you have already watched. They however only mark recently seen videos, which is kind of disappointing. This addon fixes this issue and keeps track of your entire watch history, such that not only the recently seen videos are being marked.
 
-<p align="center"><a href="https://sniklaus.com/youwatch" rel="Paper"><img src="https://content.sniklaus.com/youwatch/screenshot.jpg" alt="Screenshot"></a></p>
+<p align="center"><a href="https://sniklaus.com/youwatch"><img src="https://content.sniklaus.com/youwatch/screenshot.jpg" alt="Screenshot"></a></p>
 
 ## installation
 Firefox: https://addons.mozilla.org/en-US/firefox/addon/watchmarker-for-youtube/
