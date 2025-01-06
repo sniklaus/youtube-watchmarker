@@ -618,7 +618,8 @@ jQuery(window.document).ready(function() {
         .end()
     ;
 
-    jQuery('#idSearch_Lookup')
+    const lookupButton = jQuery("#idSearch_Lookup");
+    lookupButton
         .data({
             'intSkip' : 0
         })
@@ -658,6 +659,19 @@ jQuery(window.document).ready(function() {
         })
         .each(function() {
             jQuery(this).triggerHandler('click');
+        })
+    ;
+
+    jQuery("#idSearch_Query")
+        .on("keydown", function (event) {
+            if (event.key === "Enter") {
+                lookupButton
+                    .data({
+                        "intSkip": 0
+                    })
+                    .triggerHandler("click")
+                ;
+            }
         })
     ;
 
