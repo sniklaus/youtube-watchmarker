@@ -1491,23 +1491,23 @@ Node.series({
             window.localStorage.setItem('extensions.Youwatch.Visualization.boolHideprogress', String(true));
         }
 
-        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strFadeout') === null) {
+        if ((window.localStorage.getItem('extensions.Youwatch.Stylesheet.strFadeout') === null) || (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strFadeout').indexOf('do not modify') === -1)) {
             window.localStorage.setItem('extensions.Youwatch.Stylesheet.strFadeout', '.youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }');
         }
 
-        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strGrayout') === null) {
+        if ((window.localStorage.getItem('extensions.Youwatch.Stylesheet.strGrayout') === null) || (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strGrayout').indexOf('do not modify') === -1)) {
             window.localStorage.setItem('extensions.Youwatch.Stylesheet.strGrayout', '.youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }');
         }
 
-        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowbadge') === null) {
+        if ((window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowbadge') === null) || (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowbadge').indexOf('do not modify') === -1)) {
             window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowbadge', '.youwatch-mark::after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }');
         }
 
-        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowdate') === null) {
+        if ((window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowdate') === null) || (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strShowdate').indexOf('do not modify') === -1)) {
             window.localStorage.setItem('extensions.Youwatch.Stylesheet.strShowdate', '.youwatch-mark::after { content:"WATCHED" attr(watchdate); white-space:nowrap; }');
         }
 
-        if (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strHideprogress') === null) {
+        if ((window.localStorage.getItem('extensions.Youwatch.Stylesheet.strHideprogress') === null) || (window.localStorage.getItem('extensions.Youwatch.Stylesheet.strHideprogress').indexOf('do not modify') === -1)) {
             window.localStorage.setItem('extensions.Youwatch.Stylesheet.strHideprogress', 'ytd-thumbnail-overlay-resume-playback-renderer, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
         }
 
@@ -1699,10 +1699,30 @@ Node.series({
                                         }
 
                                         let strIdent = objVideo['videoRenderer']['videoId'];
-                                        let strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
+                                        let strTitle = null;
+
+                                        if (strTitle === null) {
+                                            try {
+                                                strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
+                                            } catch (objError) {
+                                                // ...
+                                            }
+                                        }
+
+                                        if (strTitle === null) {
+                                            try {
+                                                strTitle = objVideo['videoRenderer']['title']['simpleText'];
+                                            } catch (objError) {
+                                                // ...
+                                            }
+                                        }
 
                                         if (strIdent.length !== 11) {
                                             continue;
+
+                                        } else if (strTitle === null) {
+                                            continue;
+
                                         }
 
                                         document.dispatchEvent(new CustomEvent('youwatch-progresshook', {
@@ -1725,10 +1745,30 @@ Node.series({
                                         }
 
                                         let strIdent = objVideo['videoWithContextRenderer']['videoId'];
-                                        let strTitle = objVideo['videoWithContextRenderer']['headline']['runs'][0]['text'];
+                                        let strTitle = null;
+
+                                        if (strTitle === null) {
+                                            try {
+                                                strTitle = objVideo['videoWithContextRenderer']['headline']['runs'][0]['text'];
+                                            } catch (objError) {
+                                                // ...
+                                            }
+                                        }
+
+                                        if (strTitle === null) {
+                                            try {
+                                                strTitle = objVideo['videoWithContextRenderer']['headline']['simpleText'];
+                                            } catch (objError) {
+                                                // ...
+                                            }
+                                        }
 
                                         if (strIdent.length !== 11) {
                                             continue;
+
+                                        } else if (strTitle === null) {
+                                            continue;
+
                                         }
 
                                         document.dispatchEvent(new CustomEvent('youwatch-progresshook', {

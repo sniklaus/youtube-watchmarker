@@ -9,13 +9,14 @@ Firefox: https://addons.mozilla.org/en-US/firefox/addon/watchmarker-for-youtube/
 Chrome: [https://chrome.google.com/webstore/detail/watchmarker-for-youtube/](https://chrome.google.com/webstore/detail/watchmarker-for-youtube/pfkkfbfdhomeagojoahjmkojeeepcolc)
 
 ## questions
-<b>Does this work with the old Youtube theme?</b> I am afraid that only the new theme is supported. If you do not know which theme you are currently using then it is very likely the new one.
-
 <b>How can the persistence of the database be ensured?</b> There is an export and import feature, which makes it easy to create a backup of the history. This backup can  easily be archived such that you can ensure that you never lose your history.
 
 <b>How can I make sure that the database is complete?</b> The automatic synchronization only considers the recent activity. You are thus encouraged to manually initiate a complete synchronization in the settings, which incorporates as much of your history as possible.
 
-<b>Is it possible to import my history from Google Takeout?</b> You can give [this tool](https://github.com/janpaul123/youtube-takeout-to-watchmarker) from Jan Paul Posma a try.
+## links
+* 2025.01 - this [project](https://github.com/yutotakano/youtube-takeout-json-to-watchmarker) to import from takeout by [yutotakano](https://github.com/yutotakano]
+* 2025.01 - this [project](https://github.com/serossi/YT2Grayjay) to import from takeout and export to grayjay by [serossi](https://github.com/serossi)
+* 2021.05 - this [project](https://github.com/janpaul123/youtube-takeout-to-watchmarker) to import from takeout by [janpaul123](https://github.com/janpaul123)
 
 ## license
 Please refer to the appropriate file within this repository.
