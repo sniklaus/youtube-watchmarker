@@ -51,3 +51,48 @@ export const funcSendmessage = function (intTab, objMessage, intRetry) {
     }
   });
 };
+
+
+export const Node = {
+  series: function (objFunctions, funcCallback) {
+    let strFunctions = Object.keys(objFunctions);
+
+    let objWorkspace = {};
+
+    let funcNext = function (objArgs, objOverwrite) {
+      if (objArgs === null) {
+        return funcCallback(null);
+      }
+
+      objWorkspace[strFunctions[0]] = objArgs;
+
+      strFunctions.shift();
+
+      if (objOverwrite !== undefined) {
+        if (typeof objOverwrite === "string") {
+          strFunctions = Object.keys(objFunctions);
+
+          while (true) {
+            if (strFunctions.length === 0) {
+              break;
+            } else if (strFunctions[0] === objOverwrite) {
+              break;
+            }
+
+            strFunctions.shift();
+          }
+        } else if (typeof objOverwrite === "object") {
+          strFunctions = objOverwrite;
+        }
+      }
+
+      if (strFunctions.length === 0) {
+        return funcCallback(objWorkspace);
+      }
+
+      objFunctions[strFunctions[0]](objWorkspace, funcNext);
+    };
+
+    objFunctions[strFunctions[0]](objWorkspace, funcNext);
+  },
+};
