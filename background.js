@@ -1,57 +1,12 @@
+import {
+  funcBrowser,
+  funcHackyparse,
+  funcSendmessage,
+} from "./utils.js";
+
 "use strict";
 
-let funcBrowser = function () {
-  if (typeof browser !== "undefined") {
-    return "firefox";
-  }
 
-  if (typeof chrome !== "undefined") {
-    return "chrome";
-  }
-
-  return null;
-};
-
-let funcHackyparse = function (strJson) {
-  let intLength = 1;
-
-  for (let intCount = 0; intLength < strJson.length; intLength += 1) {
-    if (strJson[intLength - 1] === "{") {
-      intCount += 1;
-    } else if (strJson[intLength - 1] === "}") {
-      intCount -= 1;
-    }
-
-    if (intCount === 0) {
-      break;
-    }
-  }
-
-  try {
-    return JSON.parse(strJson.substr(0, intLength));
-  } catch (objError) {
-    // ...
-  }
-
-  return null;
-};
-
-let funcSendmessage = function (intTab, objMessage, intRetry) {
-  if (intRetry === 0) {
-    return;
-  } else if (intRetry === undefined) {
-    intRetry = 100;
-  }
-
-  chrome.tabs.sendMessage(intTab, objMessage, {}, function (objResponse) {
-    if (
-      chrome.runtime.lastError !== undefined &&
-      chrome.runtime.lastError !== null
-    ) {
-      setTimeout(funcSendmessage, 100, intTab, objMessage, intRetry - 1);
-    }
-  });
-};
 
 let Node = {
   series: function (objFunctions, funcCallback) {
@@ -543,9 +498,9 @@ let History = {
               for (let objResult of objResults) {
                 if (
                   objResult.url.indexOf("https://www.youtube.com/watch?v=") !==
-                    0 &&
+                  0 &&
                   objResult.url.indexOf("https://www.youtube.com/shorts/") !==
-                    0 &&
+                  0 &&
                   objResult.url.indexOf("https://m.youtube.com/watch?v=") !== 0
                 ) {
                   continue;
@@ -925,7 +880,7 @@ let Youtube = {
             objAjax.open(
               "POST",
               "https://www.youtube.com/youtubei/v1/browse?key=" +
-                objArgs.objYtcfg["INNERTUBE_API_KEY"],
+              objArgs.objYtcfg["INNERTUBE_API_KEY"],
             );
 
             objAjax.setRequestHeader(
@@ -1457,9 +1412,9 @@ let Search = {
               for (let objResult of objResults) {
                 if (
                   objResult.url.indexOf("https://www.youtube.com/watch?v=") !==
-                    0 &&
+                  0 &&
                   objResult.url.indexOf("https://www.youtube.com/shorts/") !==
-                    0 &&
+                  0 &&
                   objResult.url.indexOf("https://m.youtube.com/watch?v=") !== 0
                 ) {
                   continue;
@@ -1641,7 +1596,7 @@ let Search = {
             objAjax.open(
               "POST",
               "https://www.youtube.com/youtubei/v1/browse?key=" +
-                objArgs.objYtcfg["INNERTUBE_API_KEY"],
+              objArgs.objYtcfg["INNERTUBE_API_KEY"],
             );
 
             objAjax.setRequestHeader(
@@ -1733,7 +1688,7 @@ let Search = {
           objAjax.open(
             "POST",
             "https://www.youtube.com/youtubei/v1/feedback?key=" +
-              objArgs.objYtcfg["INNERTUBE_API_KEY"],
+            objArgs.objYtcfg["INNERTUBE_API_KEY"],
           );
 
           objAjax.setRequestHeader(
