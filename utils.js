@@ -52,6 +52,12 @@ export const funcSendmessage = function (intTab, objMessage, intRetry) {
   });
 };
 
+export const setDefaultInLocalStorageIfNull = function (key, defaultValue) {
+  if (window.localStorage.getItem(key) === null) {
+    window.localStorage.setItem(key, String(defaultValue));
+  }
+}
+
 
 export const Node = {
   series: function (objFunctions, funcCallback) {

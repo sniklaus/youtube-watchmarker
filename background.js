@@ -3,6 +3,7 @@
 import {
   funcBrowser,
   funcSendmessage,
+  setDefaultInLocalStorageIfNull,
   Node,
 } from "./utils.js";
 
@@ -18,147 +19,38 @@ let strTitlecache = {};
 Node.series(
   {
     objSettings: function (objArgs, funcCallback) {
-      if (
-        window.localStorage.getItem("extensions.Youwatch.Database.intSize") ===
-        null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Database.intSize",
+      const categoriesInt = [
+        "Database.intSize",
+        "History.intTimestamp",
+        "Youtube.intTimestamp",
+      ];
+
+      categoriesInt.forEach((catKey) => {
+        setDefaultInLocalStorageIfNull(
+          `extensions.Youwatch.${catKey}`,
           String(0),
         );
-      }
+      });
 
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.History.intTimestamp",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.History.intTimestamp",
-          String(0),
-        );
-      }
+      const categoriesBool = [
+        "Condition.boolBrownav",
+        "Condition.boolBrowhist",
+        "Condition.boolYouprog",
+        "Condition.boolYoubadge",
+        "Condition.boolYouhist",
+        "Visualization.boolFadeout",
+        "Visualization.boolGrayout",
+        "Visualization.boolShowbadge",
+        "Visualization.boolShowdate",
+        "Visualization.boolHideprogress",
+      ];
 
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Youtube.intTimestamp",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Youtube.intTimestamp",
-          String(0),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Condition.boolBrownav",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Condition.boolBrownav",
+      categoriesBool.forEach((catKey) => {
+        setDefaultInLocalStorageIfNull(
+          `extensions.Youwatch.${catKey}`,
           String(true),
         );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Condition.boolBrowhist",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Condition.boolBrowhist",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Condition.boolYouprog",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Condition.boolYouprog",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Condition.boolYoubadge",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Condition.boolYoubadge",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Condition.boolYouhist",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Condition.boolYouhist",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Visualization.boolFadeout",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Visualization.boolFadeout",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Visualization.boolGrayout",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Visualization.boolGrayout",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Visualization.boolShowbadge",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Visualization.boolShowbadge",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Visualization.boolShowdate",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Visualization.boolShowdate",
-          String(true),
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Visualization.boolHideprogress",
-        ) === null
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Visualization.boolHideprogress",
-          String(true),
-        );
-      }
+      });
 
       if (
         window.localStorage.getItem(
