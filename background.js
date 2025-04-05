@@ -16,6 +16,18 @@ let strTitlecache = {};
 
 // ##########################################################
 
+function initializeModule(moduleInit) {
+  return function (objArgs, funcCallback) {
+    moduleInit({}, function (objResponse) {
+      if (objResponse === null) {
+        funcCallback(null);
+      } else if (objResponse !== null) {
+        funcCallback({});
+      }
+    });
+  };
+}
+
 Node.series(
   {
     objSettings: function (objArgs, funcCallback) {
@@ -91,42 +103,10 @@ Node.series(
 
       return funcCallback({});
     },
-    objDatabase: function (objArgs, funcCallback) {
-      Database.init({}, function (objResponse) {
-        if (objResponse === null) {
-          funcCallback(null);
-        } else if (objResponse !== null) {
-          funcCallback({});
-        }
-      });
-    },
-    objHistory: function (objArgs, funcCallback) {
-      History.init({}, function (objResponse) {
-        if (objResponse === null) {
-          funcCallback(null);
-        } else if (objResponse !== null) {
-          funcCallback({});
-        }
-      });
-    },
-    objYoutube: function (objArgs, funcCallback) {
-      Youtube.init({}, function (objResponse) {
-        if (objResponse === null) {
-          funcCallback(null);
-        } else if (objResponse !== null) {
-          funcCallback({});
-        }
-      });
-    },
-    objSearch: function (objArgs, funcCallback) {
-      Search.init({}, function (objResponse) {
-        if (objResponse === null) {
-          funcCallback(null);
-        } else if (objResponse !== null) {
-          funcCallback({});
-        }
-      });
-    },
+    objDatabase: initializeModule(Database.init),
+    objHistory: initializeModule(History.init),
+    objYoutube: initializeModule(Youtube.init),
+    objSearch: initializeModule(Search.init),
     objAction: function (objArgs, funcCallback) {
       chrome.browserAction.onClicked.addListener(function () {
         chrome.tabs.create({
