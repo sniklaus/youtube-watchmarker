@@ -1,3 +1,4 @@
+console.log("utils.js: file loaded");
 export const funcBrowser = function () {
   if (typeof browser !== "undefined") {
     return "firefox";

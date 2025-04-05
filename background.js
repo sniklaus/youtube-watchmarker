@@ -1,12 +1,10 @@
+"use strict";
+
 import {
   funcBrowser,
   funcHackyparse,
   funcSendmessage,
 } from "./utils.js";
-
-"use strict";
-
-
 
 let Node = {
   series: function (objFunctions, funcCallback) {

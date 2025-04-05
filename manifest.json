@@ -29,13 +29,19 @@
     }
   },
   "background": {
-    "scripts": ["background.js"]
+    "page": "background.html",
+    "persistent": true
   },
   "content_scripts": [
     {
-      "matches": ["*://www.youtube.com/*", "*://m.youtube.com/*"],
+      "matches": [
+        "*://www.youtube.com/*",
+        "*://m.youtube.com/*"
+      ],
       "css": [],
-      "js": ["youtube.js"]
+      "js": [
+        "youtube.js"
+      ]
     }
   ],
   "browser_action": {
