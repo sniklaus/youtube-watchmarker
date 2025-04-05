@@ -52,75 +52,42 @@ Node.series(
         );
       });
 
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Stylesheet.strFadeout",
-        ) === null ||
-        window.localStorage
-          .getItem("extensions.Youwatch.Stylesheet.strFadeout")
-          .indexOf("do not modify") === -1
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Stylesheet.strFadeout",
-          ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }",
-        );
-      }
+      const defaultStylesheets = [
+        {
+          key: "extensions.Youwatch.Stylesheet.strFadeout",
+          defaultValue:
+            ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }",
+        },
+        {
+          key: "extensions.Youwatch.Stylesheet.strGrayout",
+          defaultValue:
+            ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }",
+        },
+        {
+          key: "extensions.Youwatch.Stylesheet.strShowbadge",
+          defaultValue:
+            '.youwatch-mark::after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }',
+        },
+        {
+          key: "extensions.Youwatch.Stylesheet.strShowdate",
+          defaultValue:
+            '.youwatch-mark::after { content:"WATCHED" attr(watchdate); white-space:nowrap; }',
+        },
+        {
+          key: "extensions.Youwatch.Stylesheet.strHideprogress",
+          defaultValue:
+            "ytd-thumbnail-overlay-resume-playback-renderer, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }",
+        },
+      ];
 
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Stylesheet.strGrayout",
-        ) === null ||
-        window.localStorage
-          .getItem("extensions.Youwatch.Stylesheet.strGrayout")
-          .indexOf("do not modify") === -1
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Stylesheet.strGrayout",
-          ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }",
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Stylesheet.strShowbadge",
-        ) === null ||
-        window.localStorage
-          .getItem("extensions.Youwatch.Stylesheet.strShowbadge")
-          .indexOf("do not modify") === -1
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Stylesheet.strShowbadge",
-          '.youwatch-mark::after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }',
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Stylesheet.strShowdate",
-        ) === null ||
-        window.localStorage
-          .getItem("extensions.Youwatch.Stylesheet.strShowdate")
-          .indexOf("do not modify") === -1
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Stylesheet.strShowdate",
-          '.youwatch-mark::after { content:"WATCHED" attr(watchdate); white-space:nowrap; }',
-        );
-      }
-
-      if (
-        window.localStorage.getItem(
-          "extensions.Youwatch.Stylesheet.strHideprogress",
-        ) === null ||
-        window.localStorage
-          .getItem("extensions.Youwatch.Stylesheet.strHideprogress")
-          .indexOf("do not modify") === -1
-      ) {
-        window.localStorage.setItem(
-          "extensions.Youwatch.Stylesheet.strHideprogress",
-          "ytd-thumbnail-overlay-resume-playback-renderer, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }",
-        );
-      }
+      defaultStylesheets.forEach(({ key, defaultValue }) => {
+        if (
+          window.localStorage.getItem(key) === null ||
+          window.localStorage.getItem(key).indexOf("do not modify") === -1
+        ) {
+          window.localStorage.setItem(key, defaultValue);
+        }
+      });
 
       return funcCallback({});
     },
