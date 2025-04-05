@@ -233,65 +233,28 @@ Node.series(
           });
         }
 
-        if (
-          window.localStorage.getItem(
-            "extensions.Youwatch.Visualization.boolFadeout",
-          ) === String(true)
-        ) {
-          chrome.tabs.insertCSS(objTab.id, {
-            code: window.localStorage.getItem(
-              "extensions.Youwatch.Stylesheet.strFadeout",
-            ),
-          });
-        }
+        // Inject CSS based on visualization settings
+        const visualizationFeatures = ['Fadeout', 'Grayout', 'Showbadge', 'Showdate', 'Hideprogress'];
+        visualizationFeatures.forEach(feature => {
+          const boolKey = `extensions.Youwatch.Visualization.bool${feature}`;
+          const styleKey = `extensions.Youwatch.Stylesheet.str${feature}`;
 
-        if (
-          window.localStorage.getItem(
-            "extensions.Youwatch.Visualization.boolGrayout",
-          ) === String(true)
-        ) {
-          chrome.tabs.insertCSS(objTab.id, {
-            code: window.localStorage.getItem(
-              "extensions.Youwatch.Stylesheet.strGrayout",
-            ),
-          });
-        }
-
-        if (
-          window.localStorage.getItem(
-            "extensions.Youwatch.Visualization.boolShowbadge",
-          ) === String(true)
-        ) {
-          chrome.tabs.insertCSS(objTab.id, {
-            code: window.localStorage.getItem(
-              "extensions.Youwatch.Stylesheet.strShowbadge",
-            ),
-          });
-        }
-
-        if (
-          window.localStorage.getItem(
-            "extensions.Youwatch.Visualization.boolShowdate",
-          ) === String(true)
-        ) {
-          chrome.tabs.insertCSS(objTab.id, {
-            code: window.localStorage.getItem(
-              "extensions.Youwatch.Stylesheet.strShowdate",
-            ),
-          });
-        }
-
-        if (
-          window.localStorage.getItem(
-            "extensions.Youwatch.Visualization.boolHideprogress",
-          ) === String(true)
-        ) {
-          chrome.tabs.insertCSS(objTab.id, {
-            code: window.localStorage.getItem(
-              "extensions.Youwatch.Stylesheet.strHideprogress",
-            ),
-          });
-        }
+          // Check if the feature is enabled in localStorage
+          if (window.localStorage.getItem(boolKey) === String(true)) {
+            const cssCode = window.localStorage.getItem(styleKey);
+            // Ensure CSS code exists before trying to inject it
+            if (cssCode) {
+              chrome.tabs.insertCSS(objTab.id, { code: cssCode }, () => {
+                // Optional: Handle potential injection errors
+                if (chrome.runtime.lastError) {
+                  console.error(`Error injecting CSS for ${feature}:`, chrome.runtime.lastError.message);
+                }
+              });
+            } else {
+              console.warn(`CSS code for feature '${feature}' not found in localStorage (key: ${styleKey})`);
+            }
+          }
+        });
       });
 
       return funcCallback({});
