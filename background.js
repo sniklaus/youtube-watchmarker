@@ -7,7 +7,7 @@ import {
   Node,
 } from "./utils.js";
 
-import Database from "./database.js";
+import { Database } from "./bg-database.js";
 
 "use strict";
 

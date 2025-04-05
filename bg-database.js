@@ -1,6 +1,6 @@
-import { Node } from "./node.js";
+import { Node } from "./utils.js";
 
-export default Database = {
+export const Database = {
   objDatabase: null,
 
   init: function (objRequest, funcResponse) {
