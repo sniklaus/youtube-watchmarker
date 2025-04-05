@@ -12,11 +12,11 @@ let videos = function (strIdent) {
       [
         'a.ytd-thumbnail[href^="/watch?v=' + strIdent + '"]', // regular
         'a.yt-lockup-view-model-wiz__content-image[href^="/watch?v=' +
-          strIdent +
-          '"]', // regular
+        strIdent +
+        '"]', // regular
         'ytd-compact-video-renderer a.yt-simple-endpoint[href^="/watch?v=' +
-          strIdent +
-          '"]', // regular
+        strIdent +
+        '"]', // regular
         'a.ytp-ce-covering-overlay[href*="/watch?v=' + strIdent + '"]', // overlays
         'a.ytp-videowall-still[href*="/watch?v=' + strIdent + '"]', // videowall
         'a.ytd-thumbnail[href^="/shorts/' + strIdent + '"]', // shorts
@@ -87,11 +87,11 @@ let mark = function (objVideo, strIdent) {
       objVideo.setAttribute(
         "watchdate",
         " - " +
-          new Date(intWatchdate[strIdent])
-            .toISOString()
-            .split("T")[0]
-            .split("-")
-            .join("."),
+        new Date(intWatchdate[strIdent])
+          .toISOString()
+          .split("T")[0]
+          .split("-")
+          .join("."),
       );
     }
   } else if (
@@ -140,6 +140,17 @@ chrome.runtime.onMessage.addListener(
     funcResponse(null);
   },
 );
+
+document.addEventListener('youwatch-progresshook', function (objEvent) {
+  chrome.runtime.sendMessage({
+    'strMessage': 'youtubeEnsure',
+    'strIdent': objEvent.detail['strIdent'],
+    'strTitle': objEvent.detail['strTitle']
+  }, function (objResponse) {
+    // ...
+  });
+});
+
 
 // ##########################################################
 
