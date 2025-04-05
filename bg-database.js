@@ -4,7 +4,7 @@ export const Database = {
   objDatabase: null,
 
   init: function (objRequest, funcResponse) {
-    console.log("History.init called");
+    console.log("Database.init called");
     Node.series(
       {
         objOpen: function (objArgs, funcCallback) {
