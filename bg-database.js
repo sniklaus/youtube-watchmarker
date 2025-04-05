@@ -4,6 +4,7 @@ export const Database = {
   objDatabase: null,
 
   init: function (objRequest, funcResponse) {
+    console.log("History.init called");
     Node.series(
       {
         objOpen: function (objArgs, funcCallback) {
