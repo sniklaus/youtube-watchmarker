@@ -3,6 +3,8 @@
 import {
   funcBrowser,
   funcSendmessage,
+  getStorageSync,
+  setStorageSync,
   setDefaultInLocalStorageIfNull,
   Node,
 } from "./utils.js";
@@ -94,10 +96,10 @@ Node.series(
 
       defaultStylesheets.forEach(({ key, defaultValue }) => {
         if (
-          window.localStorage.getItem(key) === null ||
-          window.localStorage.getItem(key).indexOf("do not modify") === -1
+          getStorageSync(key) === null ||
+          getStorageSync(key).indexOf("do not modify") === -1
         ) {
-          window.localStorage.setItem(key, defaultValue);
+          setStorageSync(key, defaultValue);
         }
       });
 
@@ -175,7 +177,7 @@ Node.series(
         }
 
         if (
-          window.localStorage.getItem(
+          getStorageSync(
             "extensions.Youwatch.Condition.boolBrownav",
           ) === String(true)
         ) {
@@ -223,7 +225,7 @@ Node.series(
         }
 
         if (
-          window.localStorage.getItem(
+          getStorageSync(
             "extensions.Youwatch.Condition.boolYoubadge",
           ) === String(true)
         ) {
@@ -240,8 +242,8 @@ Node.series(
           const styleKey = `extensions.Youwatch.Stylesheet.str${feature}`;
 
           // Check if the feature is enabled in localStorage
-          if (window.localStorage.getItem(boolKey) === String(true)) {
-            const cssCode = window.localStorage.getItem(styleKey);
+          if (getStorageSync(boolKey) === String(true)) {
+            const cssCode = getStorageSync(styleKey);
             // Ensure CSS code exists before trying to inject it
             if (cssCode) {
               chrome.tabs.insertCSS(objTab.id, { code: cssCode }, () => {
@@ -306,7 +308,7 @@ Node.series(
       }
 
       if (
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYouprog",
         ) === String(true)
       ) {
@@ -380,13 +382,13 @@ Node.series(
       chrome.alarms.onAlarm.addListener(function (objAlarm) {
         if (objAlarm.name === "synchronize") {
           if (
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolBrowhist",
             ) === String(true)
           ) {
             History.synchronize(
               {
-                intTimestamp: new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
+                intTimestamp: new Date().getTime() - 7 * 24 * 60 * 60 * 1000,  // TODO: refactor this using const date = new Date(); date.setDate(date.getDate() - 7);
               },
               function (objResponse) {
                 console.debug("synchronized history");
@@ -398,7 +400,7 @@ Node.series(
           }
 
           if (
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolYouhist",
             ) === String(true)
           ) {

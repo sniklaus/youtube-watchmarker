@@ -1,4 +1,7 @@
-import { Node } from "./utils.js";
+import {
+  Node,
+  setStorageSync,
+} from "./utils.js";
 
 export const Database = {
   objDatabase: null,
@@ -323,7 +326,7 @@ export const Database = {
           let objQuery = objArgs.objDatabase.count();
 
           objQuery.onsuccess = function () {
-            window.localStorage.setItem(
+            setStorageSync(
               "extensions.Youwatch.Database.intSize",
               String(objQuery.result),
             );
@@ -363,7 +366,7 @@ export const Database = {
           let objQuery = objArgs.objDatabase.count();
 
           objQuery.onsuccess = function () {
-            window.localStorage.setItem(
+            setStorageSync(
               "extensions.Youwatch.Database.intSize",
               String(objQuery.result),
             );

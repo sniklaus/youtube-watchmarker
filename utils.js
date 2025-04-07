@@ -53,11 +53,34 @@ export const funcSendmessage = function (intTab, objMessage, intRetry) {
 };
 
 export const setDefaultInLocalStorageIfNull = function (key, defaultValue) {
-  if (window.localStorage.getItem(key) === null) {
-    window.localStorage.setItem(key, String(defaultValue));
+  if (getStorageSync(key) === null) {
+    setStorageSync(key, String(defaultValue));
   }
 }
 
+export const getStorageSync = function (key) {
+  return window.localStorage.getItem(key);
+}
+
+export const setStorageSync = function (key, value) {
+  window.localStorage.setItem(key, value);
+}
+
+// export const getStorageAsync = function (key) {
+//   return new Promise((resolve) => {
+//     chrome.storage.local.get([key], (result) => {
+//       resolve(result[key]); // Resolves with value or undefined
+//     });
+//   });
+// }
+
+// export const setStorageAsync = function (key, value) {
+//   return new Promise((resolve) => {
+//     chrome.storage.local.set({ [key]: value }, () => {
+//       resolve(); // Resolves when set completes
+//     });
+//   });
+// }
 
 export const Node = {
   series: function (objFunctions, funcCallback) {

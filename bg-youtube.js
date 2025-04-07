@@ -1,4 +1,8 @@
-import { Node, funcHackyparse } from "./utils.js";
+import {
+  Node,
+  setStorageSync,
+  funcHackyparse
+} from "./utils.js";
 import { Database } from "./bg-database.js";
 
 export const Youtube = {
@@ -371,7 +375,7 @@ export const Youtube = {
           let objQuery = objArgs.objDatabase.count();
 
           objQuery.onsuccess = function () {
-            window.localStorage.setItem(
+            setStorageSync(
               "extensions.Youwatch.Database.intSize",
               String(objQuery.result),
             );
@@ -380,7 +384,7 @@ export const Youtube = {
           };
         },
         objTime: function (objArgs, funcCallback) {
-          window.localStorage.setItem(
+          setStorageSync(
             "extensions.Youwatch.Youtube.intTimestamp",
             String(new Date().getTime()),
           );
@@ -499,7 +503,7 @@ export const Youtube = {
           let objQuery = objArgs.objDatabase.count();
 
           objQuery.onsuccess = function () {
-            window.localStorage.setItem(
+            setStorageSync(
               "extensions.Youwatch.Database.intSize",
               String(objQuery.result),
             );
@@ -579,7 +583,7 @@ export const Youtube = {
           let objQuery = objArgs.objDatabase.count();
 
           objQuery.onsuccess = function () {
-            window.localStorage.setItem(
+            setStorageSync(
               "extensions.Youwatch.Database.intSize",
               String(objQuery.result),
             );

@@ -1,4 +1,7 @@
-import { Node } from "./utils.js";
+import {
+  Node,
+  setStorageSync,
+} from "./utils.js";
 import { Database } from "./bg-database.js";
 
 export const History = {
@@ -190,7 +193,7 @@ export const History = {
           let objQuery = objArgs.objDatabase.count();
 
           objQuery.onsuccess = function () {
-            window.localStorage.setItem(
+            setStorageSync(
               "extensions.Youwatch.Database.intSize",
               String(objQuery.result),
             );
@@ -199,7 +202,7 @@ export const History = {
           };
         },
         objTime: function (objArgs, funcCallback) {
-          window.localStorage.setItem(
+          setStorageSync(
             "extensions.Youwatch.History.intTimestamp",
             String(new Date().getTime()),
           );

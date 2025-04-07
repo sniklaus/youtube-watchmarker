@@ -1,4 +1,8 @@
-import { Node, funcHackyparse } from "./utils.js";
+import {
+  Node,
+  setStorageSync,
+  funcHackyparse
+} from "./utils.js";
 import { Database } from "./bg-database.js";
 
 export const Search = {
@@ -139,7 +143,7 @@ export const Search = {
           let objQuery = objArgs.objDatabase.count();
 
           objQuery.onsuccess = function () {
-            window.localStorage.setItem(
+            setStorageSync(
               "extensions.Youwatch.Database.intSize",
               String(objQuery.result),
             );

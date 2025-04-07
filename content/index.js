@@ -1,5 +1,16 @@
 "use strict";
 
+// TODO: should be removed after the refactoring
+const getStorageSync = function (key) {
+  return window.localStorage.getItem(key);
+}
+
+const setStorageSync = function (key, value) {
+  window.localStorage.setItem(key, value);
+}
+// TODO: should be removed after the refactoring
+
+
 let objDatabase = chrome.runtime.connect({
   name: "database",
 });
@@ -149,7 +160,7 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idDatabase_Size").text(
     parseInt(
-      window.localStorage.getItem("extensions.Youwatch.Database.intSize"),
+      getStorageSync("extensions.Youwatch.Database.intSize"),
     ),
   );
 
@@ -191,7 +202,7 @@ jQuery(window.document).ready(function () {
   jQuery("#idHistory_Timestamp").text(
     moment(
       parseInt(
-        window.localStorage.getItem("extensions.Youwatch.History.intTimestamp"),
+        getStorageSync("extensions.Youwatch.History.intTimestamp"),
       ),
     ).format("YYYY.MM.DD - HH:mm:ss"),
   );
@@ -234,16 +245,16 @@ jQuery(window.document).ready(function () {
   jQuery("#idYoutube_Timestamp").text(
     moment(
       parseInt(
-        window.localStorage.getItem("extensions.Youwatch.Youtube.intTimestamp"),
+        getStorageSync("extensions.Youwatch.Youtube.intTimestamp"),
       ),
     ).format("YYYY.MM.DD - HH:mm:ss"),
   );
 
   jQuery("#idCondition_Brownav")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Condition.boolBrownav",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolBrownav",
         ) === String(false),
       );
@@ -253,7 +264,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolBrownav",
             ) === String(true)
               ? "none"
@@ -263,7 +274,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolBrownav",
             ) === String(true)
               ? "block"
@@ -276,7 +287,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolBrownav",
         ) === String(true)
           ? "none"
@@ -286,7 +297,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolBrownav",
         ) === String(true)
           ? "block"
@@ -297,9 +308,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idCondition_Browhist")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Condition.boolBrowhist",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolBrowhist",
         ) === String(false),
       );
@@ -309,7 +320,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolBrowhist",
             ) === String(true)
               ? "none"
@@ -319,7 +330,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolBrowhist",
             ) === String(true)
               ? "block"
@@ -332,7 +343,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolBrowhist",
         ) === String(true)
           ? "none"
@@ -342,7 +353,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolBrowhist",
         ) === String(true)
           ? "block"
@@ -353,9 +364,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idCondition_Youprog")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Condition.boolYouprog",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYouprog",
         ) === String(false),
       );
@@ -365,7 +376,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolYouprog",
             ) === String(true)
               ? "none"
@@ -375,7 +386,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolYouprog",
             ) === String(true)
               ? "block"
@@ -388,7 +399,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYouprog",
         ) === String(true)
           ? "none"
@@ -398,7 +409,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYouprog",
         ) === String(true)
           ? "block"
@@ -409,9 +420,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idCondition_Youbadge")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Condition.boolYoubadge",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYoubadge",
         ) === String(false),
       );
@@ -421,7 +432,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolYoubadge",
             ) === String(true)
               ? "none"
@@ -431,7 +442,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolYoubadge",
             ) === String(true)
               ? "block"
@@ -444,7 +455,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYoubadge",
         ) === String(true)
           ? "none"
@@ -454,7 +465,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYoubadge",
         ) === String(true)
           ? "block"
@@ -465,9 +476,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idCondition_Youhist")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Condition.boolYouhist",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYouhist",
         ) === String(false),
       );
@@ -477,7 +488,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolYouhist",
             ) === String(true)
               ? "none"
@@ -487,7 +498,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Condition.boolYouhist",
             ) === String(true)
               ? "block"
@@ -500,7 +511,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYouhist",
         ) === String(true)
           ? "none"
@@ -510,7 +521,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Condition.boolYouhist",
         ) === String(true)
           ? "block"
@@ -521,9 +532,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idVisualization_Fadeout")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Visualization.boolFadeout",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolFadeout",
         ) === String(false),
       );
@@ -533,7 +544,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolFadeout",
             ) === String(true)
               ? "none"
@@ -543,7 +554,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolFadeout",
             ) === String(true)
               ? "block"
@@ -556,7 +567,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolFadeout",
         ) === String(true)
           ? "none"
@@ -566,7 +577,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolFadeout",
         ) === String(true)
           ? "block"
@@ -577,9 +588,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idVisualization_Grayout")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Visualization.boolGrayout",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolGrayout",
         ) === String(false),
       );
@@ -589,7 +600,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolGrayout",
             ) === String(true)
               ? "none"
@@ -599,7 +610,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolGrayout",
             ) === String(true)
               ? "block"
@@ -612,7 +623,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolGrayout",
         ) === String(true)
           ? "none"
@@ -622,7 +633,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolGrayout",
         ) === String(true)
           ? "block"
@@ -633,9 +644,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idVisualization_Showbadge")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Visualization.boolShowbadge",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolShowbadge",
         ) === String(false),
       );
@@ -645,7 +656,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolShowbadge",
             ) === String(true)
               ? "none"
@@ -655,7 +666,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolShowbadge",
             ) === String(true)
               ? "block"
@@ -668,7 +679,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolShowbadge",
         ) === String(true)
           ? "none"
@@ -678,7 +689,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolShowbadge",
         ) === String(true)
           ? "block"
@@ -689,9 +700,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idVisualization_Showdate")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Visualization.boolShowdate",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolShowdate",
         ) === String(false),
       );
@@ -701,7 +712,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolShowdate",
             ) === String(true)
               ? "none"
@@ -711,7 +722,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolShowdate",
             ) === String(true)
               ? "block"
@@ -724,7 +735,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolShowdate",
         ) === String(true)
           ? "none"
@@ -734,7 +745,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolShowdate",
         ) === String(true)
           ? "block"
@@ -745,9 +756,9 @@ jQuery(window.document).ready(function () {
 
   jQuery("#idVisualization_Hideprogress")
     .on("click", function () {
-      window.localStorage.setItem(
+      setStorageSync(
         "extensions.Youwatch.Visualization.boolHideprogress",
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolHideprogress",
         ) === String(false),
       );
@@ -757,7 +768,7 @@ jQuery(window.document).ready(function () {
         .eq(0)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolHideprogress",
             ) === String(true)
               ? "none"
@@ -767,7 +778,7 @@ jQuery(window.document).ready(function () {
         .eq(1)
         .css({
           display:
-            window.localStorage.getItem(
+            getStorageSync(
               "extensions.Youwatch.Visualization.boolHideprogress",
             ) === String(true)
               ? "block"
@@ -780,7 +791,7 @@ jQuery(window.document).ready(function () {
     .eq(0)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolHideprogress",
         ) === String(true)
           ? "none"
@@ -790,7 +801,7 @@ jQuery(window.document).ready(function () {
     .eq(1)
     .css({
       display:
-        window.localStorage.getItem(
+        getStorageSync(
           "extensions.Youwatch.Visualization.boolHideprogress",
         ) === String(true)
           ? "block"
