@@ -13,23 +13,25 @@ export const History = {
           chrome.runtime.onConnect.addListener(function (objPort) {
             if (objPort.name === "history") {
               objPort.onMessage.addListener(function (objData) {
-                console.log("History port message received:", objData); // <-- Added log
-                if (objData.strMessage === "historySynchronize") {
-                  History.synchronize(
-                    objData.objRequest,
-                    function (objResponse) {
-                      objPort.postMessage({
-                        strMessage: "historySynchronize",
-                        objResponse: objResponse,
-                      });
-                    },
-                    function (objResponse) {
-                      objPort.postMessage({
-                        strMessage: "historySynchronize-progress",
-                        objResponse: objResponse,
-                      });
-                    },
-                  );
+                const strMessage = objData.strMessage;
+                const objRequest = objData.objRequest;
+                const funcResponse = function (objResponse) {
+                  objPort.postMessage({
+                    strMessage: strMessage,
+                    objResponse: objResponse,
+                  });
+                };
+                const funcProgress = function (objResponse) {
+                  objPort.postMessage({
+                    strMessage: `${strMessage}-progress`,
+                    objResponse: objResponse,
+                  });
+                };
+
+                if (strMessage === "historySynchronize") {
+                  History.synchronize(objRequest, funcResponse, funcProgress);
+                } else {
+                  console.error("Received unexpected message:", strMessage);
                 }
               });
             }

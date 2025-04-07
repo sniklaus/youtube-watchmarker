@@ -14,43 +14,31 @@ export const Youtube = {
           chrome.runtime.onConnect.addListener(function (objPort) {
             if (objPort.name === "youtube") {
               objPort.onMessage.addListener(function (objData) {
-                if (objData.strMessage === "youtubeSynchronize") {
-                  Youtube.synchronize(
-                    objData.objRequest,
-                    function (objResponse) {
-                      objPort.postMessage({
-                        strMessage: "youtubeSynchronize",
-                        objResponse: objResponse,
-                      });
-                    },
-                    function (objResponse) {
-                      objPort.postMessage({
-                        strMessage: "youtubeSynchronize-progress",
-                        objResponse: objResponse,
-                      });
-                    },
-                  );
-                } else if (objData.strMessage === "youtubeLookup") {
-                  Youtube.lookup(objData.objRequest, function (objResponse) {
-                    objPort.postMessage({
-                      strMessage: "youtubeLookup",
-                      objResponse: objResponse,
-                    });
+                const strMessage = objData.strMessage;
+                const objRequest = objData.objRequest;
+                const funcResponse = function (objResponse) {
+                  objPort.postMessage({
+                    strMessage: strMessage,
+                    objResponse: objResponse,
                   });
-                } else if (objData.strMessage === "youtubeEnsure") {
-                  Youtube.ensure(objData.objRequest, function (objResponse) {
-                    objPort.postMessage({
-                      strMessage: "youtubeEnsure",
-                      objResponse: objResponse,
-                    });
+                };
+                const funcProgress = function (objResponse) {
+                  objPort.postMessage({
+                    strMessage: `${strMessage}-progress`,
+                    objResponse: objResponse,
                   });
-                } else if (objData.strMessage === "youtubeMark") {
-                  Youtube.mark(objData.objRequest, function (objResponse) {
-                    objPort.postMessage({
-                      strMessage: "youtubeMark",
-                      objResponse: objResponse,
-                    });
-                  });
+                };
+
+                if (strMessage === "youtubeSynchronize") {
+                  Youtube.synchronize(objRequest, funcResponse, funcProgress);
+                } else if (strMessage === "youtubeLookup") {
+                  Youtube.lookup(objRequest, funcResponse);
+                } else if (strMessage === "youtubeEnsure") {
+                  Youtube.ensure(objRequest, funcResponse);
+                } else if (strMessage === "youtubeMark") {
+                  Youtube.mark(objRequest, funcResponse);
+                } else {
+                  console.error("Received unexpected message:", strMessage);
                 }
               });
             }

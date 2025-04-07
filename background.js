@@ -97,7 +97,7 @@ Node.series(
       defaultStylesheets.forEach(({ key, defaultValue }) => {
         if (
           getStorageSync(key) === null ||
-          getStorageSync(key).indexOf("do not modify") === -1
+          getStorageSync(key).indexOf("do not modify") === -1  // TODO: this condition seems unnecessary as "do not modify" is not found anywhere else in the repo.
         ) {
           setStorageSync(key, defaultValue);
         }
@@ -121,42 +121,35 @@ Node.series(
     objMessage: function (objArgs, funcCallback) {
       chrome.runtime.onMessage.addListener(
         function (objRequest, objSender, funcResponse) {
-          if (objRequest.strMessage === "youtubeLookup") {
-            if (objRequest.strTitle !== "") {
-              strTitlecache[objRequest.strIdent] = objRequest.strTitle;
+          const strMessage = objRequest.strMessage;
+          const strIdent = objRequest.strIdent;
+          const strTitle = objRequest.strTitle;
+          const newObjRequest = {
+            strIdent: strIdent,
+            strTitle: strTitle,
+          };
+          const newFuncResponse = function (objResponse) {
+            console.debug(strMessage, objRequest, objResponse);
+
+            funcResponse(objResponse);
+          }
+
+          const youtubeActions = {
+            "youtubeLookup": Youtube.lookup,
+            "youtubeEnsure": Youtube.ensure,
+          };
+
+          const youtubeAction = youtubeActions[strMessage];
+
+          if (youtubeAction) {
+            if (strTitle !== "") {
+              strTitlecache[strIdent] = strTitle;
             }
-
-            Youtube.lookup(
-              {
-                strIdent: objRequest.strIdent,
-                strTitle: objRequest.strTitle,
-              },
-              function (objResponse) {
-                console.debug("lookup video", objRequest, objResponse);
-
-                funcResponse(objResponse);
-              },
-            );
-
+            youtubeAction(newObjRequest, newFuncResponse);
             return true; // indicate asynchronous response
-          } else if (objRequest.strMessage === "youtubeEnsure") {
-            if (objRequest.strTitle !== "") {
-              strTitlecache[objRequest.strIdent] = objRequest.strTitle;
-            }
-
-            Youtube.ensure(
-              {
-                strIdent: objRequest.strIdent,
-                strTitle: objRequest.strTitle,
-              },
-              function (objResponse) {
-                console.debug("ensure video", objRequest, objResponse);
-
-                funcResponse(objResponse);
-              },
-            );
-
-            return true; // indicate asynchronous response
+          } else {
+            console.error("Unknown message type:", strMessage);
+            // return false; // the old code before refactoring didn't return anything here. I'm not sure if this is necessary.
           }
 
           funcResponse(null);

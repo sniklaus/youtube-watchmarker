@@ -14,29 +14,27 @@ export const Search = {
           chrome.runtime.onConnect.addListener(function (objPort) {
             if (objPort.name === "search") {
               objPort.onMessage.addListener(function (objData) {
-                if (objData.strMessage === "searchLookup") {
-                  Search.lookup(objData.objRequest, function (objResponse) {
-                    objPort.postMessage({
-                      strMessage: "searchLookup",
-                      objResponse: objResponse,
-                    });
+                const strMessage = objData.strMessage;
+                const objRequest = objData.objRequest;
+                const funcResponse = function (objResponse) {
+                  objPort.postMessage({
+                    strMessage: strMessage,
+                    objResponse: objResponse,
                   });
-                } else if (objData.strMessage === "searchDelete") {
-                  Search.delete(
-                    objData.objRequest,
-                    function (objResponse) {
-                      objPort.postMessage({
-                        strMessage: "searchDelete",
-                        objResponse: objResponse,
-                      });
-                    },
-                    function (objResponse) {
-                      objPort.postMessage({
-                        strMessage: "searchDelete-progress",
-                        objResponse: objResponse,
-                      });
-                    },
-                  );
+                };
+                const funcProgress = function (objResponse) {
+                  objPort.postMessage({
+                    strMessage: `${strMessage}-progress`,
+                    objResponse: objResponse,
+                  });
+                };
+
+                if (strMessage === "searchLookup") {
+                  Search.lookup(objRequest, funcResponse);
+                } else if (strMessage === "searchDelete") {
+                  Search.delete(objRequest, funcResponse, funcProgress);
+                } else {
+                  console.error("Received unexpected message:", strMessage);
                 }
               });
             }
