@@ -78,13 +78,7 @@ export const Node = {
         if (typeof objOverwrite === "string") {
           strFunctions = Object.keys(objFunctions);
 
-          while (true) {
-            if (strFunctions.length === 0) {
-              break;
-            } else if (strFunctions[0] === objOverwrite) {
-              break;
-            }
-
+          while (strFunctions.length > 0 && strFunctions[0] !== objOverwrite) {
             strFunctions.shift();
           }
         } else if (typeof objOverwrite === "object") {
