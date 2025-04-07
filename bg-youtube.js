@@ -1,7 +1,8 @@
 import {
   Node,
   setStorageSync,
-  funcHackyparse
+  funcHackyparse,
+  setupPortListener,
 } from "./utils.js";
 import { Database } from "./bg-database.js";
 
@@ -11,39 +12,13 @@ export const Youtube = {
     Node.series(
       {
         objMessaging: function (objArgs, funcCallback) {
-          chrome.runtime.onConnect.addListener(function (objPort) {
-            if (objPort.name === "youtube") {
-              objPort.onMessage.addListener(function (objData) {
-                const strMessage = objData.strMessage;
-                const objRequest = objData.objRequest;
-                const funcResponse = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: strMessage,
-                    objResponse: objResponse,
-                  });
-                };
-                const funcProgress = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: `${strMessage}-progress`,
-                    objResponse: objResponse,
-                  });
-                };
-
-                if (strMessage === "youtubeSynchronize") {
-                  Youtube.synchronize(objRequest, funcResponse, funcProgress);
-                } else if (strMessage === "youtubeLookup") {
-                  Youtube.lookup(objRequest, funcResponse);
-                } else if (strMessage === "youtubeEnsure") {
-                  Youtube.ensure(objRequest, funcResponse);
-                } else if (strMessage === "youtubeMark") {
-                  Youtube.mark(objRequest, funcResponse);
-                } else {
-                  console.error("Received unexpected message:", strMessage);
-                }
-              });
-            }
-          });
-
+          const youtubeMessageHandlers = {
+            'youtubeSynchronize': Youtube.synchronize,
+            'youtubeLookup': Youtube.lookup,
+            'youtubeEnsure': Youtube.ensure,
+            'youtubeMark': Youtube.mark
+          };
+          setupPortListener('youtube', youtubeMessageHandlers);
           return funcCallback({});
         },
       },

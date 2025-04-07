@@ -1,7 +1,8 @@
 import {
   Node,
   setStorageSync,
-  funcHackyparse
+  funcHackyparse,
+  setupPortListener,
 } from "./utils.js";
 import { Database } from "./bg-database.js";
 
@@ -11,35 +12,11 @@ export const Search = {
     Node.series(
       {
         objMessaging: function (objArgs, funcCallback) {
-          chrome.runtime.onConnect.addListener(function (objPort) {
-            if (objPort.name === "search") {
-              objPort.onMessage.addListener(function (objData) {
-                const strMessage = objData.strMessage;
-                const objRequest = objData.objRequest;
-                const funcResponse = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: strMessage,
-                    objResponse: objResponse,
-                  });
-                };
-                const funcProgress = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: `${strMessage}-progress`,
-                    objResponse: objResponse,
-                  });
-                };
-
-                if (strMessage === "searchLookup") {
-                  Search.lookup(objRequest, funcResponse);
-                } else if (strMessage === "searchDelete") {
-                  Search.delete(objRequest, funcResponse, funcProgress);
-                } else {
-                  console.error("Received unexpected message:", strMessage);
-                }
-              });
-            }
-          });
-
+          const searchMessageHandlers = {
+            'searchLookup': Search.lookup,
+            'searchDelete': Search.delete
+          };
+          setupPortListener('search', searchMessageHandlers);
           return funcCallback({});
         },
       },

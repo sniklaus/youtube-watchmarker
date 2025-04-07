@@ -1,6 +1,7 @@
 import {
   Node,
   setStorageSync,
+  setupPortListener
 } from "./utils.js";
 import { Database } from "./bg-database.js";
 
@@ -10,33 +11,10 @@ export const History = {
     Node.series(
       {
         objMessaging: function (objArgs, funcCallback) {
-          chrome.runtime.onConnect.addListener(function (objPort) {
-            if (objPort.name === "history") {
-              objPort.onMessage.addListener(function (objData) {
-                const strMessage = objData.strMessage;
-                const objRequest = objData.objRequest;
-                const funcResponse = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: strMessage,
-                    objResponse: objResponse,
-                  });
-                };
-                const funcProgress = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: `${strMessage}-progress`,
-                    objResponse: objResponse,
-                  });
-                };
-
-                if (strMessage === "historySynchronize") {
-                  History.synchronize(objRequest, funcResponse, funcProgress);
-                } else {
-                  console.error("Received unexpected message:", strMessage);
-                }
-              });
-            }
-          });
-
+          const historyMessageHandlers = {
+            'historySynchronize': History.synchronize,
+          };
+          setupPortListener('history', historyMessageHandlers);
           return funcCallback({});
         },
       },

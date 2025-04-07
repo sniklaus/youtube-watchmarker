@@ -1,6 +1,7 @@
 import {
   Node,
   setStorageSync,
+  setupPortListener,
 } from "./utils.js";
 
 export const Database = {
@@ -83,37 +84,12 @@ export const Database = {
           };
         },
         objMessaging: function (objArgs, funcCallback) {
-          chrome.runtime.onConnect.addListener(function (objPort) {
-            if (objPort.name === "database") {
-              objPort.onMessage.addListener(function (objData) {
-                const strMessage = objData.strMessage;
-                const objRequest = objData.objRequest;
-                const funcResponse = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: strMessage,
-                    objResponse: objResponse,
-                  });
-                };
-                const funcProgress = function (objResponse) {
-                  objPort.postMessage({
-                    strMessage: `${strMessage}-progress`,
-                    objResponse: objResponse,
-                  });
-                };
-
-                if (strMessage === "databaseExport") {
-                  Database.export(objRequest, funcResponse, funcProgress);
-                } else if (strMessage === "databaseImport") {
-                  Database.import(objRequest, funcResponse, funcProgress);
-                } else if (strMessage === "databaseReset") {
-                  Database.reset(objRequest, funcResponse);
-                } else {
-                  console.error("Received unexpected message:", strMessage);
-                }
-              });
-            }
-          });
-
+          const databaseMessageHandlers = {
+            'databaseExport': Database.export,
+            'databaseImport': Database.import,
+            'databaseReset': Database.reset
+          };
+          setupPortListener('database', databaseMessageHandlers);
           return funcCallback({});
         },
       },
