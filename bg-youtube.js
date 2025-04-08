@@ -153,12 +153,21 @@ export const Youtube = {
               let strIdent = strRegex[1];
               let strTitle = strRegex[2];
 
-              strTitle = strTitle.split("\\u0022").join('"');
-              strTitle = strTitle.split("\\u0026").join("&");
-              strTitle = strTitle.split("\\u003C").join("<");
-              strTitle = strTitle.split("\\u003C").join("=");
-              strTitle = strTitle.split("\\u003E").join(">");
-              strTitle = strTitle.split("\\u003E").join(">");
+              // TODO: this part of code might be unnecessary
+              // because the old code had a bug where '\u003D' was not
+              // replaced with '=' in the title. I've fixed it and I'm 
+              // keeping it here just in case it is needed.
+              const decodeMap = {
+                "\\u0022": '"',
+                "\\u0026": '&',
+                "\\u003C": '<',
+                "\\u003D": '=',
+                "\\u003E": '>'
+              };
+              for (const [encoded, decoded] of Object.entries(decodeMap)) {
+                strTitle = strTitle.replaceAll(encoded, decoded);
+              }
+              /////////////////////////////////////////////////////////
 
               objVideos.push({
                 strIdent: strIdent,
