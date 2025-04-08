@@ -52,6 +52,26 @@ export const funcSendmessage = function (intTab, objMessage, intRetry) {
   });
 };
 
+/**
+ * Creates a response callback function.
+ * Handles the null case by propagating null.
+ * For non-null inputs, it applies the provided transformation logic.
+ *
+ * @param {Function} transformArgs - A function to transforms the non-null objArgs,
+ *                                     or () => staticValue to return a static value
+ * @param {Function} funcResponse - The callback function to be called with the transformed arguments.
+ * @returns {Function} A callback function (objArgs, funcResponse) => void
+ */
+export const createResponseCallback = function (transformArgs, funcResponse) {
+  return function (objArgs) {
+    if (objArgs === null) {
+      funcResponse(null);
+    } else {
+      funcResponse(transformArgs(objArgs));
+    }
+  };
+}
+
 export const setDefaultInLocalStorageIfNull = function (key, defaultValue) {
   if (getStorageSync(key) === null) {
     setStorageSync(key, String(defaultValue));

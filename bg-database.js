@@ -1,5 +1,6 @@
 import {
   Node,
+  createResponseCallback,
   setStorageSync,
   setupPortListener,
 } from "./utils.js";
@@ -93,13 +94,7 @@ export const Database = {
           return funcCallback({});
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 
@@ -166,13 +161,7 @@ export const Database = {
           return funcCallback({});
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 
@@ -295,13 +284,7 @@ export const Database = {
           };
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 
@@ -335,13 +318,7 @@ export const Database = {
           };
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 };

@@ -1,5 +1,6 @@
 import {
   Node,
+  createResponseCallback,
   setStorageSync,
   funcHackyparse,
   setupPortListener,
@@ -20,13 +21,7 @@ export const Search = {
           return funcCallback({});
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 
@@ -81,15 +76,7 @@ export const Search = {
           };
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({
-            objVideos: objArgs.objGet,
-          });
-        }
-      },
+      createResponseCallback(objArgs => ({ objVideos: objArgs.objGet }), funcResponse),
     );
   },
 
@@ -463,13 +450,7 @@ export const Search = {
           );
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 };

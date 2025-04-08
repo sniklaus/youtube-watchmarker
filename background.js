@@ -3,6 +3,7 @@
 import {
   funcBrowser,
   funcSendmessage,
+  createResponseCallback,
   getStorageSync,
   setStorageSync,
   setDefaultInLocalStorageIfNull,
@@ -18,15 +19,9 @@ let strTitlecache = {};
 
 // ##########################################################
 
-function initializeModule(moduleInit) {
+function moduleInitializer(moduleInit) {
   return function (objArgs, funcCallback) {
-    moduleInit({}, function (objResponse) {
-      if (objResponse === null) {
-        funcCallback(null);
-      } else if (objResponse !== null) {
-        funcCallback({});
-      }
-    });
+    moduleInit({}, createResponseCallback(() => { }, funcCallback));
   };
 }
 
@@ -105,10 +100,10 @@ Node.series(
 
       return funcCallback({});
     },
-    objDatabase: initializeModule(Database.init),
-    objHistory: initializeModule(History.init),
-    objYoutube: initializeModule(Youtube.init),
-    objSearch: initializeModule(Search.init),
+    objDatabase: moduleInitializer(Database.init),
+    objHistory: moduleInitializer(History.init),
+    objYoutube: moduleInitializer(Youtube.init),
+    objSearch: moduleInitializer(Search.init),
     objAction: function (objArgs, funcCallback) {
       chrome.browserAction.onClicked.addListener(function () {
         chrome.tabs.create({

@@ -1,5 +1,6 @@
 import {
   Node,
+  createResponseCallback,
   setStorageSync,
   funcHackyparse,
   setupPortListener,
@@ -22,13 +23,7 @@ export const Youtube = {
           return funcCallback({});
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 
@@ -364,13 +359,7 @@ export const Youtube = {
           return funcCallback({});
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse({});
-        }
-      },
+      createResponseCallback(() => { }, funcResponse),
     );
   },
 
@@ -407,13 +396,7 @@ export const Youtube = {
           };
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse(objArgs.objGet);
-        }
-      },
+      createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );
   },
 
@@ -475,13 +458,7 @@ export const Youtube = {
           };
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse(objArgs.objGet);
-        }
-      },
+      createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );
   },
 
@@ -555,13 +532,7 @@ export const Youtube = {
           };
         },
       },
-      function (objArgs) {
-        if (objArgs === null) {
-          funcResponse(null);
-        } else if (objArgs !== null) {
-          funcResponse(objArgs.objGet);
-        }
-      },
+      createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );
   },
 };
