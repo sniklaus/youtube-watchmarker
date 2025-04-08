@@ -132,12 +132,9 @@ export const Youtube = {
               "g",
             );
             let strUnescaped = objAjax.responseText
-              .split('\\"')
-              .join("\\u0022")
-              .split("\r")
-              .join("")
-              .split("\n")
-              .join("");
+              .replaceAll('\\"', '\\u0022')
+              .replaceAll("\r", "")
+              .replaceAll("\n", "");
 
             if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
               objArgs.strContinuation = strRegex[1];
