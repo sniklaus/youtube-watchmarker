@@ -298,5 +298,65 @@ export const bgObject = {
     );
 
     return funcCallback({});
+  },
+  cookies: () => (objArgs, funcCallback) => {
+    let strCookies = ["SAPISID", "__Secure-3PAPISID"];
+    let objCookies = {};
+
+    let funcCookie = () => {
+      if (strCookies.length === 0) {
+        return funcCallback(objCookies);
+      }
+
+      let strCookie = strCookies.shift();
+
+      chrome.cookies.get(
+        {
+          url: "https://www.youtube.com",
+          name: strCookie,
+        },
+        (objCookie) => {
+          if (objCookie === null) {
+            objCookies[strCookie] = null;
+          } else if (objCookie !== null) {
+            objCookies[strCookie] = objCookie.value;
+          }
+
+          funcCookie();
+        },
+      );
+    };
+
+    funcCookie();
+  },
+  contauth: () => (objArgs, funcCallback) => {
+    let intTime = Math.round(new Date().getTime() / 1000.0);
+    let strCookie =
+      objArgs.objCookies["SAPISID"] ||
+      objArgs.objCookies["__Secure-3PAPISID"];
+    let strOrigin = "https://www.youtube.com";
+
+    // https://stackoverflow.com/a/32065323
+
+    crypto.subtle
+      .digest(
+        "SHA-1",
+        new TextEncoder().encode(
+          intTime + " " + strCookie + " " + strOrigin,
+        ),
+      )
+      .then((strHash) => {
+        return funcCallback({
+          strAuth:
+            "SAPISIDHASH " +
+            intTime +
+            "_" +
+            Array.from(new Uint8Array(strHash))
+              .map(function (intByte) {
+                return intByte.toString(16).padStart(2, "0");
+              })
+              .join(""),
+        });
+      });
   }
 }
