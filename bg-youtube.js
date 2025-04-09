@@ -5,7 +5,6 @@ import {
   funcHackyparse,
   bgObject,
 } from "./utils.js";
-import { Database } from "./bg-database.js";
 
 export const Youtube = {
   init: function (objRequest, funcResponse) {
@@ -258,13 +257,7 @@ export const Youtube = {
             objArgs.strContinuation = null;
           }
         },
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readwrite")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objVideo: function (objArgs, funcCallback) {
           if (objArgs.hasOwnProperty("intVideo") === false) {
             objArgs.intVideo = 0;
@@ -390,13 +383,7 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readonly")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("strIdent")
@@ -427,13 +414,7 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readwrite")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("strIdent")
@@ -489,13 +470,7 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readwrite")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("strIdent")

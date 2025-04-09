@@ -1,3 +1,5 @@
+import { Database } from "./bg-database.js";
+
 console.log("utils.js: file loaded");
 export const funcBrowser = function () {
   if (typeof browser !== "undefined") {
@@ -180,5 +182,12 @@ export const bgObject = {
       }
     });
     return funcCallback({});
+  },
+  database: () => (objArgs, funcCallback) => {
+    return funcCallback(
+      Database.objDatabase
+        .transaction(["storeDatabase"], "readwrite")
+        .objectStore("storeDatabase"),
+    );
   },
 }

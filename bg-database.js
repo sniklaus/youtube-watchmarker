@@ -97,13 +97,7 @@ export const Database = {
   export: function (objRequest, funcResponse, funcProgress) {
     Node.series(
       {
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readonly")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase.openCursor();
 
@@ -167,13 +161,7 @@ export const Database = {
         objVideos: function (objArgs, funcCallback) {
           return funcCallback(objRequest.objVideos);
         },
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readwrite")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objVideo: function (objArgs, funcCallback) {
           if (objArgs.hasOwnProperty("intVideo") === false) {
             objArgs.intVideo = 0;
@@ -287,13 +275,7 @@ export const Database = {
   reset: function (objRequest, funcResponse) {
     Node.series(
       {
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readwrite")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objClear: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase.clear();
 

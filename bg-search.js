@@ -24,13 +24,7 @@ export const Search = {
   lookup: function (objRequest, funcResponse) {
     Node.series(
       {
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readonly")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("intTimestamp")
@@ -79,13 +73,7 @@ export const Search = {
   delete: function (objRequest, funcResponse, funcProgress) {
     Node.series(
       {
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readwrite")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objDelete: function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "1/4 - deleting it from the database",

@@ -62,13 +62,7 @@ export const History = {
             },
           );
         },
-        objDatabase: function (objArgs, funcCallback) {
-          return funcCallback(
-            Database.objDatabase
-              .transaction(["storeDatabase"], "readwrite")
-              .objectStore("storeDatabase"),
-          );
-        },
+        objDatabase: bgObject.database(),
         objVideo: function (objArgs, funcCallback) {
           if (objArgs.hasOwnProperty("intVideo") === false) {
             objArgs.intVideo = 0;
