@@ -76,17 +76,7 @@ export const History = {
         },
         objGet: bgObject.get(funcProgress),
         objPut: bgObject.put(),
-        "objVideo-Next": function (objArgs, funcCallback) {
-          objArgs.intVideo += 1;
-
-          if (objArgs.intVideo < objArgs.objVideos.length) {
-            return funcCallback({}, "objVideo");
-          }
-
-          objArgs.intVideo = 0;
-
-          return funcCallback({});
-        },
+        "objVideo-Next": bgObject.videoNext(),
         objCount: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase.count();
 

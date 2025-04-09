@@ -269,5 +269,16 @@ export const bgObject = {
     objQuery.onsuccess = () => {
       return funcCallback({});
     };
+  },
+  videoNext: () => (objArgs, funcCallback) => {
+    objArgs.intVideo += 1;
+
+    if (objArgs.intVideo < objArgs.objVideos.length) {
+      return funcCallback({}, "objVideo");
+    }
+
+    objArgs.intVideo = 0;
+
+    return funcCallback({});
   }
 }
