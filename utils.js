@@ -360,7 +360,7 @@ export const bgObject = {
       });
   },
   video: () => function (objArgs, funcCallback) {
-    if (objArgs.hasOwnProperty("intVideo") === false) {
+    if (objArgs.hasOwn("intVideo") === false) {
       objArgs.intVideo = 0;
     }
 

@@ -316,7 +316,7 @@ Node.series(
 
               let strIdent = objData.url.split("&docid=")[1].split("&")[0];
               let strTitle =
-                strTitlecache.hasOwnProperty(strIdent) === true
+                strTitlecache.hasOwn(strIdent) === true
                   ? strTitlecache[strIdent]
                   : "";
 
