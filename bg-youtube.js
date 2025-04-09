@@ -270,19 +270,7 @@ export const Youtube = {
           return funcCallback(objArgs.objVideos[objArgs.intVideo]);
         },
         objGet: bgObject.get(funcProgress),
-        objPut: function (objArgs, funcCallback) {
-          if (objArgs.objGet.strIdent.trim() === "") {
-            return funcCallback({});
-          } else if (objArgs.objGet.strTitle.trim() === "") {
-            return funcCallback({});
-          }
-
-          let objQuery = objArgs.objDatabase.put(objArgs.objGet);
-
-          objQuery.onsuccess = function () {
-            return funcCallback({});
-          };
-        },
+        objPut: bgObject.put(),
         "objVideo-Next": function (objArgs, funcCallback) {
           objArgs.intVideo += 1;
 
@@ -385,19 +373,7 @@ export const Youtube = {
             return funcCallback(null);
           };
         },
-        objPut: function (objArgs, funcCallback) {
-          if (objArgs.objGet.strIdent.trim() === "") {
-            return funcCallback({});
-          } else if (objArgs.objGet.strTitle.trim() === "") {
-            return funcCallback({});
-          }
-
-          let objQuery = objArgs.objDatabase.put(objArgs.objGet);
-
-          objQuery.onsuccess = function () {
-            return funcCallback({});
-          };
-        },
+        objPut: bgObject.put(),
         objCount: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase.count();
 
@@ -453,19 +429,7 @@ export const Youtube = {
             }
           };
         },
-        objPut: function (objArgs, funcCallback) {
-          if (objArgs.objGet.strIdent.trim() === "") {
-            return funcCallback({});
-          } else if (objArgs.objGet.strTitle.trim() === "") {
-            return funcCallback({});
-          }
-
-          let objQuery = objArgs.objDatabase.put(objArgs.objGet);
-
-          objQuery.onsuccess = function () {
-            return funcCallback({});
-          };
-        },
+        objPut: bgObject.put(),
         objCount: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase.count();
 

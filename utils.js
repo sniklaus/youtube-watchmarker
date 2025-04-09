@@ -257,4 +257,17 @@ export const bgObject = {
       }
     };
   },
+  put: () => (objArgs, funcCallback) => {
+    if (objArgs.objGet.strIdent.trim() === "") {
+      return funcCallback({});
+    } else if (objArgs.objGet.strTitle.trim() === "") {
+      return funcCallback({});
+    }
+
+    const objQuery = objArgs.objDatabase.put(objArgs.objGet);
+
+    objQuery.onsuccess = () => {
+      return funcCallback({});
+    };
+  }
 }
