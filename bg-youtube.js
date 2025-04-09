@@ -90,6 +90,19 @@ export const Youtube = {
               });
             });
         },
+
+        /**
+         * @typedef {Object} VideoArgs
+         * @property {string|null} [strContinuation] - YouTube Continuation token
+         * @property {string|null} [strClicktrack] - YouTube Click tracking string
+         * @property {Object|null} [objYtcfg] - YouTube config object
+         * @property {Object|null} [objYtctx] - YouTube context object
+         */
+        /**
+         * Extract video information from YouTube history page
+         * @param {VideoArgs} objArgs - Arguments for the XMLHttpRequest request
+         * @param {Function} funcCallback - Callback to be invoked after processing
+         */
         objVideos: function (objArgs, funcCallback) {
           if (objArgs.strContinuation === undefined) {
             objArgs.strContinuation = null;
@@ -101,9 +114,15 @@ export const Youtube = {
           let objAjax = new XMLHttpRequest();
 
           objAjax.onload = function () {
+            const responseText = objAjax.responseText // html text
+              .replaceAll('\\"', '\\u0022')
+              .replaceAll("\r", "")
+              .replaceAll("\n", "");
+
+            // extract youtube config
             if (objArgs.objYtcfg === null) {
               objArgs.objYtcfg = funcHackyparse(
-                objAjax.responseText
+                responseText
                   .split("ytcfg.set(")
                   .find(function (strData) {
                     return strData.indexOf("INNERTUBE_API_KEY") !== -1;
@@ -112,47 +131,47 @@ export const Youtube = {
               );
             }
 
+            // extract youtube context
             if (objArgs.objYtctx === null) {
               objArgs.objYtctx = funcHackyparse(
-                objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1],
+                responseText.split('"INNERTUBE_CONTEXT":')[1],
               );
             }
 
+            // extract continuation token
             let strRegex = null;
-            let objContinuation = new RegExp(
+            const objContinuation = new RegExp(
               '"continuationCommand":[^"]*"token":[^"]*"([^"]*)"',
               "g",
             );
-            let objClicktrack = new RegExp(
-              '"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"',
-              "g",
-            );
-            let objVideo = new RegExp(
-              '"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"',
-              "g",
-            );
-            let strUnescaped = objAjax.responseText
-              .replaceAll('\\"', '\\u0022')
-              .replaceAll("\r", "")
-              .replaceAll("\n", "");
-
-            if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
+            if ((strRegex = objContinuation.exec(responseText)) !== null) {
               objArgs.strContinuation = strRegex[1];
             }
 
-            if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
+            // extract click tracking params
+            const objClicktrack = new RegExp(
+              '"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"',
+              "g",
+            );
+            if ((strRegex = objClicktrack.exec(responseText)) !== null) {
               objArgs.strClicktrack = strRegex[1];
             }
 
+            // captures videoIds and titles
             let objVideos = [];
-
-            while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
+            const objVideo = new RegExp(
+              '"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})"' + // videoId
+              '.*?"text"[^"]*"([^"]*)"', // title
+              "g",
+            );
+            while ((strRegex = objVideo.exec(responseText)) !== null) {
               let strIdent = strRegex[1];
               let strTitle = strRegex[2];
 
               // TODO: this part of code might be unnecessary
-              // because the old code had a bug where '\u003D' was not
-              // replaced with '=' in the title. I've fixed it and I'm 
+              // because 1. the old code had a bug where '\u003D' was not
+              // replaced with '=' in the title. 2. this code is not seen
+              // in Search.delete.objYoulookup. I've fixed it and I'm 
               // keeping it here just in case it is needed.
               const decodeMap = {
                 "\\u0022": '"',
