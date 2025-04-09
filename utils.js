@@ -190,4 +190,71 @@ export const bgObject = {
         .objectStore("storeDatabase"),
     );
   },
+  get: (funcProgress) => (objArgs, funcCallback) => {
+    let objQuery = objArgs.objDatabase
+      .index("strIdent")
+      .get(objArgs.objVideo.strIdent);
+
+    objQuery.onsuccess = function () {
+      if (objArgs.intNew === undefined) {
+        objArgs.intNew = 0;
+        objArgs.intExisting = 0;
+      }
+
+      funcProgress({
+        strProgress:
+          "imported " +
+          (objArgs.intNew + objArgs.intExisting) +
+          " videos - " +
+          objArgs.intNew +
+          " were new",
+      });
+
+      // TODO: this part was only in Database.import.objGet, but there's no harm 
+      // to have it here as well. As if longTimestamp is undefined, intTimestamp
+      // simply stays undefined.
+      if (objArgs.objVideo.intTimestamp === undefined) {
+        objArgs.objVideo.intTimestamp = objArgs.objVideo.longTimestamp; // legacy
+      }
+      ////////////////////////////////////////////////////////
+
+      if (objQuery.result === undefined || objQuery.result === null) {
+        objArgs.intNew += 1;
+
+        return funcCallback({
+          strIdent: objArgs.objVideo.strIdent,
+          intTimestamp:
+            objArgs.objVideo.intTimestamp || new Date().getTime(),
+          strTitle: objArgs.objVideo.strTitle || "",
+          intCount: objArgs.objVideo.intCount || 1,
+        });
+      } else if (
+        objQuery.result !== undefined &&
+        objQuery.result !== null
+      ) {
+        objArgs.intExisting += 1;
+
+        return funcCallback({
+          strIdent: objQuery.result.strIdent,
+          intTimestamp:
+            Math.max(
+              objQuery.result.intTimestamp,
+              objArgs.objVideo.intTimestamp,
+            ) || new Date().getTime(),
+          // TODO: in Youtube.synchronize.objGet this was:
+          // "intTimestamp: objArgs.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),"
+          // but I assume that was outdated code and Math.max should be used. I might be wrong.
+          strTitle:
+            objQuery.result.strTitle || objArgs.objVideo.strTitle || "",
+          intCount:
+            Math.max(
+              objQuery.result.intCount,
+              objArgs.objVideo.intCount,
+            ) || 1,
+          // TODO: in Youtube.synchronize.objGet this was "intCount: objArgs.objVideo.intCount || objQuery.result.intCount || 1"
+          // but I assume that was outdated code and Math.max should be used. I might be wrong.
+        });
+      }
+    };
+  },
 }

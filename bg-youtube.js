@@ -269,56 +269,7 @@ export const Youtube = {
 
           return funcCallback(objArgs.objVideos[objArgs.intVideo]);
         },
-        objGet: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase
-            .index("strIdent")
-            .get(objArgs.objVideo.strIdent);
-
-          objQuery.onsuccess = function () {
-            if (objArgs.intNew === undefined) {
-              objArgs.intNew = 0;
-              objArgs.intExisting = 0;
-            }
-
-            funcProgress({
-              strProgress:
-                "imported " +
-                (objArgs.intNew + objArgs.intExisting) +
-                " videos - " +
-                objArgs.intNew +
-                " were new",
-            });
-
-            if (objQuery.result === undefined || objQuery.result === null) {
-              objArgs.intNew += 1;
-
-              return funcCallback({
-                strIdent: objArgs.objVideo.strIdent,
-                intTimestamp:
-                  objArgs.objVideo.intTimestamp || new Date().getTime(),
-                strTitle: objArgs.objVideo.strTitle || "",
-                intCount: objArgs.objVideo.intCount || 1,
-              });
-            } else if (
-              objQuery.result !== undefined &&
-              objQuery.result !== null
-            ) {
-              objArgs.intExisting += 1;
-
-              return funcCallback({
-                strIdent: objQuery.result.strIdent,
-                intTimestamp:
-                  objArgs.objVideo.intTimestamp ||
-                  objQuery.result.intTimestamp ||
-                  new Date().getTime(),
-                strTitle:
-                  objArgs.objVideo.strTitle || objQuery.result.strTitle || "",
-                intCount:
-                  objArgs.objVideo.intCount || objQuery.result.intCount || 1,
-              });
-            }
-          };
-        },
+        objGet: bgObject.get(funcProgress),
         objPut: function (objArgs, funcCallback) {
           if (objArgs.objGet.strIdent.trim() === "") {
             return funcCallback({});
