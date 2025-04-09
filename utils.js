@@ -358,5 +358,16 @@ export const bgObject = {
               .join(""),
         });
       });
-  }
+  },
+  video: () => function (objArgs, funcCallback) {
+    if (objArgs.hasOwnProperty("intVideo") === false) {
+      objArgs.intVideo = 0;
+    }
+
+    if (objArgs.intVideo >= objArgs.objVideos.length) {
+      return funcCallback({}, "objVideo-Next");
+    }
+
+    return funcCallback(objArgs.objVideos[objArgs.intVideo]);
+  },
 }

@@ -63,17 +63,7 @@ export const History = {
           );
         },
         objDatabase: bgObject.database(),
-        objVideo: function (objArgs, funcCallback) {
-          if (objArgs.hasOwnProperty("intVideo") === false) {
-            objArgs.intVideo = 0;
-          }
-
-          if (objArgs.intVideo >= objArgs.objVideos.length) {
-            return funcCallback({}, "objVideo-Next");
-          }
-
-          return funcCallback(objArgs.objVideos[objArgs.intVideo]);
-        },
+        objVideo: bgObject.video(),
         objGet: bgObject.get(funcProgress),
         objPut: bgObject.put(),
         "objVideo-Next": bgObject.videoNext(),
