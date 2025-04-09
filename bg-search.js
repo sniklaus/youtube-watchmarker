@@ -85,18 +85,7 @@ export const Search = {
             return funcCallback({});
           };
         },
-        objCount: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase.count();
-
-          objQuery.onsuccess = function () {
-            setStorageSync(
-              "extensions.Youwatch.Database.intSize",
-              String(objQuery.result),
-            );
-
-            return funcCallback({});
-          };
-        },
+        objCount: bgObject.count(),
         objHistory: function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "2/4 - deleting it from the history in the browser",

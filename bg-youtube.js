@@ -272,26 +272,8 @@ export const Youtube = {
         objGet: bgObject.get(funcProgress),
         objPut: bgObject.put(),
         "objVideo-Next": bgObject.videoNext(),
-        objCount: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase.count();
-
-          objQuery.onsuccess = function () {
-            setStorageSync(
-              "extensions.Youwatch.Database.intSize",
-              String(objQuery.result),
-            );
-
-            return funcCallback({});
-          };
-        },
-        objTime: function (objArgs, funcCallback) {
-          setStorageSync(
-            "extensions.Youwatch.Youtube.intTimestamp",
-            String(new Date().getTime()),
-          );
-
-          return funcCallback({});
-        },
+        objCount: bgObject.count(),
+        objTime: bgObject.time("extensions.Youwatch.Youtube.intTimestamp"),
         objContinuation: function (objArgs, funcCallback) {
           if (objArgs.intExisting < objRequest.intThreshold) {
             if (objArgs.strContinuation !== null) {
@@ -364,18 +346,7 @@ export const Youtube = {
           };
         },
         objPut: bgObject.put(),
-        objCount: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase.count();
-
-          objQuery.onsuccess = function () {
-            setStorageSync(
-              "extensions.Youwatch.Database.intSize",
-              String(objQuery.result),
-            );
-
-            return funcCallback({});
-          };
-        },
+        objCount: bgObject.count(),
       },
       createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );
@@ -420,18 +391,7 @@ export const Youtube = {
           };
         },
         objPut: bgObject.put(),
-        objCount: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase.count();
-
-          objQuery.onsuccess = function () {
-            setStorageSync(
-              "extensions.Youwatch.Database.intSize",
-              String(objQuery.result),
-            );
-
-            return funcCallback({});
-          };
-        },
+        objCount: bgObject.count(),
       },
       createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );

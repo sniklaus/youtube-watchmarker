@@ -176,18 +176,7 @@ export const Database = {
         objGet: bgObject.get(funcProgress),
         objPut: bgObject.put(),
         "objVideo-Next": bgObject.videoNext(),
-        objCount: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase.count();
-
-          objQuery.onsuccess = function () {
-            setStorageSync(
-              "extensions.Youwatch.Database.intSize",
-              String(objQuery.result),
-            );
-
-            return funcCallback({});
-          };
-        },
+        objCount: bgObject.count(),
       },
       createResponseCallback(() => { }, funcResponse),
     );
@@ -204,18 +193,7 @@ export const Database = {
             return funcCallback({});
           };
         },
-        objCount: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase.count();
-
-          objQuery.onsuccess = function () {
-            setStorageSync(
-              "extensions.Youwatch.Database.intSize",
-              String(objQuery.result),
-            );
-
-            return funcCallback({});
-          };
-        },
+        objCount: bgObject.count(),
       },
       createResponseCallback(() => { }, funcResponse),
     );

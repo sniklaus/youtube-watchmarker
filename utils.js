@@ -280,5 +280,23 @@ export const bgObject = {
     objArgs.intVideo = 0;
 
     return funcCallback({});
+  },
+  count: () => (objArgs, funcCallback) => {
+    let objQuery = objArgs.objDatabase.count();
+
+    objQuery.onsuccess = () => {
+      setStorageSync(
+        "extensions.Youwatch.Database.intSize",
+        String(objQuery.result),
+      );
+
+      return funcCallback({});
+    };
+  },
+  time: (key) => (objArgs, funcCallback) => {
+    setStorageSync(key, String(new Date().getTime()),
+    );
+
+    return funcCallback({});
   }
 }

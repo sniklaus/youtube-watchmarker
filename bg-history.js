@@ -77,26 +77,8 @@ export const History = {
         objGet: bgObject.get(funcProgress),
         objPut: bgObject.put(),
         "objVideo-Next": bgObject.videoNext(),
-        objCount: function (objArgs, funcCallback) {
-          let objQuery = objArgs.objDatabase.count();
-
-          objQuery.onsuccess = function () {
-            setStorageSync(
-              "extensions.Youwatch.Database.intSize",
-              String(objQuery.result),
-            );
-
-            return funcCallback({});
-          };
-        },
-        objTime: function (objArgs, funcCallback) {
-          setStorageSync(
-            "extensions.Youwatch.History.intTimestamp",
-            String(new Date().getTime()),
-          );
-
-          return funcCallback({});
-        },
+        objCount: bgObject.count(),
+        objTime: bgObject.time("extensions.Youwatch.History.intTimestamp"),
       },
       createResponseCallback(() => { }, funcResponse),
     );
