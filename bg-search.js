@@ -3,7 +3,7 @@ import {
   createResponseCallback,
   setStorageSync,
   funcHackyparse,
-  setupPortListener,
+  bgObject,
 } from "./utils.js";
 import { Database } from "./bg-database.js";
 
@@ -12,14 +12,10 @@ export const Search = {
     console.log("Search.init called");
     Node.series(
       {
-        objMessaging: function (objArgs, funcCallback) {
-          const searchMessageHandlers = {
-            'searchLookup': Search.lookup,
-            'searchDelete': Search.delete
-          };
-          setupPortListener('search', searchMessageHandlers);
-          return funcCallback({});
-        },
+        objMessaging: bgObject.messaging('search', {
+          'searchLookup': Search.lookup,
+          'searchDelete': Search.delete
+        }),
       },
       createResponseCallback(() => { }, funcResponse),
     );

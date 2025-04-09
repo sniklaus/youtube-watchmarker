@@ -3,7 +3,7 @@ import {
   createResponseCallback,
   setStorageSync,
   funcHackyparse,
-  setupPortListener,
+  bgObject,
 } from "./utils.js";
 import { Database } from "./bg-database.js";
 
@@ -12,16 +12,12 @@ export const Youtube = {
     console.log("Youtube.init called");
     Node.series(
       {
-        objMessaging: function (objArgs, funcCallback) {
-          const youtubeMessageHandlers = {
-            'youtubeSynchronize': Youtube.synchronize,
-            'youtubeLookup': Youtube.lookup,
-            'youtubeEnsure': Youtube.ensure,
-            'youtubeMark': Youtube.mark
-          };
-          setupPortListener('youtube', youtubeMessageHandlers);
-          return funcCallback({});
-        },
+        objMessaging: bgObject.messaging('youtube', {
+          'youtubeSynchronize': Youtube.synchronize,
+          'youtubeLookup': Youtube.lookup,
+          'youtubeEnsure': Youtube.ensure,
+          'youtubeMark': Youtube.mark
+        }),
       },
       createResponseCallback(() => { }, funcResponse),
     );

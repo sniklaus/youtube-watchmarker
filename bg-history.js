@@ -2,7 +2,7 @@ import {
   Node,
   createResponseCallback,
   setStorageSync,
-  setupPortListener
+  bgObject
 } from "./utils.js";
 import { Database } from "./bg-database.js";
 
@@ -11,13 +11,7 @@ export const History = {
     console.log("History.init called");
     Node.series(
       {
-        objMessaging: function (objArgs, funcCallback) {
-          const historyMessageHandlers = {
-            'historySynchronize': History.synchronize,
-          };
-          setupPortListener('history', historyMessageHandlers);
-          return funcCallback({});
-        },
+        objMessaging: bgObject.messaging('history', { 'historySynchronize': History.synchronize }),
       },
       createResponseCallback(() => { }, funcResponse),
     );

@@ -2,7 +2,7 @@ import {
   Node,
   createResponseCallback,
   setStorageSync,
-  setupPortListener,
+  bgObject,
 } from "./utils.js";
 
 export const Database = {
@@ -84,15 +84,11 @@ export const Database = {
             objQuery.result.continue();
           };
         },
-        objMessaging: function (objArgs, funcCallback) {
-          const databaseMessageHandlers = {
-            'databaseExport': Database.export,
-            'databaseImport': Database.import,
-            'databaseReset': Database.reset
-          };
-          setupPortListener('database', databaseMessageHandlers);
-          return funcCallback({});
-        },
+        objMessaging: bgObject.messaging('database', {
+          'databaseExport': Database.export,
+          'databaseImport': Database.import,
+          'databaseReset': Database.reset
+        }),
       },
       createResponseCallback(() => { }, funcResponse),
     );

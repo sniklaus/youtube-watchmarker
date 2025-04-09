@@ -140,42 +140,45 @@ export const Node = {
   },
 }
 
-export const setupPortListener = function (portName, messageHandlers) {
-  chrome.runtime.onConnect.addListener(function (objPort) {
-    if (objPort.name === portName) {
-      objPort.onMessage.addListener(function (objData) {
-        const strMessage = objData.strMessage;
-        const objRequest = objData.objRequest;
+export const bgObject = {
+  messaging: (portName, messageHandlers) => (objArgs, funcCallback) => {
+    chrome.runtime.onConnect.addListener((objPort) => {
+      if (objPort.name === portName) {
+        objPort.onMessage.addListener((objData) => {
+          const strMessage = objData.strMessage;
+          const objRequest = objData.objRequest;
 
-        // Common response function
-        const funcResponse = function (objResponse) {
-          objPort.postMessage({
-            strMessage: strMessage, // Echo the original message type
-            objResponse: objResponse,
-          });
-        };
+          // Common response function
+          const funcResponse = (objResponse) => {
+            objPort.postMessage({
+              strMessage: strMessage, // Echo the original message type
+              objResponse: objResponse,
+            });
+          };
 
-        // Common progress function
-        const funcProgress = function (objResponse) {
-          objPort.postMessage({
-            strMessage: `${strMessage}-progress`, // Indicate progress for the original message
-            objResponse: objResponse,
-          });
-        };
+          // Common progress function
+          const funcProgress = (objResponse) => {
+            objPort.postMessage({
+              strMessage: `${strMessage}-progress`, // Indicate progress for the original message
+              objResponse: objResponse,
+            });
+          };
 
-        // Look up the handler for the received message
-        const handler = messageHandlers[strMessage];
+          // Look up the handler for the received message
+          const handler = messageHandlers[strMessage];
 
-        if (handler) {
-          // Call the specific handler function
-          // We need a way to determine if the handler needs funcProgress.
-          // One way is to check the function's arity (number of expected args).
-          // Or, more simply, always pass it and let the handler ignore it if unused.
-          handler(objRequest, funcResponse, funcProgress);
-        } else {
-          console.error(`[${portName}] Received unexpected message:`, strMessage);
-        }
-      });
-    }
-  });
+          if (handler) {
+            // Call the specific handler function
+            // We need a way to determine if the handler needs funcProgress.
+            // One way is to check the function's arity (number of expected args).
+            // Or, more simply, always pass it and let the handler ignore it if unused.
+            handler(objRequest, funcResponse, funcProgress);
+          } else {
+            console.error(`[${portName}] Received unexpected message:`, strMessage);
+          }
+        });
+      }
+    });
+    return funcCallback({});
+  },
 }
