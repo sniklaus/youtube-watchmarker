@@ -4,7 +4,6 @@ import {
   funcBrowser,
   funcSendmessage,
   createResponseCallback,
-  getStorageSync,
   getStorageAsync,
   setStorageAsync,
   setDefaultInLocalStorageIfNullAsync,
@@ -248,7 +247,7 @@ Node.series(
 
       return funcCallback({});
     },
-    objReqhook: function (objArgs, funcCallback) {
+    objReqhook: async (objArgs, funcCallback) => {
       {
         let strInfospec = ["requestHeaders", "blocking"];
 
@@ -294,11 +293,10 @@ Node.series(
         );
       }
 
-      if (
-        getStorageSync(
-          "extensions.Youwatch.Condition.boolYouprog",
-        ) === String(true)
-      ) {
+      const boolYouprog = await getStorageAsync(
+        "extensions.Youwatch.Condition.boolYouprog",
+      );
+      if (boolYouprog === String(true)) {
         chrome.webRequest.onSendHeaders.addListener(
           function (objData) {
             if (objData.url.indexOf("muted=1") !== -1) {
@@ -366,13 +364,12 @@ Node.series(
         periodInMinutes: 60,
       });
 
-      chrome.alarms.onAlarm.addListener(function (objAlarm) {
+      chrome.alarms.onAlarm.addListener(async (objAlarm) => {
         if (objAlarm.name === "synchronize") {
-          if (
-            getStorageSync(
-              "extensions.Youwatch.Condition.boolBrowhist",
-            ) === String(true)
-          ) {
+          const boolBrowhist = await getStorageAsync(
+            "extensions.Youwatch.Condition.boolBrowhist",
+          );
+          if (boolBrowhist === String(true)) {
             History.synchronize(
               {
                 intTimestamp: new Date().getTime() - 7 * 24 * 60 * 60 * 1000,  // TODO: refactor this using const date = new Date(); date.setDate(date.getDate() - 7);
@@ -386,11 +383,10 @@ Node.series(
             );
           }
 
-          if (
-            getStorageSync(
-              "extensions.Youwatch.Condition.boolYouhist",
-            ) === String(true)
-          ) {
+          const boolYouhist = await getStorageAsync(
+            "extensions.Youwatch.Condition.boolYouhist",
+          );
+          if (boolYouhist === String(true)) {
             Youtube.synchronize(
               {
                 intThreshold: 512,
