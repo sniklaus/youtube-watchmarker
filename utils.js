@@ -74,9 +74,16 @@ export const createResponseCallback = function (transformArgs, funcResponse) {
   };
 }
 
-export const setDefaultInLocalStorageIfNull = function (key, defaultValue) {
+export const setDefaultInLocalStorageIfNullSync = function (key, defaultValue) {
   if (getStorageSync(key) === null) {
     setStorageSync(key, String(defaultValue));
+  }
+}
+
+export const setDefaultInLocalStorageIfNullAsync = async function (key, defaultValue) {
+  const value = await getStorageAsync(key);
+  if (value === null) {
+    await setStorageAsync(key, String(defaultValue));
   }
 }
 
@@ -88,21 +95,41 @@ export const setStorageSync = function (key, value) {
   window.localStorage.setItem(key, value);
 }
 
-// export const getStorageAsync = function (key) {
-//   return new Promise((resolve) => {
-//     chrome.storage.local.get([key], (result) => {
-//       resolve(result[key]); // Resolves with value or undefined
-//     });
-//   });
-// }
+export const getStorageAsync = function (key) {
+  return new Promise((resolve, reject) => {
+    // Check localStorage first (synchronous) for legacy support
+    const localValue = window.localStorage.getItem(key);
 
-// export const setStorageAsync = function (key, value) {
-//   return new Promise((resolve) => {
-//     chrome.storage.local.set({ [key]: value }, () => {
-//       resolve(); // Resolves when set completes
-//     });
-//   });
-// }
+    if (localValue !== null) {
+      // Migrate to chrome.storage.local and return the value
+      setStorageAsync(key, localValue)
+        .then(() => resolve(localValue))
+        .catch(reject);
+    } else {
+      // No localStorage value, check chrome.storage.local
+      chrome.storage.local.get([key], (result) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(`Failed to get ${key} from chrome.storage.local: ${chrome.runtime.lastError.message}`));
+        } else {
+          resolve(result[key] || null); // Return null if key doesn’t exist, mimicking localStorage
+        }
+      });
+    }
+  });
+};
+
+export const setStorageAsync = function (key, value, errorMessage) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [key]: value }, () => {
+      if (chrome.runtime.lastError) {
+        const errorMsg = errorMessage || `Failed to set ${key} in chrome.storage.local: ${chrome.runtime.lastError.message}`;
+        reject(new Error(errorMsg));
+      } else {
+        resolve();
+      }
+    });
+  });
+};
 
 export const Node = {
   series: function (objFunctions, funcCallback) {
@@ -110,7 +137,7 @@ export const Node = {
 
     let objWorkspace = {};
 
-    let funcNext = function (objArgs, objOverwrite) {
+    let funcNext = async function (objArgs, objOverwrite) {
       if (objArgs === null) {
         return funcCallback(null);
       }
@@ -135,10 +162,22 @@ export const Node = {
         return funcCallback(objWorkspace);
       }
 
-      objFunctions[strFunctions[0]](objWorkspace, funcNext);
+      try {
+        await objFunctions[strFunctions[0]](objWorkspace, funcNext);
+      } catch (error) {
+        console.error("Error in series step:", strFunctions[0], error);
+        // Decide how to handle the error
+      }
     };
 
-    objFunctions[strFunctions[0]](objWorkspace, funcNext);
+    // Wrap the initial call in an async IIFE to handle potential async first function
+    (async () => {
+      try {
+        await objFunctions[strFunctions[0]](objWorkspace, funcNext);
+      } catch (error) {
+        console.error("Error in initial series step:", strFunctions[0], error);
+      }
+    })();
   },
 }
 

@@ -5,8 +5,9 @@ import {
   funcSendmessage,
   createResponseCallback,
   getStorageSync,
-  setStorageSync,
-  setDefaultInLocalStorageIfNull,
+  getStorageAsync,
+  setStorageAsync,
+  setDefaultInLocalStorageIfNullAsync,
   Node,
 } from "./utils.js";
 
@@ -27,19 +28,19 @@ function moduleInitializer(moduleInit) {
 
 Node.series(
   {
-    objSettings: function (objArgs, funcCallback) {
+    objSettings: async (objArgs, funcCallback) => {
       const categoriesInt = [
         "Database.intSize",
         "History.intTimestamp",
         "Youtube.intTimestamp",
       ];
 
-      categoriesInt.forEach((catKey) => {
-        setDefaultInLocalStorageIfNull(
+      for (const catKey of categoriesInt) {
+        await setDefaultInLocalStorageIfNullAsync(
           `extensions.Youwatch.${catKey}`,
           String(0),
         );
-      });
+      }
 
       const categoriesBool = [
         "Condition.boolBrownav",
@@ -54,12 +55,12 @@ Node.series(
         "Visualization.boolHideprogress",
       ];
 
-      categoriesBool.forEach((catKey) => {
-        setDefaultInLocalStorageIfNull(
+      for (const catKey of categoriesBool) {
+        await setDefaultInLocalStorageIfNullAsync(
           `extensions.Youwatch.${catKey}`,
           String(true),
         );
-      });
+      }
 
       const defaultStylesheets = [
         {
@@ -89,14 +90,15 @@ Node.series(
         },
       ];
 
-      defaultStylesheets.forEach(({ key, defaultValue }) => {
+      for (const { key, defaultValue } of defaultStylesheets) {
+        const value = await getStorageAsync(key);
         if (
-          getStorageSync(key) === null ||
-          getStorageSync(key).indexOf("do not modify") === -1  // TODO: this condition seems unnecessary as "do not modify" is not found anywhere else in the repo.
+          value === null ||
+          value.indexOf("do not modify") === -1 // TODO: this condition seems unnecessary as "do not modify" is not found anywhere else in the repo.
         ) {
-          setStorageSync(key, defaultValue);
+          await setStorageAsync(key, defaultValue);
         }
-      });
+      }
 
       return funcCallback({});
     },

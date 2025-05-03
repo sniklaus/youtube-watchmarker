@@ -5,6 +5,7 @@
   "homepage_url": "https://sniklaus.com/",
   "version": "4.7.1",
   "permissions": [
+    "storage",
     "alarms",
     "downloads",
     "history",
