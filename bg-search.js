@@ -1,7 +1,6 @@
 import {
   Node,
   createResponseCallback,
-  setStorageSync,
   funcHackyparse,
   bgObject,
 } from "./utils.js";

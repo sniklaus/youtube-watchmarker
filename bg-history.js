@@ -1,7 +1,6 @@
 import {
   Node,
   createResponseCallback,
-  setStorageSync,
   bgObject
 } from "./utils.js";
 import { Database } from "./bg-database.js";

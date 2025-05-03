@@ -74,25 +74,11 @@ export const createResponseCallback = function (transformArgs, funcResponse) {
   };
 }
 
-export const setDefaultInLocalStorageIfNullSync = function (key, defaultValue) {
-  if (getStorageSync(key) === null) {
-    setStorageSync(key, String(defaultValue));
-  }
-}
-
 export const setDefaultInLocalStorageIfNullAsync = async function (key, defaultValue) {
   const value = await getStorageAsync(key);
   if (value === null) {
     await setStorageAsync(key, String(defaultValue));
   }
-}
-
-export const getStorageSync = function (key) {
-  return window.localStorage.getItem(key);
-}
-
-export const setStorageSync = function (key, value) {
-  window.localStorage.setItem(key, value);
 }
 
 export const getStorageAsync = function (key) {
@@ -323,8 +309,8 @@ export const bgObject = {
   count: () => (objArgs, funcCallback) => {
     let objQuery = objArgs.objDatabase.count();
 
-    objQuery.onsuccess = () => {
-      setStorageSync(
+    objQuery.onsuccess = async () => { // TODO: not sure if this being async causes any issues
+      await setStorageAsync(
         "extensions.Youwatch.Database.intSize",
         String(objQuery.result),
       );
@@ -332,8 +318,8 @@ export const bgObject = {
       return funcCallback({});
     };
   },
-  time: (key) => (objArgs, funcCallback) => {
-    setStorageSync(key, String(new Date().getTime()),
+  time: (key) => async (objArgs, funcCallback) => {
+    await setStorageAsync(key, String(new Date().getTime()),
     );
 
     return funcCallback({});

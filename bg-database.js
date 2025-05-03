@@ -1,7 +1,6 @@
 import {
   Node,
   createResponseCallback,
-  setStorageSync,
   bgObject,
 } from "./utils.js";
 
