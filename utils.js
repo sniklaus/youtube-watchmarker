@@ -399,7 +399,7 @@ export const bgObject = {
       });
   },
   video: () => function (objArgs, funcCallback) {
-    if (objArgs.hasOwn("intVideo") === false) {
+    if (Object.hasOwn(objArgs, "intVideo") === false) {
       objArgs.intVideo = 0;
     }
 

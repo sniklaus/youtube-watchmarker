@@ -39,7 +39,7 @@ let refresh = function () {
 
     observe(objVideo);
 
-    if (intWatchdate.hasOwn(strIdent) === true) {
+    if (Object.hasOwn(intWatchdate, strIdent) === true) {
       continue;
     }
 
@@ -78,7 +78,7 @@ let refresh = function () {
 
 let mark = function (objVideo, strIdent) {
   if (
-    intWatchdate.hasOwn(strIdent) === true &&
+    Object.hasOwn(intWatchdate, strIdent) === true &&
     objVideo.classList.contains("youwatch-mark") === false
   ) {
     objVideo.classList.add("youwatch-mark");
@@ -95,7 +95,7 @@ let mark = function (objVideo, strIdent) {
       );
     }
   } else if (
-    intWatchdate.hasOwn(strIdent) !== true &&
+    Object.hasOwn(intWatchdate, strIdent) !== true &&
     objVideo.classList.contains("youwatch-mark") !== false
   ) {
     objVideo.classList.remove("youwatch-mark");
