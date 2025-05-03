@@ -156,7 +156,7 @@ Node.series(
       return funcCallback({});
     },
     objTabhook: function (objArgs, funcCallback) {
-      chrome.tabs.onUpdated.addListener(function (intTab, objChange, objTab) {
+      chrome.tabs.onUpdated.addListener(async (intTab, objChange, objTab) => {
         if (objTab.id < 0) {
           return;
         } else if (
@@ -166,11 +166,10 @@ Node.series(
           return;
         }
 
-        if (
-          getStorageSync(
-            "extensions.Youwatch.Condition.boolBrownav",
-          ) === String(true)
-        ) {
+        const boolBrownav = await getStorageAsync(
+          "extensions.Youwatch.Condition.boolBrownav",
+        );
+        if (boolBrownav === String(true)) {
           if (
             objTab.url.indexOf("https://www.youtube.com/watch?v=") === 0 ||
             objTab.url.indexOf("https://www.youtube.com/shorts/") === 0 ||
@@ -214,11 +213,10 @@ Node.series(
           }
         }
 
-        if (
-          getStorageSync(
-            "extensions.Youwatch.Condition.boolYoubadge",
-          ) === String(true)
-        ) {
+        const boolYoubadge = await getStorageAsync(
+          "extensions.Youwatch.Condition.boolYoubadge",
+        );
+        if (boolYoubadge === String(true)) {
           chrome.tabs.executeScript(objTab.id, {
             file: 'content/progress-hook.js',
             runAt: "document_start",
@@ -227,14 +225,13 @@ Node.series(
 
         // Inject CSS based on visualization settings
         const visualizationFeatures = ['Fadeout', 'Grayout', 'Showbadge', 'Showdate', 'Hideprogress'];
-        visualizationFeatures.forEach(feature => {
-          const boolKey = `extensions.Youwatch.Visualization.bool${feature}`;
-          const styleKey = `extensions.Youwatch.Stylesheet.str${feature}`;
+        for (const feature of visualizationFeatures) {
+          const boolValue = await getStorageAsync(`extensions.Youwatch.Visualization.bool${feature}`);
 
           // Check if the feature is enabled in localStorage
-          if (getStorageSync(boolKey) === String(true)) {
-            const cssCode = getStorageSync(styleKey);
+          if (boolValue === String(true)) {
             // Ensure CSS code exists before trying to inject it
+            const cssCode = await getStorageAsync(`extensions.Youwatch.Stylesheet.str${feature}`);
             if (cssCode) {
               chrome.tabs.insertCSS(objTab.id, { code: cssCode }, () => {
                 // Optional: Handle potential injection errors
@@ -243,10 +240,10 @@ Node.series(
                 }
               });
             } else {
-              console.warn(`CSS code for feature '${feature}' not found in localStorage (key: ${styleKey})`);
+              console.warn(`CSS code for feature '${feature}' not found in chrome.storage.local.`);
             }
           }
-        });
+        };
       });
 
       return funcCallback({});
