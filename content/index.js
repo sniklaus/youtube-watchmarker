@@ -1,15 +1,5 @@
-"use strict";
-
-// TODO: should be removed after the refactoring
-const getStorageSync = function (key) {
-  return window.localStorage.getItem(key);
-}
-
-const setStorageSync = function (key, value) {
-  window.localStorage.setItem(key, value);
-}
-// TODO: should be removed after the refactoring
-
+import { getStorageSync, setStorageSync } from '../utils.js';
+import { getStorageAsync, setStorageAsync } from '../utils.js';
 
 let objDatabase = chrome.runtime.connect({
   name: "database",
@@ -27,7 +17,7 @@ let objSearch = chrome.runtime.connect({
   name: "search",
 });
 
-jQuery(window.document).ready(function () {
+jQuery(window.document).ready(async () => {
   jQuery("html").attr({
     "data-bs-theme":
       window.matchMedia("(prefers-color-scheme: dark)").matches === true
@@ -158,10 +148,9 @@ jQuery(window.document).ready(function () {
     }
   });
 
+  const intSize = await getStorageAsync("extensions.Youwatch.Database.intSize")
   jQuery("#idDatabase_Size").text(
-    parseInt(
-      getStorageSync("extensions.Youwatch.Database.intSize"),
-    ),
+    parseInt(intSize),
   );
 
   jQuery("#idHistory_Synchronize").on("click", function () {
@@ -199,11 +188,10 @@ jQuery(window.document).ready(function () {
     }
   });
 
+  const intTimestampHistory = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
   jQuery("#idHistory_Timestamp").text(
     moment(
-      parseInt(
-        getStorageSync("extensions.Youwatch.History.intTimestamp"),
-      ),
+      parseInt(intTimestampHistory),
     ).format("YYYY.MM.DD - HH:mm:ss"),
   );
 
@@ -242,69 +230,34 @@ jQuery(window.document).ready(function () {
     }
   });
 
+  const intTimestampYoutube = await getStorageAsync("extensions.Youwatch.Youtube.intTimestamp");
   jQuery("#idYoutube_Timestamp").text(
     moment(
-      parseInt(
-        getStorageSync("extensions.Youwatch.Youtube.intTimestamp"),
-      ),
+      parseInt(intTimestampYoutube),
     ).format("YYYY.MM.DD - HH:mm:ss"),
   );
 
+  // TODO: consider using css instead of manually setting the display
+  const $idCondition_Brownav = jQuery("#idCondition_Brownav").find("i");
+  const boolBrownav = await getStorageAsync("extensions.Youwatch.Condition.boolBrownav");
+  if (boolBrownav === String(true)) {
+    $idCondition_Brownav.eq(0).hide().end().eq(1).show();
+  } else {
+    $idCondition_Brownav.eq(0).show().end().eq(1).hide();
+  }
+  // add click handler
   jQuery("#idCondition_Brownav")
-    .on("click", function () {
-      setStorageSync(
-        "extensions.Youwatch.Condition.boolBrownav",
-        getStorageSync(
-          "extensions.Youwatch.Condition.boolBrownav",
-        ) === String(false),
-      );
+    .on("click", async function () {
+      const oldBoolBrownav = await getStorageAsync("extensions.Youwatch.Condition.boolBrownav");
+      const newBoolBrownav = String(oldBoolBrownav === String(false));
+      await setStorageAsync("extensions.Youwatch.Condition.boolBrownav", newBoolBrownav);
 
-      jQuery(this)
-        .find("i")
-        .eq(0)
-        .css({
-          display:
-            getStorageSync(
-              "extensions.Youwatch.Condition.boolBrownav",
-            ) === String(true)
-              ? "none"
-              : "block",
-        })
-        .end()
-        .eq(1)
-        .css({
-          display:
-            getStorageSync(
-              "extensions.Youwatch.Condition.boolBrownav",
-            ) === String(true)
-              ? "block"
-              : "none",
-        })
-        .end()
-        .end();
+      if (newBoolBrownav === String(true)) {
+        $idCondition_Brownav.eq(0).hide().end().eq(1).show();
+      } else {
+        $idCondition_Brownav.eq(0).show().end().eq(1).hide();
+      }
     })
-    .find("i")
-    .eq(0)
-    .css({
-      display:
-        getStorageSync(
-          "extensions.Youwatch.Condition.boolBrownav",
-        ) === String(true)
-          ? "none"
-          : "block",
-    })
-    .end()
-    .eq(1)
-    .css({
-      display:
-        getStorageSync(
-          "extensions.Youwatch.Condition.boolBrownav",
-        ) === String(true)
-          ? "block"
-          : "none",
-    })
-    .end()
-    .end();
 
   jQuery("#idCondition_Browhist")
     .on("click", function () {
