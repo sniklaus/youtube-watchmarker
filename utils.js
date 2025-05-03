@@ -89,7 +89,10 @@ export const getStorageAsync = function (key) {
     if (localValue !== null) {
       // Migrate to chrome.storage.local and return the value
       setStorageAsync(key, localValue)
-        .then(() => resolve(localValue))
+        .then(() => {
+          window.localStorage.removeItem(key);
+          resolve(localValue);
+        })
         .catch(reject);
     } else {
       // No localStorage value, check chrome.storage.local

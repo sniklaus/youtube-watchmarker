@@ -1,20 +1,9 @@
 import { getStorageAsync, setStorageAsync } from '../utils.js';
 
-let objDatabase = chrome.runtime.connect({
-  name: "database",
-});
-
-let objHistory = chrome.runtime.connect({
-  name: "history",
-});
-
-let objYoutube = chrome.runtime.connect({
-  name: "youtube",
-});
-
-let objSearch = chrome.runtime.connect({
-  name: "search",
-});
+let objDatabase = chrome.runtime.connect({ name: "database" });
+let objHistory = chrome.runtime.connect({ name: "history" });
+let objYoutube = chrome.runtime.connect({ name: "youtube" });
+let objSearch = chrome.runtime.connect({ name: "search" });
 
 jQuery(window.document).ready(async () => {
   jQuery("html").attr({
