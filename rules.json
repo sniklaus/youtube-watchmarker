@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Origin",
+          "operation": "remove"
+        },
+        {
+          "header": "Referer",
+          "operation": "remove"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.youtube.com"
+        },
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.youtube.com/feed/history"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||youtube.com/youtubei/v1/*",
+      "resourceTypes": [
+        "xmlhttprequest"
+      ]
+    }
+  }
+]

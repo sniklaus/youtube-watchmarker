@@ -13,6 +13,7 @@
     "cookies",
     "webRequest",
     "webRequestBlocking",
+    "declarativeNetRequest",
     "https://www.youtube.com/*",
     "https://m.youtube.com/*"
   ],
@@ -51,5 +52,14 @@
     "default_icon": {
       "72": "content/icon.png"
     }
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
   }
 }

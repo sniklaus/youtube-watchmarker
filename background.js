@@ -248,51 +248,6 @@ Node.series(
       return funcCallback({});
     },
     objReqhook: async (objArgs, funcCallback) => {
-      {
-        let strInfospec = ["requestHeaders", "blocking"];
-
-        if (funcBrowser() === "chrome") {
-          strInfospec.push("extraHeaders");
-        }
-
-        chrome.webRequest.onBeforeSendHeaders.addListener(
-          function (objData) {
-            let objHeaders = [];
-
-            for (let objHeader of objData.requestHeaders) {
-              if (objHeader.name === "Referer") {
-                continue;
-              } else if (objHeader.name === "Origin") {
-                continue;
-              }
-
-              objHeaders.push(objHeader);
-            }
-
-            objHeaders.push({
-              name: "Referer",
-              value: "https://www.youtube.com/feed/history",
-            });
-
-            objHeaders.push({
-              name: "Origin",
-              value: "https://www.youtube.com",
-            });
-
-            objData.requestHeaders.splice(0);
-            objData.requestHeaders.push(...objHeaders);
-
-            return {
-              requestHeaders: objData.requestHeaders,
-            };
-          },
-          {
-            urls: ["https://www.youtube.com/youtubei/v1/*"],
-          },
-          strInfospec,
-        );
-      }
-
       const boolYouprog = await getStorageAsync(
         "extensions.Youwatch.Condition.boolYouprog",
       );
