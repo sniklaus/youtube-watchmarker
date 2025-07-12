@@ -106,7 +106,7 @@ Node.series(
     objYoutube: moduleInitializer(Youtube.init),
     objSearch: moduleInitializer(Search.init),
     objAction: function (objArgs, funcCallback) {
-      chrome.browserAction.onClicked.addListener(function () {
+      chrome.action.onClicked.addListener(function () {
         chrome.tabs.create({
           url: "content/index.html",
         });
@@ -216,9 +216,9 @@ Node.series(
           "extensions.Youwatch.Condition.boolYoubadge",
         );
         if (boolYoubadge === String(true)) {
-          chrome.tabs.executeScript(objTab.id, {
-            file: 'content/progress-hook.js',
-            runAt: "document_start",
+          chrome.scripting.executeScript({
+            target: { tabId: objTab.id },
+            files: ['content/progress-hook.js'],
           });
         }
 
@@ -232,7 +232,10 @@ Node.series(
             // Ensure CSS code exists before trying to inject it
             const cssCode = await getStorageAsync(`extensions.Youwatch.Stylesheet.str${feature}`);
             if (cssCode) {
-              chrome.tabs.insertCSS(objTab.id, { code: cssCode }, () => {
+              chrome.scripting.insertCSS({
+                target: { tabId: objTab.id },
+                css: cssCode,
+              }, () => {
                 // Optional: Handle potential injection errors
                 if (chrome.runtime.lastError) {
                   console.error(`Error injecting CSS for ${feature}:`, chrome.runtime.lastError.message);

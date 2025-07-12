@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Watchmarker for Youtube",
   "description": "Automatically mark videos on Youtube that you have already watched.",
   "homepage_url": "https://sniklaus.com/",
@@ -12,8 +12,10 @@
     "tabs",
     "cookies",
     "webRequest",
-    "webRequestBlocking",
-    "declarativeNetRequest",
+    "scripting",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
     "https://www.youtube.com/*",
     "https://m.youtube.com/*"
   ],
@@ -31,8 +33,8 @@
     }
   },
   "background": {
-    "page": "background.html",
-    "persistent": true
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -46,7 +48,7 @@
       ]
     }
   ],
-  "browser_action": {
+  "action": {
     "browser_style": false,
     "default_title": "Watchmarker for Youtube",
     "default_icon": {
