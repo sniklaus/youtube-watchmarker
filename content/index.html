@@ -1,350 +1,382 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-
-    <meta name="viewport" content="width=1000" />
-
-    <title>Youtube Watchmarker</title>
-
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="YouTube Watchmarker Extension - Manage your video watching preferences and synchronize across devices" />
+    
+    <title>YouTube Watchmarker - Settings</title>
+    
     <link rel="icon" type="image/png" href="icon.png" />
-
-    <script type="text/javascript" src="moment.js"></script>
-
-    <link rel="stylesheet" type="text/css" href="bootstrap.css" />
-
-    <link rel="stylesheet" type="text/css" href="fontawesome.css" />
-
-  <script type="module" src="index.js"></script>
+    
+    <!-- External Dependencies -->
+    <script src="moment.js"></script>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="bootstrap.css" />
+    <link rel="stylesheet" href="fontawesome.css" />
+    <link rel="stylesheet" href="styles.css" />
+    
+    <!-- Main JavaScript Module -->
+    <script type="module" src="index.js"></script>
   </head>
-  <body style="cursor: default; line-height: 1.1; padding: 20px 20px 0px 20px">
-    <div class="card" style="margin: 0px auto 20px auto; max-width: 700px">
-      <div class="card-header">Database</div>
-
-      <div class="card-body">
-        <p style="text-align: justify">
-          The database is only stored within the browser, which is why
-          uninstalling the browser or even just this addon would lead to the
-          loss of your timeline. You are therefore highly encouraged to
-          regularly export the database in order to have a backup.
-        </p>
-
-        <button class="btn btn-primary" id="idDatabase_Export">Export</button>
-
-        <button
-          class="btn btn-primary"
-          id="idDatabase_Import"
-          style="position: relative"
-        >
-          Import<input
-            type="file"
-            accept=".database"
-            style="
-              cursor: pointer;
-              bottom: 0px;
-              height: 100%;
-              left: 0px;
-              opacity: 0;
-              position: absolute;
-              right: 0px;
-              top: 0px;
-              width: 100%;
-              z-index: 1;
-            "
-          />
-        </button>
-
-        <button class="btn btn-primary" id="idDatabase_Reset">Reset</button>
-
-        <div
-          class="input-group"
-          style="
-            display: none;
-            font-size: 0px;
-            margin: 0px 5px 0px 0px;
-            vertical-align: top;
-          "
-        >
-          <div style="display: inline-block; vertical-align: top">
-            <button class="btn btn-primary">Reset</button>
+  
+  <body class="bg-body-tertiary">
+    <!-- Header -->
+    <header class="bg-primary text-white py-4 mb-4">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <img src="icon.png" alt="YouTube Watchmarker" class="header-icon" width="48" height="48" />
           </div>
-          <div class="form-control" style="display: inline-block; width: auto">
-            Are you sure?
+          <div class="col">
+            <h1 class="h3 mb-0">YouTube Watchmarker</h1>
+            <p class="mb-0 opacity-75">Manage your video watching preferences</p>
           </div>
-          <div style="display: inline-block; vertical-align: top">
-            <button class="btn btn-danger" id="idDatabase_Resyes">Yes</button>
+          <div class="col-auto">
+            <button class="btn btn-outline-light btn-sm" id="theme-toggle" type="button" aria-label="Toggle theme">
+              <i class="fas fa-sun" id="theme-icon"></i>
+            </button>
           </div>
         </div>
+      </div>
+    </header>
 
-        <div
-          class="input-group"
-          style="
-            display: inline;
-            font-size: 0px;
-            margin: 0px 5px 0px 0px;
-            vertical-align: top;
-          "
-        >
-          <div style="display: inline-block; vertical-align: top">
-            <span class="input-group-text">Size:</span>
+    <!-- Main Content -->
+    <main id="main-content" class="container pb-5" tabindex="-1">
+      <div class="row g-4">
+        <!-- Database Management -->
+        <div class="col-12 col-lg-6">
+          <section class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+              <h2 class="card-title h5 mb-0">
+                <i class="fas fa-database me-2"></i>
+                Database Management
+              </h2>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-4">
+                Your watch history is stored locally in your browser. Regular backups are recommended to prevent data loss.
+              </p>
+              
+              <div class="d-flex flex-wrap gap-2 mb-4">
+                <button class="btn btn-primary" id="idDatabase_Export" type="button">
+                  <i class="fas fa-download me-2"></i>Export
+                </button>
+                
+                <div class="position-relative">
+                  <button class="btn btn-success" id="idDatabase_Import" type="button">
+                    <i class="fas fa-upload me-2"></i>Import
+                  </button>
+                  <input 
+                    type="file" 
+                    accept=".database" 
+                    class="position-absolute top-0 start-0 w-100 h-100 opacity-0" 
+                    style="cursor: pointer;"
+                    aria-label="Import database file"
+                  />
+                </div>
+                
+                <button class="btn btn-outline-danger" id="idDatabase_Reset" type="button">
+                  <i class="fas fa-trash me-2"></i>Reset
+                </button>
+              </div>
+              
+              <div class="alert alert-info d-flex align-items-center">
+                <i class="fas fa-info-circle me-2"></i>
+                <div>
+                  <strong>Database Size:</strong> 
+                  <span id="idDatabase_Size" class="badge bg-secondary ms-2">Loading...</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Synchronization -->
+        <div class="col-12 col-lg-6">
+          <section class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white">
+              <h2 class="card-title h5 mb-0">
+                <i class="fas fa-sync me-2"></i>
+                Synchronization
+              </h2>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-12">
+                  <h3 class="h6 mb-2">Browser History</h3>
+                  <p class="text-muted small mb-3">
+                    Initialize your timeline from browser history. Usually needed only once.
+                  </p>
+                  <button class="btn btn-outline-success btn-sm w-100" id="idHistory_Synchronize" type="button">
+                    <i class="fas fa-history me-2"></i>Synchronize History
+                  </button>
+                  <div class="mt-2">
+                    <small class="text-muted">
+                      Last sync: <span id="idHistory_Timestamp" class="fw-medium">Never</span>
+                    </small>
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <hr class="my-3">
+                  <h3 class="h6 mb-2">YouTube Account</h3>
+                  <p class="text-muted small mb-3">
+                    Sync with your YouTube account for cross-device compatibility. Updates automatically every hour.
+                  </p>
+                  <button class="btn btn-success btn-sm w-100" id="idYoutube_Synchronize" type="button">
+                    <i class="fab fa-youtube me-2"></i>Synchronize YouTube
+                  </button>
+                  <div class="mt-2">
+                    <small class="text-muted">
+                      Last sync: <span id="idYoutube_Timestamp" class="fw-medium">Never</span>
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Watch Conditions -->
+        <div class="col-12">
+          <section class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+              <h2 class="card-title h5 mb-0">
+                <i class="fas fa-eye me-2"></i>
+                Watch Detection Conditions
+              </h2>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-4">
+                Choose when videos should be marked as watched. Multiple conditions can be active simultaneously.
+              </p>
+              
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idCondition_Brownav" />
+                    <label class="form-check-label" for="idCondition_Brownav">
+                      <strong>Browser Navigation</strong>
+                      <br><small class="text-muted">Mark when video is opened in browser</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idCondition_Browhist" />
+                    <label class="form-check-label" for="idCondition_Browhist">
+                      <strong>Browser History</strong>
+                      <br><small class="text-muted">Mark when video appears in browser history</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idCondition_Youprog" />
+                    <label class="form-check-label" for="idCondition_Youprog">
+                      <strong>YouTube Progress</strong>
+                      <br><small class="text-muted">Mark when player reports progress to YouTube</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idCondition_Youbadge" />
+                    <label class="form-check-label" for="idCondition_Youbadge">
+                      <strong>YouTube Badge</strong>
+                      <br><small class="text-muted">Mark when video has official YouTube watched badge</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idCondition_Youhist" />
+                    <label class="form-check-label" for="idCondition_Youhist">
+                      <strong>YouTube History</strong>
+                      <br><small class="text-muted">Mark when video appears in YouTube's watch history</small>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Visual Settings -->
+        <div class="col-12">
+          <section class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+              <h2 class="card-title h5 mb-0">
+                <i class="fas fa-palette me-2"></i>
+                Visual Appearance
+              </h2>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-4">
+                Customize how watched videos are displayed on YouTube pages.
+              </p>
+              
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idVisualization_Fadeout" />
+                    <label class="form-check-label" for="idVisualization_Fadeout">
+                      <strong>Fade Out</strong>
+                      <br><small class="text-muted">Slightly fade watched video thumbnails</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idVisualization_Grayout" />
+                    <label class="form-check-label" for="idVisualization_Grayout">
+                      <strong>Grayscale</strong>
+                      <br><small class="text-muted">Convert watched thumbnails to grayscale</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idVisualization_Showbadge" />
+                    <label class="form-check-label" for="idVisualization_Showbadge">
+                      <strong>Show Badge</strong>
+                      <br><small class="text-muted">Display text badge on watched videos</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idVisualization_Showdate" />
+                    <label class="form-check-label" for="idVisualization_Showdate">
+                      <strong>Show Date</strong>
+                      <br><small class="text-muted">Include watch date in badge</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="idVisualization_Hideprogress" />
+                    <label class="form-check-label" for="idVisualization_Hideprogress">
+                      <strong>Hide Progress Bar</strong>
+                      <br><small class="text-muted">Hide YouTube's progress bar on watched videos</small>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Search -->
+        <div class="col-12">
+          <section class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+              <h2 class="card-title h5 mb-0">
+                <i class="fas fa-search me-2"></i>
+                Search Watch History
+              </h2>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-12">
+                  <div class="input-group">
+                    <input 
+                      type="text" 
+                      class="form-control" 
+                      id="idSearch_Query" 
+                      placeholder="Search your watch history..."
+                      aria-label="Search query"
+                    />
+                    <button class="btn btn-primary" type="button" id="idSearch_Lookup">
+                      <i class="fas fa-search" id="search-icon"></i>
+                      <i class="fas fa-spinner fa-spin d-none" id="search-spinner"></i>
+                      <span class="visually-hidden">Search</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <div id="idSearch_Results" class="search-results"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="loadingModalLabel">Processing</h5>
           </div>
-          <div
-            class="form-control"
-            id="idDatabase_Size"
-            style="display: inline-block; width: auto"
-          ></div>
+          <div class="modal-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="spinner-border spinner-border-sm me-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <div>
+                <div id="idLoading_Message" class="fw-medium">Please wait...</div>
+                <div id="idLoading_Progress" class="text-muted small"></div>
+              </div>
+            </div>
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="idLoading_Close">Close</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="card" style="margin: 0px auto 20px auto; max-width: 700px">
-      <div class="card-header">History</div>
-
-      <div class="card-body">
-        <p style="text-align: justify">
-          The history of your browser provides a straightforward way to
-          initialize your timeline, which you can manually initiate. It is
-          usually not necessary to use this feature more than once, as every
-          subsequent activity on Youtube will already be tracked by this addon.
-        </p>
-
-        <button class="btn btn-primary" id="idHistory_Synchronize">
-          Synchronize
-        </button>
-
-        <div
-          class="input-group"
-          style="
-            display: inline;
-            font-size: 0px;
-            margin: 0px 5px 0px 0px;
-            vertical-align: top;
-          "
-        >
-          <div style="display: inline-block; vertical-align: top">
-            <span class="input-group-text">Timestamp:</span>
-          </div>
-          <div
-            class="form-control"
-            id="idHistory_Timestamp"
-            style="display: inline-block; width: auto"
-          ></div>
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+          <i class="fas fa-check-circle me-2"></i>
+          <strong class="me-auto">Success</strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="successToastMessage">
+          Operation completed successfully!
+        </div>
+      </div>
+      
+      <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong class="me-auto">Error</strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="errorToastMessage">
+          An error occurred. Please try again.
         </div>
       </div>
     </div>
 
-    <div class="card" style="margin: 0px auto 20px auto; max-width: 700px">
-      <div class="card-header">Youtube</div>
-
-      <div class="card-body">
-        <p style="text-align: justify">
-          In order to synchronize your timeline across multiple devices, this
-          addon fetches your browsing information directly from your Youtube
-          account. It will in this regard automatically fetch the most recent
-          activity every hour, but you can manually initiate a complete fetch of
-          the entire browsing information.
-        </p>
-
-        <button class="btn btn-primary" id="idYoutube_Synchronize">
-          Synchronize
-        </button>
-
-        <div
-          class="input-group"
-          style="
-            display: inline;
-            font-size: 0px;
-            margin: 0px 5px 0px 0px;
-            vertical-align: top;
-          "
-        >
-          <div style="display: inline-block; vertical-align: top">
-            <span class="input-group-text">Timestamp:</span>
-          </div>
-          <div
-            class="form-control"
-            id="idYoutube_Timestamp"
-            style="display: inline-block; width: auto"
-          ></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin: 0px auto 20px auto; max-width: 700px">
-      <div class="card-header">Condition</div>
-
-      <div class="card-body">
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Mark a video as watched once it has been opened in the browser.
-          </div>
-          <button class="btn btn-primary" id="idCondition_Brownav">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Mark a video as watched once it appears in the browser's history.
-          </div>
-          <button class="btn btn-primary" id="idCondition_Browhist">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Mark a video as watched once the player reports progress to Youtube.
-          </div>
-          <button class="btn btn-primary" id="idCondition_Youprog">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Mark a video as watched once it has the official Youtube watched
-            badge.
-          </div>
-          <button class="btn btn-primary" id="idCondition_Youbadge">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 0px 0px">
-          <div class="form-control">
-            Mark a video as watched once it appears in Youtube's watch history.
-          </div>
-          <button class="btn btn-primary" id="idCondition_Youhist">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin: 0px auto 20px auto; max-width: 700px">
-      <div class="card-header">Visualization</div>
-
-      <div class="card-body">
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Mark watched videos by slightly fading the thumbnail out.
-          </div>
-          <button class="btn btn-primary" id="idVisualization_Fadeout">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Mark watched videos by converting the thumbnail to grayscale.
-          </div>
-          <button class="btn btn-primary" id="idVisualization_Grayout">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Show a textual badge in addition to graying out watched videos.
-          </div>
-          <button class="btn btn-primary" id="idVisualization_Showbadge">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <div class="form-control">
-            Show the date of when the video has been watched in the textual
-            badge.
-          </div>
-          <button class="btn btn-primary" id="idVisualization_Showdate">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-
-        <div class="input-group" style="margin: 0px 0px 0px 0px">
-          <div class="form-control">
-            Hide the progressbar that is being shown underneath watched videos.
-          </div>
-          <button class="btn btn-primary" id="idVisualization_Hideprogress">
-            <i class="fa-regular fa-square"></i>
-            <i class="fa-regular fa-check-square"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin: 0px auto 20px auto; max-width: 700px">
-      <div class="card-header">Search</div>
-
-      <div class="card-body">
-        <div class="input-group" style="margin: 0px 0px 17px 0px">
-          <input
-            class="form-control"
-            id="idSearch_Query"
-            type="text"
-            placeholder="..."
-          />
-          <button class="btn btn-primary" id="idSearch_Lookup">
-            <i class="fa-solid fa-magnifying-glass" style="display: inline"></i>
-            <i class="fa-solid fa-gear fa-spin" style="display: none"></i>
-          </button>
-        </div>
-
-        <div id="idSearch_Results" style="font-size: 14px"></div>
-      </div>
-    </div>
-
-    <div
-      id="idLoading_Container"
-      style="
-        background-color: #000000aa;
-        bottom: 0px;
-        display: none;
-        left: 0px;
-        padding: 20px;
-        position: fixed;
-        right: 0px;
-        top: 0px;
-        z-index: 10;
-      "
-    >
-      <div
-        class="card"
-        style="margin: -95px auto 20px auto; max-width: 500px; top: 50%"
-      >
-        <div class="card-body">
-          <div class="input-group" style="margin: 0px 0px 17px 0px">
-            <span
-              class="input-group-text"
-              style="display: block; text-align: right; width: 96px"
-              >Message:</span
-            >
-            <div class="form-control" id="idLoading_Message"></div>
-          </div>
-
-          <div class="input-group" style="margin: 0px 0px 17px 0px">
-            <span
-              class="input-group-text"
-              style="display: block; text-align: right; width: 96px"
-              >Progress:</span
-            >
-            <div class="form-control" id="idLoading_Progress"></div>
-          </div>
-
-          <button class="btn btn-primary" id="idLoading_Close">Close</button>
-        </div>
-      </div>
-    </div>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="bootstrap.bundle.min.js"></script>
+    
+    <!-- Accessibility: Announce to screen readers when content changes -->
+    <div id="sr-announcements" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+    
+    <!-- Skip to main content link for keyboard navigation -->
+    <a href="#main-content" class="visually-hidden-focusable btn btn-primary position-absolute top-0 start-0 m-2" style="z-index: 9999;">
+      Skip to main content
+    </a>
   </body>
 </html>

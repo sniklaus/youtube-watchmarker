@@ -1,14 +1,16 @@
 /**
  * Modern Options Page Manager for YouTube Watch Marker Extension
- * Replaces jQuery with vanilla JavaScript for better performance and modern standards
+ * Enhanced with modern JavaScript patterns, improved UX, and accessibility features
  */
 class OptionsPageManager {
     constructor() {
         this.isInitialized = false;
-        this.loadingContainer = null;
+        this.loadingModal = null;
         this.loadingMessage = null;
         this.loadingProgress = null;
         this.loadingClose = null;
+        this.themeToggle = null;
+        this.bootstrap = null;
         
         // Initialize when DOM is ready
         if (document.readyState === 'loading') {
@@ -25,6 +27,9 @@ class OptionsPageManager {
         if (this.isInitialized) return;
         
         try {
+            // Wait for Bootstrap to be available
+            await this.waitForBootstrap();
+            
             // Cache DOM elements
             this.cacheElements();
             
@@ -37,22 +42,47 @@ class OptionsPageManager {
             // Load initial data
             await this.loadInitialData();
             
+            // Add page animations
+            this.addPageAnimations();
+            
             this.isInitialized = true;
             console.log('Options page initialized successfully');
         } catch (error) {
             console.error('Failed to initialize options page:', error);
+            this.showError('Failed to initialize the options page. Please refresh and try again.');
         }
+    }
+
+    /**
+     * Wait for Bootstrap to be available
+     */
+    async waitForBootstrap() {
+        return new Promise((resolve) => {
+            const checkBootstrap = () => {
+                if (window.bootstrap) {
+                    this.bootstrap = window.bootstrap;
+                    resolve();
+                } else {
+                    setTimeout(checkBootstrap, 100);
+                }
+            };
+            checkBootstrap();
+        });
     }
 
     /**
      * Cache frequently used DOM elements
      */
     cacheElements() {
-        // Loading elements
-        this.loadingContainer = document.getElementById('idLoading_Container');
+        // Loading modal elements
+        this.loadingModal = new this.bootstrap.Modal(document.getElementById('loadingModal'));
         this.loadingMessage = document.getElementById('idLoading_Message');
         this.loadingProgress = document.getElementById('idLoading_Progress');
         this.loadingClose = document.getElementById('idLoading_Close');
+        
+        // Theme toggle
+        this.themeToggle = document.getElementById('theme-toggle');
+        this.themeIcon = document.getElementById('theme-icon');
         
         // Database elements
         this.databaseSize = document.getElementById('idDatabase_Size');
@@ -60,6 +90,19 @@ class OptionsPageManager {
         // Timestamp elements
         this.historyTimestamp = document.getElementById('idHistory_Timestamp');
         this.youtubeTimestamp = document.getElementById('idYoutube_Timestamp');
+        
+        // Search elements
+        this.searchIcon = document.getElementById('search-icon');
+        this.searchSpinner = document.getElementById('search-spinner');
+        
+        // Toast elements
+        this.successToast = new this.bootstrap.Toast(document.getElementById('successToast'));
+        this.errorToast = new this.bootstrap.Toast(document.getElementById('errorToast'));
+        this.successToastMessage = document.getElementById('successToastMessage');
+        this.errorToastMessage = document.getElementById('errorToastMessage');
+        
+        // Screen reader announcements
+        this.srAnnouncements = document.getElementById('sr-announcements');
     }
 
     /**
@@ -68,32 +111,38 @@ class OptionsPageManager {
     setupEventListeners() {
         // Database operations
         this.getElementById('idDatabase_Export').addEventListener('click', () => this.exportDatabase());
-        this.getElementById('idDatabase_Import').querySelector('input[type=file]').addEventListener('change', (event) => this.importDatabase(event));
+        this.getElementById('idDatabase_Import').parentElement.querySelector('input[type=file]').addEventListener('change', (event) => this.importDatabase(event));
         this.getElementById('idDatabase_Reset').addEventListener('click', () => this.resetDatabase());
 
         // Synchronization
         this.getElementById('idHistory_Synchronize').addEventListener('click', () => this.synchronizeHistory());
         this.getElementById('idYoutube_Synchronize').addEventListener('click', () => this.synchronizeYoutube());
 
-        // Toggle buttons for conditions
-        this.setupToggleButton('idCondition_Brownav');
-        this.setupToggleButton('idCondition_Browhist');
-        this.setupToggleButton('idCondition_Youprog');
-        this.setupToggleButton('idCondition_Youbadge');
-        this.setupToggleButton('idCondition_Youhist');
+        // Toggle switches for conditions (using new form-switch format)
+        this.setupToggleSwitch('idCondition_Brownav');
+        this.setupToggleSwitch('idCondition_Browhist');
+        this.setupToggleSwitch('idCondition_Youprog');
+        this.setupToggleSwitch('idCondition_Youbadge');
+        this.setupToggleSwitch('idCondition_Youhist');
 
-        // Toggle buttons for visualization
-        this.setupToggleButton('idVisualization_Fadeout');
-        this.setupToggleButton('idVisualization_Grayout');
-        this.setupToggleButton('idVisualization_Showbadge');
-        this.setupToggleButton('idVisualization_Showdate');
-        this.setupToggleButton('idVisualization_Hideprogress');
+        // Toggle switches for visualization
+        this.setupToggleSwitch('idVisualization_Fadeout');
+        this.setupToggleSwitch('idVisualization_Grayout');
+        this.setupToggleSwitch('idVisualization_Showbadge');
+        this.setupToggleSwitch('idVisualization_Showdate');
+        this.setupToggleSwitch('idVisualization_Hideprogress');
 
         // Search functionality
         this.setupSearchListeners();
 
+        // Theme toggle
+        this.themeToggle.addEventListener('click', () => this.toggleTheme());
+
         // Loading modal close
         this.loadingClose.addEventListener('click', () => this.hideLoading());
+        
+        // Keyboard shortcuts
+        this.setupKeyboardShortcuts();
     }
 
     /**
@@ -108,6 +157,44 @@ class OptionsPageManager {
         searchQuery.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
                 this.performSearch();
+            }
+        });
+        
+        // Add input debouncing for live search
+        let searchTimeout;
+        searchQuery.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (searchQuery.value.trim().length > 2) {
+                    this.performSearch();
+                } else if (searchQuery.value.trim().length === 0) {
+                    searchResults.innerHTML = '';
+                }
+            }, 500);
+        });
+    }
+
+    /**
+     * Set up keyboard shortcuts
+     */
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (event) => {
+            // Ctrl/Cmd + K to focus search
+            if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+                event.preventDefault();
+                this.getElementById('idSearch_Query').focus();
+            }
+            
+            // Ctrl/Cmd + E to export database
+            if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+                event.preventDefault();
+                this.exportDatabase();
+            }
+            
+            // Ctrl/Cmd + T to toggle theme
+            if ((event.ctrlKey || event.metaKey) && event.key === 't') {
+                event.preventDefault();
+                this.toggleTheme();
             }
         });
     }
@@ -126,64 +213,154 @@ class OptionsPageManager {
     }
 
     /**
-     * Set up toggle button functionality
-     * @param {string} elementId - Button element ID
+     * Set up toggle switch functionality (Bootstrap form-switch)
+     * @param {string} elementId - Switch element ID
      */
-    setupToggleButton(elementId) {
-        const button = this.getElementById(elementId);
-        const icons = button.querySelectorAll('i');
+    setupToggleSwitch(elementId) {
+        const switchElement = this.getElementById(elementId);
         
-        if (icons.length !== 2) {
-            console.warn(`Toggle button ${elementId} should have exactly 2 icons`);
+        if (!switchElement) {
+            console.warn(`Toggle switch ${elementId} not found`);
             return;
         }
 
-        button.addEventListener('click', async () => {
+        switchElement.addEventListener('change', async () => {
             try {
-                const isEnabled = await this.getToggleState(elementId);
-                await this.setToggleState(elementId, !isEnabled);
-                this.updateToggleVisuals(button, !isEnabled);
+                const isEnabled = switchElement.checked;
+                await this.setToggleState(elementId, isEnabled);
+                this.showSuccess(`Setting ${this.getSettingDisplayName(elementId)} ${isEnabled ? 'enabled' : 'disabled'}`);
             } catch (error) {
                 console.error(`Error toggling ${elementId}:`, error);
+                // Revert the switch state on error
+                switchElement.checked = !switchElement.checked;
+                this.showError(`Failed to update ${this.getSettingDisplayName(elementId)} setting`);
             }
         });
 
-        // Initialize visual state
+        // Initialize switch state
         this.getToggleState(elementId).then(isEnabled => {
-            this.updateToggleVisuals(button, isEnabled);
+            switchElement.checked = isEnabled;
+        }).catch(error => {
+            console.error(`Error loading initial state for ${elementId}:`, error);
         });
     }
 
     /**
-     * Update toggle button visual state
-     * @param {HTMLElement} button - Button element
-     * @param {boolean} isEnabled - Whether toggle is enabled
+     * Get display name for a setting
+     * @param {string} elementId - Element ID
+     * @returns {string} Human-readable setting name
      */
-    updateToggleVisuals(button, isEnabled) {
-        const icons = button.querySelectorAll('i');
-        if (icons.length === 2) {
-            icons[0].style.display = isEnabled ? 'none' : 'inline';
-            icons[1].style.display = isEnabled ? 'inline' : 'none';
-        }
+    getSettingDisplayName(elementId) {
+        const nameMap = {
+            'idCondition_Brownav': 'Browser Navigation',
+            'idCondition_Browhist': 'Browser History',
+            'idCondition_Youprog': 'YouTube Progress',
+            'idCondition_Youbadge': 'YouTube Badge',
+            'idCondition_Youhist': 'YouTube History',
+            'idVisualization_Fadeout': 'Fade Out',
+            'idVisualization_Grayout': 'Grayscale',
+            'idVisualization_Showbadge': 'Show Badge',
+            'idVisualization_Showdate': 'Show Date',
+            'idVisualization_Hideprogress': 'Hide Progress Bar'
+        };
+        return nameMap[elementId] || elementId;
     }
 
     /**
-     * Initialize theme based on system preference
+     * Initialize theme based on saved preference or system preference
      */
     async initializeTheme() {
         try {
-            const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.documentElement.setAttribute('data-bs-theme', isDarkMode ? 'dark' : '');
+            // Get saved theme preference
+            const savedTheme = await this.getSavedTheme();
+            let theme = savedTheme;
             
-            // Listen for theme changes
-            if (window.matchMedia) {
+            // If no saved theme, use system preference
+            if (!theme) {
+                const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                theme = isDarkMode ? 'dark' : 'light';
+            }
+            
+            this.setTheme(theme);
+            
+            // Listen for system theme changes only if no saved preference
+            if (!savedTheme && window.matchMedia) {
                 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-                    document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : '');
+                    this.setTheme(e.matches ? 'dark' : 'light');
                 });
             }
         } catch (error) {
             console.error('Error initializing theme:', error);
         }
+    }
+
+    /**
+     * Toggle between light and dark theme
+     */
+    async toggleTheme() {
+        try {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            this.setTheme(newTheme);
+            await this.saveTheme(newTheme);
+            
+            this.showSuccess(`Switched to ${newTheme} theme`);
+        } catch (error) {
+            console.error('Error toggling theme:', error);
+            this.showError('Failed to change theme');
+        }
+    }
+
+    /**
+     * Set the theme
+     * @param {string} theme - 'light' or 'dark'
+     */
+    setTheme(theme) {
+        document.documentElement.setAttribute('data-bs-theme', theme === 'dark' ? 'dark' : '');
+        
+        // Update theme toggle icon
+        if (this.themeIcon) {
+            this.themeIcon.className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+    }
+
+    /**
+     * Get saved theme preference
+     * @returns {Promise<string|null>} Saved theme or null
+     */
+    async getSavedTheme() {
+        try {
+            const result = await chrome.storage.local.get(['theme']);
+            return result.theme || null;
+        } catch (error) {
+            console.error('Error getting saved theme:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Save theme preference
+     * @param {string} theme - Theme to save
+     */
+    async saveTheme(theme) {
+        try {
+            await chrome.storage.local.set({ theme });
+        } catch (error) {
+            console.error('Error saving theme:', error);
+        }
+    }
+
+    /**
+     * Add page animations
+     */
+    addPageAnimations() {
+        // Add slide-in animation to cards
+        const cards = document.querySelectorAll('.card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('animate-slide-in-up');
+        });
     }
 
     /**
@@ -355,13 +532,16 @@ class OptionsPageManager {
         const searchResults = this.getElementById('idSearch_Results');
         const query = searchQuery.value.trim();
 
+        if (!query) {
+            this.showError('Please enter a search query');
+            return;
+        }
+
         try {
             // Update button state
-            const icons = searchButton.querySelectorAll('i');
-            if (icons.length === 2) {
-                icons[0].style.display = 'none';
-                icons[1].style.display = 'inline';
-            }
+            this.searchIcon.classList.add('d-none');
+            this.searchSpinner.classList.remove('d-none');
+            searchButton.disabled = true;
 
             const response = await chrome.runtime.sendMessage({
                 action: 'search-videos',
@@ -371,18 +551,18 @@ class OptionsPageManager {
             if (response && response.success) {
                 this.displaySearchResults(response.results);
             } else {
-                searchResults.innerHTML = '<p class="text-danger">Search failed</p>';
+                this.showError(response?.error || 'Search failed');
+                searchResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>Search failed. Please try again.</div>';
             }
         } catch (error) {
             console.error('Search error:', error);
-            searchResults.innerHTML = '<p class="text-danger">Search error: ' + error.message + '</p>';
+            this.showError('Search failed. Please try again.');
+            searchResults.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Search error occurred. Please try again.</div>';
         } finally {
             // Reset button state
-            const icons = searchButton.querySelectorAll('i');
-            if (icons.length === 2) {
-                icons[0].style.display = 'inline';
-                icons[1].style.display = 'none';
-            }
+            this.searchIcon.classList.remove('d-none');
+            this.searchSpinner.classList.add('d-none');
+            searchButton.disabled = false;
         }
     }
 
@@ -394,51 +574,81 @@ class OptionsPageManager {
         const searchResults = this.getElementById('idSearch_Results');
         
         if (!results || results.length === 0) {
-            searchResults.innerHTML = '<p class="text-muted">No results found</p>';
+            searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found matching your search.</div>';
             return;
         }
 
-        // Create table structure matching the original design
+        // Create modern table structure with enhanced styling
         const html = `
-            <table class="table table-hover" style="font-size: 14px;">
-                <thead>
-                    <tr>
-                        <th style="width: 200px;">Time</th>
-                        <th>Title</th>
-                        <th style="width: 80px; text-align: center;">Visits</th>
-                        <th style="width: 50px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${results.map(result => `
-                        <tr>
-                            <td style="font-family: monospace; font-size: 12px; color: #666;">
-                                ${this.formatDateForTable(new Date(result.timestamp))}
-                            </td>
-                            <td>
-                                <a href="https://www.youtube.com/watch?v=${result.id}" 
-                                   target="_blank" 
-                                   style="color: #4285f4; text-decoration: none;">
-                                    ${this.escapeHtml(result.title)}
-                                </a>
-                            </td>
-                            <td style="text-align: center; font-weight: bold;">
-                                ${result.count}
-                            </td>
-                            <td style="text-align: center;">
-                                <button class="btn btn-sm btn-outline-danger delete-video-btn" 
-                                        data-video-id="${result.id}"
-                                        title="Delete video">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+            <div class="mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 text-primary">
+                        <i class="fas fa-video me-2"></i>
+                        Found ${results.length} video${results.length !== 1 ? 's' : ''}
+                    </h6>
+                    <small class="text-muted">
+                        <i class="fas fa-external-link-alt me-1"></i>
+                        Click titles to open on YouTube
+                    </small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="text-center" style="width: 200px;">
+                                    <i class="fas fa-clock me-2"></i>Watch Time
+                                </th>
+                                <th>
+                                    <i class="fas fa-play me-2"></i>Video Title
+                                </th>
+                                <th class="text-center" style="width: 100px;">
+                                    <i class="fas fa-eye me-2"></i>Visits
+                                </th>
+                                <th class="text-center" style="width: 80px;">
+                                    <i class="fas fa-cog me-2"></i>Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.map(result => `
+                                <tr class="search-result-item">
+                                    <td class="text-center">
+                                        <small class="text-muted font-monospace">
+                                            ${this.formatDateForTable(new Date(result.timestamp))}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <a href="https://www.youtube.com/watch?v=${result.id}" 
+                                           target="_blank" 
+                                           class="text-decoration-none fw-medium text-primary">
+                                            ${this.escapeHtml(result.title)}
+                                            <i class="fas fa-external-link-alt ms-2 text-muted small"></i>
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary rounded-pill">
+                                            ${result.count}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-danger delete-video-btn hover-lift" 
+                                                data-video-id="${result.id}"
+                                                title="Delete from watch history">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         `;
 
         searchResults.innerHTML = html;
+        
+        // Add fade-in animation
+        searchResults.classList.add('animate-fade-in');
         
         // Add event listeners for delete buttons
         const deleteButtons = searchResults.querySelectorAll('.delete-video-btn');
@@ -634,11 +844,11 @@ class OptionsPageManager {
      * @param {string} message - Loading message
      */
     showLoading(message) {
-        if (this.loadingContainer && this.loadingMessage && this.loadingProgress && this.loadingClose) {
-            this.loadingContainer.style.display = 'block';
+        if (this.loadingModal && this.loadingMessage && this.loadingProgress) {
             this.loadingMessage.textContent = message;
-            this.loadingProgress.textContent = '...';
-            this.loadingClose.classList.add('disabled');
+            this.loadingProgress.textContent = '';
+            this.updateLoadingProgress(0);
+            this.loadingModal.show();
         }
     }
 
@@ -646,40 +856,72 @@ class OptionsPageManager {
      * Hide loading modal
      */
     hideLoading() {
-        if (this.loadingContainer && this.loadingClose) {
-            this.loadingContainer.style.display = 'none';
-            this.loadingClose.classList.remove('disabled');
+        if (this.loadingModal) {
+            this.loadingModal.hide();
         }
     }
 
     /**
      * Update loading progress
-     * @param {string} progress - Progress text
+     * @param {string|number} progress - Progress message or percentage
      */
     updateLoadingProgress(progress) {
-        if (this.loadingProgress) {
+        if (typeof progress === 'number') {
+            // Update progress bar
+            const progressBar = document.querySelector('.progress-bar');
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+            }
+            if (this.loadingProgress) {
+                this.loadingProgress.textContent = `${progress}%`;
+            }
+        } else if (this.loadingProgress) {
             this.loadingProgress.textContent = progress;
         }
     }
 
     /**
-     * Show success message
+     * Show success toast
      * @param {string} message - Success message
      */
     showSuccess(message) {
-        console.log('Success:', message);
-        // Could implement toast notifications here
-        alert(message); // Simple fallback
+        if (this.successToast && this.successToastMessage) {
+            this.successToastMessage.textContent = message;
+            this.successToast.show();
+            this.announceToScreenReader(message);
+        } else {
+            console.log('Success:', message);
+        }
     }
 
     /**
-     * Show error message
+     * Show error toast
      * @param {string} message - Error message
      */
     showError(message) {
-        console.error('Error:', message);
-        // Could implement toast notifications here
-        alert('Error: ' + message); // Simple fallback
+        if (this.errorToast && this.errorToastMessage) {
+            this.errorToastMessage.textContent = message;
+            this.errorToast.show();
+            this.announceToScreenReader(`Error: ${message}`);
+        } else {
+            console.error('Error:', message);
+            alert('Error: ' + message); // Fallback
+        }
+    }
+
+    /**
+     * Announce message to screen readers
+     * @param {string} message - Message to announce
+     */
+    announceToScreenReader(message) {
+        if (this.srAnnouncements) {
+            this.srAnnouncements.textContent = message;
+            // Clear after a short delay to allow for re-announcement of the same message
+            setTimeout(() => {
+                this.srAnnouncements.textContent = '';
+            }, 1000);
+        }
     }
 }
 
