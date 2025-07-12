@@ -212,13 +212,79 @@
           </section>
         </div>
 
-        <!-- Synchronization -->
+        <!-- Remote Sync -->
+        <div class="col-12 col-lg-6">
+          <section class="card shadow-sm h-100">
+            <div class="card-header bg-info text-white">
+              <h2 class="card-title h5 mb-0">
+                <i class="fas fa-cloud-sync me-2"></i>
+                Remote Sync
+              </h2>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-4">
+                Sync your watch history across devices using cloud storage. Your data remains under your control.
+              </p>
+              
+              <div class="mb-3">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="idSync_Enable" />
+                  <label class="form-check-label fw-medium" for="idSync_Enable">
+                    Enable Remote Sync
+                  </label>
+                </div>
+              </div>
+              
+              <div id="sync-options" class="d-none">
+                <div class="mb-3">
+                  <label for="idSync_Provider" class="form-label fw-medium">Sync Provider</label>
+                  <select class="form-select" id="idSync_Provider">
+                    <option value="">Select a provider...</option>
+                    <option value="chrome">Chrome Sync (Limited to 100KB)</option>
+                    <option value="googledrive" disabled>Google Drive (Coming Soon)</option>
+                    <option value="custom" disabled>Custom Backend (Coming Soon)</option>
+                  </select>
+                  <div class="form-text">
+                    Chrome Sync works automatically but has storage limits. Other providers offer more space.
+                  </div>
+                </div>
+                
+                <div class="d-flex gap-2 mb-3">
+                  <button class="btn btn-primary btn-sm" id="idSync_Now" type="button">
+                    <i class="fas fa-sync me-2"></i>Sync Now
+                  </button>
+                  <button class="btn btn-outline-secondary btn-sm" id="idSync_Status" type="button">
+                    <i class="fas fa-info-circle me-2"></i>Check Status
+                  </button>
+                </div>
+                
+                <div class="alert alert-info small">
+                  <i class="fas fa-info-circle me-2"></i>
+                  <div>
+                    <strong>Last sync:</strong> <span id="idSync_LastSync">Never</span><br>
+                    <strong>Provider:</strong> <span id="idSync_CurrentProvider">None</span><br>
+                    <strong>Status:</strong> <span id="idSync_CurrentStatus">Disabled</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="sync-disabled-info">
+                <div class="alert alert-warning small">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  <strong>Remote sync is disabled.</strong> Enable it to sync your watch history across devices.
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Local Synchronization -->
         <div class="col-12 col-lg-6">
           <section class="card shadow-sm h-100">
             <div class="card-header bg-success text-white">
               <h2 class="card-title h5 mb-0">
                 <i class="fas fa-sync me-2"></i>
-                Synchronization
+                Local Synchronization
               </h2>
             </div>
             <div class="card-body">

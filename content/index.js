@@ -92,6 +92,15 @@ class OptionsPageManager {
         this.youtubeWatchHistoryTimestamp = document.getElementById('idYoutube_Watch_History_Timestamp');
         this.youtubeLikedTimestamp = document.getElementById('idYoutube_LikedTimestamp');
         
+        // Sync elements
+        this.syncEnable = document.getElementById('idSync_Enable');
+        this.syncProvider = document.getElementById('idSync_Provider');
+        this.syncOptions = document.getElementById('sync-options');
+        this.syncDisabledInfo = document.getElementById('sync-disabled-info');
+        this.syncLastSync = document.getElementById('idSync_LastSync');
+        this.syncCurrentProvider = document.getElementById('idSync_CurrentProvider');
+        this.syncCurrentStatus = document.getElementById('idSync_CurrentStatus');
+        
         // Search elements
         this.searchIcon = document.getElementById('search-icon');
         this.searchSpinner = document.getElementById('search-spinner');
@@ -119,6 +128,12 @@ class OptionsPageManager {
         this.getElementById('idHistory_Synchronize').addEventListener('click', () => this.synchronizeHistory());
         this.getElementById('idYoutube_Synchronize').addEventListener('click', () => this.synchronizeYoutube());
         this.getElementById('idYoutube_LikedVideos').addEventListener('click', () => this.synchronizeLikedVideos());
+
+        // Remote Sync
+        this.getElementById('idSync_Enable').addEventListener('change', (event) => this.toggleRemoteSync(event));
+        this.getElementById('idSync_Provider').addEventListener('change', (event) => this.changeProvider(event));
+        this.getElementById('idSync_Now').addEventListener('click', () => this.syncNow());
+        this.getElementById('idSync_Status').addEventListener('click', () => this.checkSyncStatus());
 
         // Toggle switches for conditions (using new form-switch format)
         this.setupToggleSwitch('idCondition_Brownav');
@@ -883,6 +898,7 @@ class OptionsPageManager {
                 this.updateHistoryTimestamp(),
                 this.updateYoutubeWatchHistoryTimestamp(),
                 this.updateYoutubeLikedTimestamp(),
+                this.updateSyncStatus(),
                 this.performInitialSearch() // Show all videos by default without errors
             ]);
         } catch (error) {
@@ -1169,6 +1185,177 @@ class OptionsPageManager {
         
         // Perform the search with the updated page
         await this.performSearch();
+    }
+
+    /**
+     * Update sync status display
+     */
+    async updateSyncStatus() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-sync-status'
+            });
+
+            if (response && response.success) {
+                const status = response.status;
+                
+                // Update UI elements
+                this.syncEnable.checked = status.isEnabled;
+                this.syncCurrentProvider.textContent = status.provider || 'None';
+                this.syncCurrentStatus.textContent = status.isEnabled ? 'Enabled' : 'Disabled';
+                
+                if (status.lastSync && status.lastSync > 0) {
+                    const date = new Date(status.lastSync);
+                    this.syncLastSync.textContent = this.formatDate(date);
+                } else {
+                    this.syncLastSync.textContent = 'Never';
+                }
+                
+                // Show/hide options based on sync status
+                if (status.isEnabled) {
+                    this.syncOptions.classList.remove('d-none');
+                    this.syncDisabledInfo.classList.add('d-none');
+                    this.syncProvider.value = status.provider || '';
+                } else {
+                    this.syncOptions.classList.add('d-none');
+                    this.syncDisabledInfo.classList.remove('d-none');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating sync status:', error);
+            this.syncCurrentStatus.textContent = 'Error';
+        }
+    }
+
+    /**
+     * Toggle remote sync on/off
+     * @param {Event} event - Change event
+     */
+    async toggleRemoteSync(event) {
+        const isEnabled = event.target.checked;
+        
+        try {
+            if (isEnabled) {
+                // Show options immediately
+                this.syncOptions.classList.remove('d-none');
+                this.syncDisabledInfo.classList.add('d-none');
+                
+                // If no provider selected, don't enable yet
+                if (!this.syncProvider.value) {
+                    this.showError('Please select a sync provider first.');
+                    return;
+                }
+                
+                // Enable sync with selected provider
+                const response = await chrome.runtime.sendMessage({
+                    action: 'database-sync-enable',
+                    provider: this.syncProvider.value
+                });
+                
+                if (response && response.success) {
+                    this.showSuccess('Remote sync enabled successfully.');
+                    await this.updateSyncStatus();
+                } else {
+                    throw new Error(response?.error || 'Failed to enable sync');
+                }
+            } else {
+                // Disable sync
+                const response = await chrome.runtime.sendMessage({
+                    action: 'database-sync-disable'
+                });
+                
+                if (response && response.success) {
+                    this.showSuccess('Remote sync disabled.');
+                    this.syncOptions.classList.add('d-none');
+                    this.syncDisabledInfo.classList.remove('d-none');
+                    await this.updateSyncStatus();
+                } else {
+                    throw new Error(response?.error || 'Failed to disable sync');
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling sync:', error);
+            this.showError('Failed to toggle sync: ' + error.message);
+            // Revert checkbox state
+            event.target.checked = !isEnabled;
+        }
+    }
+
+    /**
+     * Change sync provider
+     * @param {Event} event - Change event
+     */
+    async changeProvider(event) {
+        const provider = event.target.value;
+        
+        if (!provider) {
+            return;
+        }
+        
+        // If sync is already enabled, update the provider
+        if (this.syncEnable.checked) {
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'database-sync-enable',
+                    provider: provider
+                });
+                
+                if (response && response.success) {
+                    this.showSuccess(`Switched to ${provider} sync provider.`);
+                    await this.updateSyncStatus();
+                } else {
+                    throw new Error(response?.error || 'Failed to change provider');
+                }
+            } catch (error) {
+                console.error('Error changing provider:', error);
+                this.showError('Failed to change provider: ' + error.message);
+            }
+        }
+    }
+
+    /**
+     * Trigger manual sync
+     */
+    async syncNow() {
+        if (!this.syncEnable.checked) {
+            this.showError('Sync is not enabled. Please enable sync first.');
+            return;
+        }
+        
+        try {
+            this.showLoading('Syncing data...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-sync-now'
+            });
+            
+            this.hideLoading();
+            
+            if (response && response.success) {
+                this.showSuccess(response.message || 'Sync completed successfully.');
+                await this.updateSyncStatus();
+                await this.updateDatabaseSize(); // Refresh database size in case data was merged
+            } else {
+                throw new Error(response?.error || 'Sync failed');
+            }
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error during manual sync:', error);
+            this.showError('Sync failed: ' + error.message);
+        }
+    }
+
+    /**
+     * Check sync status
+     */
+    async checkSyncStatus() {
+        try {
+            await this.updateSyncStatus();
+            this.showSuccess('Sync status updated.');
+        } catch (error) {
+            console.error('Error checking sync status:', error);
+            this.showError('Failed to check sync status: ' + error.message);
+        }
     }
 }
 

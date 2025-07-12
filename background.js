@@ -241,6 +241,20 @@ class ExtensionManager {
             this.getDatabaseSize(res);
           },
           
+          // Sync actions
+          "database-sync-enable": (req, res) => {
+            Database.enableSync({ provider: req.provider }, res);
+          },
+          "database-sync-disable": (req, res) => {
+            Database.disableSync({}, res);
+          },
+          "database-sync-now": (req, res) => {
+            Database.syncNow({}, res);
+          },
+          "database-sync-status": (req, res) => {
+            Database.getSyncStatus({}, res);
+          },
+          
           // Search actions
           "search-videos": (req, res) => {
             const page = req.page || 1;
