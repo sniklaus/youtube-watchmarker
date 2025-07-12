@@ -42,8 +42,37 @@
         --bs-table-color: var(--bs-light);
       }
       
+      [data-bs-theme="dark"] .table-secondary {
+        --bs-table-bg: var(--bs-gray-700);
+        --bs-table-color: var(--bs-light);
+        background-color: var(--bs-gray-700) !important;
+        color: var(--bs-light) !important;
+      }
+      
+      [data-bs-theme="dark"] .table thead th {
+        background-color: var(--bs-gray-700) !important;
+        color: var(--bs-light) !important;
+        border-color: var(--bs-gray-600) !important;
+      }
+      
       [data-bs-theme="dark"] .search-result-item:hover {
         background-color: var(--bs-gray-700);
+      }
+      
+      /* Search card height and styling */
+      .search-results {
+        min-height: 400px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+      
+      .search-card {
+        min-height: 500px;
+      }
+      
+      .table-responsive {
+        max-height: 60vh;
+        overflow-y: auto;
       }
       
       /* Pagination styling */
@@ -354,7 +383,7 @@
 
         <!-- Search -->
         <div class="col-12">
-          <section class="card shadow-sm">
+          <section class="card shadow-sm search-card">
             <div class="card-header bg-dark text-white">
               <h2 class="card-title h5 mb-0">
                 <i class="fas fa-search me-2"></i>

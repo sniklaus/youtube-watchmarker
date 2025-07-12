@@ -558,11 +558,16 @@ class OptionsPageManager {
         const searchQuery = this.getElementById('idSearch_Query');
         const searchButton = this.getElementById('idSearch_Lookup');
         const searchResults = this.getElementById('idSearch_Results');
-        const query = searchQuery.value.trim();
+        
+        // Use the query from search state if available, otherwise from input
+        let query = this.searchState.currentQuery;
+        if (query === undefined || query === null) {
+            query = searchQuery.value.trim();
+            this.searchState.currentQuery = query;
+        }
 
         // Update search state
         this.searchState.isSearching = true;
-        this.searchState.currentQuery = query;
 
         try {
             // Update button state
@@ -573,14 +578,14 @@ class OptionsPageManager {
 
             const response = await chrome.runtime.sendMessage({
                 action: 'search-videos',
-                query: query, // Send query (empty shows all videos, non-empty filters)
+                query: query, // Use the query from search state
                 page: this.searchState.currentPage,
                 pageSize: this.searchState.pageSize
             });
 
             if (response && response.success) {
+                this.searchState.totalResults = response.totalResults || 0;
                 this.displaySearchResults(response.results);
-                this.searchState.totalResults = response.totalResults;
             } else {
                 const errorMessage = query 
                     ? 'Search failed. Please try again.' 
@@ -614,6 +619,8 @@ class OptionsPageManager {
             this.searchState.currentQuery = '';
             this.searchState.currentPage = 1;
             
+            console.log('Performing initial search...');
+            
             const response = await chrome.runtime.sendMessage({
                 action: 'search-videos',
                 query: '', // Empty query to show all videos
@@ -621,19 +628,23 @@ class OptionsPageManager {
                 pageSize: 50
             });
 
+            console.log('Initial search response:', response);
+
             if (response && response.success) {
+                this.searchState.totalResults = response.totalResults || 0;
                 this.displaySearchResults(response.results);
-                this.searchState.totalResults = response.totalResults;
+                console.log(`Initial search successful: ${response.totalResults} total videos found`);
             } else {
+                console.warn('Initial search failed:', response);
                 // Don't show error on initial load, just show empty state
                 const searchResults = this.getElementById('idSearch_Results');
-                searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history.</div>';
+                searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history. Try synchronizing your browser history or YouTube history first.</div>';
             }
         } catch (error) {
             console.error('Initial search error:', error);
             // Don't show error toast on initial load
             const searchResults = this.getElementById('idSearch_Results');
-            searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history.</div>';
+            searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history. Try synchronizing your browser history or YouTube history first.</div>';
         }
     }
 
@@ -647,7 +658,7 @@ class OptionsPageManager {
         if (!results || results.length === 0) {
             const message = this.searchState.currentQuery 
                 ? 'No videos found matching your search.' 
-                : 'No videos found in your watch history.';
+                : 'No videos found in your watch history. Try synchronizing your browser history or YouTube history first.';
             searchResults.innerHTML = `<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>${message}</div>`;
             return;
         }
@@ -1074,8 +1085,20 @@ class OptionsPageManager {
         paginationButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
-                const page = parseInt(e.target.getAttribute('data-page'));
-                if (page && !e.target.disabled) {
+                e.stopPropagation();
+                
+                // Get page number from button or its parent
+                let pageElement = e.target;
+                let page = pageElement.getAttribute('data-page');
+                
+                // If clicked on span inside button, get page from button
+                if (!page && pageElement.parentElement) {
+                    page = pageElement.parentElement.getAttribute('data-page');
+                }
+                
+                page = parseInt(page);
+                
+                if (page && !pageElement.disabled && !pageElement.parentElement?.disabled) {
                     this.goToPage(page);
                 }
             });
@@ -1087,7 +1110,16 @@ class OptionsPageManager {
      * @param {number} page - Page number to go to
      */
     async goToPage(page) {
+        if (page < 1) return;
+        
+        // Update the current page in search state
         this.searchState.currentPage = page;
+        
+        // Get the current search query from the input
+        const searchQuery = this.getElementById('idSearch_Query');
+        this.searchState.currentQuery = searchQuery.value.trim();
+        
+        // Perform the search with the updated page
         await this.performSearch();
     }
 }

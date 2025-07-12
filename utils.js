@@ -229,16 +229,23 @@ export class BackgroundUtils {
   }
 
   /**
-   * Gets database connection
+   * Gets database connection with modern async/await support
+   * @param {string} mode - Transaction mode ('readonly' or 'readwrite')
    * @returns {Function} Function that returns database object store
    */
-  static database() {
+  static database(mode = 'readwrite') {
     return (args, callback) => {
       const Database = globalThis.Database;
       if (!Database || !Database.database) {
-        throw new Error("Database not initialized or not available");
+        console.error("Database not initialized or not available");
+        return callback(null);
       }
-      return callback(Database.getObjectStore());
+      try {
+        return callback(Database.getObjectStore(mode));
+      } catch (error) {
+        console.error("Error getting database object store:", error);
+        return callback(null);
+      }
     };
   }
 
@@ -301,11 +308,22 @@ export class BackgroundUtils {
    */
   static put() {
     return (args, callback) => {
-      if (!args.objGet.strIdent.trim() || !args.objGet.strTitle.trim()) {
+      if (!args.objDatabase) {
+        console.error("Database object store not available");
+        return callback({});
+      }
+      
+      if (!args.objGet || !args.objGet.strIdent || !args.objGet.strIdent.trim()) {
         return callback({});
       }
 
       const query = args.objDatabase.put(args.objGet);
+      
+      query.onerror = () => {
+        console.error("Database put error:", query.error);
+        return callback({});
+      };
+      
       query.onsuccess = () => callback({});
     };
   }
@@ -333,7 +351,17 @@ export class BackgroundUtils {
    */
   static count() {
     return (args, callback) => {
+      if (!args.objDatabase) {
+        console.error("Database object store not available");
+        return callback({});
+      }
+      
       const query = args.objDatabase.count();
+
+      query.onerror = () => {
+        console.error("Database count error:", query.error);
+        return callback({});
+      };
 
       query.onsuccess = async () => {
         await setStorageAsync(

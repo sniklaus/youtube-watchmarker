@@ -227,39 +227,37 @@ class ExtensionManager {
           "search-videos": (req, res) => {
             const page = req.page || 1;
             const pageSize = req.pageSize || 50;
-            const skip = (page - 1) * pageSize;
+            const query = req.query || '';
             
-            const searchRequest = { 
-              strQuery: req.query || '', 
-              intSkip: skip, 
-              intLength: pageSize 
+            // First, get all matching results for counting
+            const countRequest = { 
+              strQuery: query, 
+              intSkip: 0, 
+              intLength: 999999 // Large number to get all matching results
             };
             
-            Search.lookup(searchRequest, (response) => {
-              if (response && response.objVideos) {
-                const results = response.objVideos.map(video => ({
+            Search.lookup(countRequest, (countResponse) => {
+              if (countResponse && countResponse.objVideos) {
+                const allResults = countResponse.objVideos;
+                const totalResults = allResults.length;
+                
+                // Calculate pagination
+                const skip = (page - 1) * pageSize;
+                const paginatedResults = allResults.slice(skip, skip + pageSize);
+                
+                const results = paginatedResults.map(video => ({
                   id: video.strIdent,
                   title: video.strTitle,
                   timestamp: video.intTimestamp,
                   count: video.intCount
                 }));
                 
-                // Get total count for pagination
-                const countRequest = { 
-                  strQuery: req.query || '', 
-                  intSkip: 0, 
-                  intLength: 999999 // Large number to get all results for counting
-                };
-                
-                Search.lookup(countRequest, (countResponse) => {
-                  const totalResults = countResponse && countResponse.objVideos ? countResponse.objVideos.length : 0;
-                  res({ 
-                    success: true, 
-                    results, 
-                    totalResults,
-                    currentPage: page,
-                    pageSize: pageSize
-                  });
+                res({ 
+                  success: true, 
+                  results, 
+                  totalResults,
+                  currentPage: page,
+                  pageSize: pageSize
                 });
               } else {
                 res({ success: false, results: [], totalResults: 0 });

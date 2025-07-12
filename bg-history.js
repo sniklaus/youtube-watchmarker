@@ -60,7 +60,7 @@ export const History = {
             },
           );
         },
-        objDatabase: BackgroundUtils.database(),
+        objDatabase: BackgroundUtils.database("readwrite"),
         objVideo: BackgroundUtils.video(),
         objGet: BackgroundUtils.get(funcProgress),
         objPut: BackgroundUtils.put(),

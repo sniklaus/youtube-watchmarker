@@ -22,14 +22,24 @@ export const Search = {
   lookup: function (objRequest, funcResponse) {
     AsyncSeries.run(
       {
-        objDatabase: BackgroundUtils.database(),
+        objDatabase: BackgroundUtils.database("readonly"),
         objGet: function (objArgs, funcCallback) {
+          if (!objArgs.objDatabase) {
+            console.error("Database object store not available");
+            return funcCallback([]);
+          }
+          
           let objQuery = objArgs.objDatabase
             .index("intTimestamp")
             .openCursor(null, "prev");
 
           objQuery.skip = objRequest.intSkip;
           objQuery.results = [];
+
+          objQuery.onerror = function () {
+            console.error("Database cursor error:", objQuery.error);
+            return funcCallback([]);
+          };
 
           objQuery.onsuccess = function () {
             if (objQuery.result === undefined || objQuery.result === null) {
@@ -40,17 +50,25 @@ export const Search = {
               return funcCallback(objQuery.results);
             }
 
-            if (
-              objQuery.result.value.strIdent
-                .toLowerCase()
-                .indexOf(objRequest.strQuery.toLowerCase()) !== -1 ||
-              objQuery.result.value.strTitle
-                .toLowerCase()
-                .indexOf(objRequest.strQuery.toLowerCase()) !== -1
-            ) {
+            // Check if this video matches the search criteria
+            let matches = false;
+            
+            if (!objRequest.strQuery || objRequest.strQuery.trim() === '') {
+              // Empty query - show all videos
+              matches = true;
+            } else {
+              // Non-empty query - search in both ID and title (case-insensitive)
+              const searchTerm = objRequest.strQuery.toLowerCase().trim();
+              const videoId = (objQuery.result.value.strIdent || '').toLowerCase();
+              const videoTitle = (objQuery.result.value.strTitle || '').toLowerCase();
+              
+              matches = videoId.includes(searchTerm) || videoTitle.includes(searchTerm);
+            }
+
+            if (matches) {
               if (objQuery.skip !== 0) {
                 objQuery.skip -= 1;
-              } else if (objQuery.skip === 0) {
+              } else {
                 objQuery.results.push({
                   strIdent: objQuery.result.value.strIdent,
                   intTimestamp: objQuery.result.value.intTimestamp,
@@ -71,13 +89,23 @@ export const Search = {
   delete: function (objRequest, funcResponse, funcProgress) {
     AsyncSeries.run(
       {
-        objDatabase: BackgroundUtils.database(),
+        objDatabase: BackgroundUtils.database("readwrite"),
         objDelete: function (objArgs, funcCallback) {
+          if (!objArgs.objDatabase) {
+            console.error("Database object store not available");
+            return funcCallback(null);
+          }
+          
           funcProgress({
             strProgress: "1/4 - deleting it from the database",
           });
 
           let objQuery = objArgs.objDatabase.delete(objRequest.strIdent);
+
+          objQuery.onerror = function () {
+            console.error("Database delete error:", objQuery.error);
+            return funcCallback(null);
+          };
 
           objQuery.onsuccess = function () {
             return funcCallback({});

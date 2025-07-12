@@ -192,7 +192,7 @@ export const Youtube = {
             return funcCallback([]);
           }
         },
-        objDatabase: BackgroundUtils.database(),
+        objDatabase: BackgroundUtils.database("readwrite"),
         objVideo: BackgroundUtils.video(),
         objGet: BackgroundUtils.get(funcProgress),
         objPut: BackgroundUtils.put(),
@@ -219,11 +219,21 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: BackgroundUtils.database(),
+        objDatabase: BackgroundUtils.database("readonly"),
         objGet: function (objArgs, funcCallback) {
+          if (!objArgs.objDatabase) {
+            console.error("Database object store not available");
+            return funcCallback(null);
+          }
+          
           let objQuery = objArgs.objDatabase
             .index("strIdent")
             .get(objArgs.objVideo.strIdent);
+
+          objQuery.onerror = function () {
+            console.error("Database query error:", objQuery.error);
+            return funcCallback(null);
+          };
 
           objQuery.onsuccess = function () {
             if (objQuery.result !== undefined && objQuery.result !== null) {
@@ -250,11 +260,21 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: BackgroundUtils.database(),
+        objDatabase: BackgroundUtils.database("readwrite"),
         objGet: function (objArgs, funcCallback) {
+          if (!objArgs.objDatabase) {
+            console.error("Database object store not available");
+            return funcCallback(null);
+          }
+          
           let objQuery = objArgs.objDatabase
             .index("strIdent")
             .get(objArgs.objVideo.strIdent);
+
+          objQuery.onerror = function () {
+            console.error("Database query error:", objQuery.error);
+            return funcCallback(null);
+          };
 
           objQuery.onsuccess = function () {
             if (objQuery.result === undefined || objQuery.result === null) {
@@ -283,11 +303,21 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: BackgroundUtils.database(),
+        objDatabase: BackgroundUtils.database("readwrite"),
         objGet: function (objArgs, funcCallback) {
+          if (!objArgs.objDatabase) {
+            console.error("Database object store not available");
+            return funcCallback(null);
+          }
+          
           let objQuery = objArgs.objDatabase
             .index("strIdent")
             .get(objArgs.objVideo.strIdent);
+
+          objQuery.onerror = function () {
+            console.error("Database query error:", objQuery.error);
+            return funcCallback(null);
+          };
 
           objQuery.onsuccess = function () {
             if (objQuery.result === undefined || objQuery.result === null) {
