@@ -175,8 +175,72 @@
             </div>
             <div class="card-body">
               <p class="text-muted mb-4">
-                Your watch history is stored locally in your browser. Regular backups are recommended to prevent data loss.
+                Your watch history can be stored locally in your browser or in the cloud using Firestore. Regular backups are recommended to prevent data loss.
               </p>
+              
+              <!-- Database Provider Selection -->
+              <div class="mb-4">
+                <label class="form-label fw-medium">Database Provider</label>
+                <div class="d-flex gap-2 mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="database_provider" id="database_provider_indexeddb" value="indexeddb" checked>
+                    <label class="form-check-label" for="database_provider_indexeddb">
+                      <i class="fas fa-hdd me-1"></i>Local Storage (IndexedDB)
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="database_provider" id="database_provider_firestore" value="firestore">
+                    <label class="form-check-label" for="database_provider_firestore">
+                      <i class="fas fa-cloud me-1"></i>Cloud Storage (Firestore)
+                    </label>
+                  </div>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="database_sync_enabled">
+                  <label class="form-check-label" for="database_sync_enabled">
+                    Enable automatic synchronization between local and cloud storage
+                  </label>
+                </div>
+              </div>
+              
+              <!-- Firestore Configuration (hidden by default) -->
+              <div id="firestore-config" class="mb-4" style="display: none;">
+                <h6 class="fw-medium mb-3">Firestore Configuration</h6>
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label for="firestore_project_id" class="form-label">Project ID</label>
+                    <input type="text" class="form-control" id="firestore_project_id" placeholder="your-project-id">
+                  </div>
+                  <div class="col-12">
+                    <label for="firestore_api_key" class="form-label">API Key</label>
+                    <input type="password" class="form-control" id="firestore_api_key" placeholder="Your Firebase API key">
+                  </div>
+                  <div class="col-12">
+                    <label for="firestore_auth_domain" class="form-label">Auth Domain (optional)</label>
+                    <input type="text" class="form-control" id="firestore_auth_domain" placeholder="your-project.firebaseapp.com">
+                  </div>
+                  <div class="col-12">
+                    <label for="firestore_collection_name" class="form-label">Collection Name</label>
+                    <input type="text" class="form-control" id="firestore_collection_name" value="watchmarker_videos" placeholder="watchmarker_videos">
+                  </div>
+                  <div class="col-12">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="firestore_use_emulator">
+                      <label class="form-check-label" for="firestore_use_emulator">
+                        Use local emulator (development only)
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <button class="btn btn-outline-primary btn-sm" id="firestore_save_config" type="button">
+                      <i class="fas fa-save me-2"></i>Save Configuration
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm ms-2" id="firestore_test_connection" type="button">
+                      <i class="fas fa-plug me-2"></i>Test Connection
+                    </button>
+                  </div>
+                </div>
+              </div>
               
               <div class="d-flex flex-wrap gap-2 mb-4">
                 <button class="btn btn-primary" id="idDatabase_Export" type="button">
@@ -199,6 +263,10 @@
                 <button class="btn btn-outline-danger" id="idDatabase_Reset" type="button">
                   <i class="fas fa-trash me-2"></i>Reset
                 </button>
+                
+                <button class="btn btn-outline-info" id="idDatabase_Sync" type="button">
+                  <i class="fas fa-sync me-2"></i>Sync Databases
+                </button>
               </div>
               
               <div class="alert alert-info d-flex align-items-center">
@@ -212,79 +280,13 @@
           </section>
         </div>
 
-        <!-- Remote Sync -->
-        <div class="col-12 col-lg-6">
-          <section class="card shadow-sm h-100">
-            <div class="card-header bg-info text-white">
-              <h2 class="card-title h5 mb-0">
-                <i class="fas fa-cloud-sync me-2"></i>
-                Remote Sync
-              </h2>
-            </div>
-            <div class="card-body">
-              <p class="text-muted mb-4">
-                Sync your watch history across devices using cloud storage. Your data remains under your control.
-              </p>
-              
-              <div class="mb-3">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="idSync_Enable" />
-                  <label class="form-check-label fw-medium" for="idSync_Enable">
-                    Enable Remote Sync
-                  </label>
-                </div>
-              </div>
-              
-              <div id="sync-options" class="d-none">
-                <div class="mb-3">
-                  <label for="idSync_Provider" class="form-label fw-medium">Sync Provider</label>
-                  <select class="form-select" id="idSync_Provider">
-                    <option value="">Select a provider...</option>
-                    <option value="chrome">Chrome Sync (Limited to 100KB)</option>
-                    <option value="googledrive" disabled>Google Drive (Coming Soon)</option>
-                    <option value="custom" disabled>Custom Backend (Coming Soon)</option>
-                  </select>
-                  <div class="form-text">
-                    Chrome Sync works automatically but has storage limits. Other providers offer more space.
-                  </div>
-                </div>
-                
-                <div class="d-flex gap-2 mb-3">
-                  <button class="btn btn-primary btn-sm" id="idSync_Now" type="button">
-                    <i class="fas fa-sync me-2"></i>Sync Now
-                  </button>
-                  <button class="btn btn-outline-secondary btn-sm" id="idSync_Status" type="button">
-                    <i class="fas fa-info-circle me-2"></i>Check Status
-                  </button>
-                </div>
-                
-                <div class="alert alert-info small">
-                  <i class="fas fa-info-circle me-2"></i>
-                  <div>
-                    <strong>Last sync:</strong> <span id="idSync_LastSync">Never</span><br>
-                    <strong>Provider:</strong> <span id="idSync_CurrentProvider">None</span><br>
-                    <strong>Status:</strong> <span id="idSync_CurrentStatus">Disabled</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div id="sync-disabled-info">
-                <div class="alert alert-warning small">
-                  <i class="fas fa-exclamation-triangle me-2"></i>
-                  <strong>Remote sync is disabled.</strong> Enable it to sync your watch history across devices.
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <!-- Local Synchronization -->
+        <!-- Synchronization -->
         <div class="col-12 col-lg-6">
           <section class="card shadow-sm h-100">
             <div class="card-header bg-success text-white">
               <h2 class="card-title h5 mb-0">
                 <i class="fas fa-sync me-2"></i>
-                Local Synchronization
+                Synchronization
               </h2>
             </div>
             <div class="card-body">

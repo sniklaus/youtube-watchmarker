@@ -92,15 +92,6 @@ class OptionsPageManager {
         this.youtubeWatchHistoryTimestamp = document.getElementById('idYoutube_Watch_History_Timestamp');
         this.youtubeLikedTimestamp = document.getElementById('idYoutube_LikedTimestamp');
         
-        // Sync elements
-        this.syncEnable = document.getElementById('idSync_Enable');
-        this.syncProvider = document.getElementById('idSync_Provider');
-        this.syncOptions = document.getElementById('sync-options');
-        this.syncDisabledInfo = document.getElementById('sync-disabled-info');
-        this.syncLastSync = document.getElementById('idSync_LastSync');
-        this.syncCurrentProvider = document.getElementById('idSync_CurrentProvider');
-        this.syncCurrentStatus = document.getElementById('idSync_CurrentStatus');
-        
         // Search elements
         this.searchIcon = document.getElementById('search-icon');
         this.searchSpinner = document.getElementById('search-spinner');
@@ -123,17 +114,21 @@ class OptionsPageManager {
         this.getElementById('idDatabase_Export').addEventListener('click', () => this.exportDatabase());
         this.getElementById('idDatabase_Import').parentElement.querySelector('input[type=file]').addEventListener('change', (event) => this.importDatabase(event));
         this.getElementById('idDatabase_Reset').addEventListener('click', () => this.resetDatabase());
+        this.getElementById('idDatabase_Sync').addEventListener('click', () => this.syncDatabases());
+        
+        // Database provider selection
+        this.getElementById('database_provider_indexeddb').addEventListener('change', () => this.handleDatabaseProviderChange());
+        this.getElementById('database_provider_firestore').addEventListener('change', () => this.handleDatabaseProviderChange());
+        this.getElementById('database_sync_enabled').addEventListener('change', () => this.handleSyncToggle());
+        
+        // Firestore configuration
+        this.getElementById('firestore_save_config').addEventListener('click', () => this.saveFirestoreConfig());
+        this.getElementById('firestore_test_connection').addEventListener('click', () => this.testFirestoreConnection());
 
         // Synchronization
         this.getElementById('idHistory_Synchronize').addEventListener('click', () => this.synchronizeHistory());
         this.getElementById('idYoutube_Synchronize').addEventListener('click', () => this.synchronizeYoutube());
         this.getElementById('idYoutube_LikedVideos').addEventListener('click', () => this.synchronizeLikedVideos());
-
-        // Remote Sync
-        this.getElementById('idSync_Enable').addEventListener('change', (event) => this.toggleRemoteSync(event));
-        this.getElementById('idSync_Provider').addEventListener('change', (event) => this.changeProvider(event));
-        this.getElementById('idSync_Now').addEventListener('click', () => this.syncNow());
-        this.getElementById('idSync_Status').addEventListener('click', () => this.checkSyncStatus());
 
         // Toggle switches for conditions (using new form-switch format)
         this.setupToggleSwitch('idCondition_Brownav');
@@ -898,7 +893,8 @@ class OptionsPageManager {
                 this.updateHistoryTimestamp(),
                 this.updateYoutubeWatchHistoryTimestamp(),
                 this.updateYoutubeLikedTimestamp(),
-                this.updateSyncStatus(),
+                this.loadDatabaseProviderSettings(),
+                this.loadFirestoreConfig(),
                 this.performInitialSearch() // Show all videos by default without errors
             ]);
         } catch (error) {
@@ -1188,173 +1184,243 @@ class OptionsPageManager {
     }
 
     /**
-     * Update sync status display
+     * Load database provider settings
      */
-    async updateSyncStatus() {
+    async loadDatabaseProviderSettings() {
         try {
             const response = await chrome.runtime.sendMessage({
-                action: 'database-sync-status'
+                action: 'database-provider-status'
             });
 
             if (response && response.success) {
                 const status = response.status;
                 
-                // Update UI elements
-                this.syncEnable.checked = status.isEnabled;
-                this.syncCurrentProvider.textContent = status.provider || 'None';
-                this.syncCurrentStatus.textContent = status.isEnabled ? 'Enabled' : 'Disabled';
-                
-                if (status.lastSync && status.lastSync > 0) {
-                    const date = new Date(status.lastSync);
-                    this.syncLastSync.textContent = this.formatDate(date);
+                // Set database provider radio buttons
+                if (status.primaryDatabase === 'Firestore') {
+                    this.getElementById('database_provider_firestore').checked = true;
                 } else {
-                    this.syncLastSync.textContent = 'Never';
+                    this.getElementById('database_provider_indexeddb').checked = true;
                 }
                 
-                // Show/hide options based on sync status
-                if (status.isEnabled) {
-                    this.syncOptions.classList.remove('d-none');
-                    this.syncDisabledInfo.classList.add('d-none');
-                    this.syncProvider.value = status.provider || '';
-                } else {
-                    this.syncOptions.classList.add('d-none');
-                    this.syncDisabledInfo.classList.remove('d-none');
-                }
+                // Set sync enabled checkbox
+                this.getElementById('database_sync_enabled').checked = status.syncEnabled;
+                
+                // Show/hide Firestore config based on selection
+                this.toggleFirestoreConfig();
             }
         } catch (error) {
-            console.error('Error updating sync status:', error);
-            this.syncCurrentStatus.textContent = 'Error';
+            console.error('Error loading database provider settings:', error);
         }
     }
 
     /**
-     * Toggle remote sync on/off
-     * @param {Event} event - Change event
+     * Load Firestore configuration
      */
-    async toggleRemoteSync(event) {
-        const isEnabled = event.target.checked;
-        
+    async loadFirestoreConfig() {
         try {
-            if (isEnabled) {
-                // Show options immediately
-                this.syncOptions.classList.remove('d-none');
-                this.syncDisabledInfo.classList.add('d-none');
+            const response = await chrome.runtime.sendMessage({
+                action: 'firestore-config-load'
+            });
+
+            if (response && response.success) {
+                const config = response.config;
                 
-                // If no provider selected, don't enable yet
-                if (!this.syncProvider.value) {
-                    this.showError('Please select a sync provider first.');
-                    return;
-                }
-                
-                // Enable sync with selected provider
-                const response = await chrome.runtime.sendMessage({
-                    action: 'database-sync-enable',
-                    provider: this.syncProvider.value
-                });
-                
-                if (response && response.success) {
-                    this.showSuccess('Remote sync enabled successfully.');
-                    await this.updateSyncStatus();
-                } else {
-                    throw new Error(response?.error || 'Failed to enable sync');
-                }
-            } else {
-                // Disable sync
-                const response = await chrome.runtime.sendMessage({
-                    action: 'database-sync-disable'
-                });
-                
-                if (response && response.success) {
-                    this.showSuccess('Remote sync disabled.');
-                    this.syncOptions.classList.add('d-none');
-                    this.syncDisabledInfo.classList.remove('d-none');
-                    await this.updateSyncStatus();
-                } else {
-                    throw new Error(response?.error || 'Failed to disable sync');
-                }
+                this.getElementById('firestore_project_id').value = config.projectId || '';
+                this.getElementById('firestore_api_key').value = config.apiKey || '';
+                this.getElementById('firestore_auth_domain').value = config.authDomain || '';
+                this.getElementById('firestore_collection_name').value = config.collectionName || 'watchmarker_videos';
+                this.getElementById('firestore_use_emulator').checked = config.useEmulator || false;
             }
         } catch (error) {
-            console.error('Error toggling sync:', error);
-            this.showError('Failed to toggle sync: ' + error.message);
-            // Revert checkbox state
-            event.target.checked = !isEnabled;
+            console.error('Error loading Firestore configuration:', error);
         }
     }
 
     /**
-     * Change sync provider
-     * @param {Event} event - Change event
+     * Handle database provider change
      */
-    async changeProvider(event) {
-        const provider = event.target.value;
-        
-        if (!provider) {
-            return;
-        }
-        
-        // If sync is already enabled, update the provider
-        if (this.syncEnable.checked) {
-            try {
-                const response = await chrome.runtime.sendMessage({
-                    action: 'database-sync-enable',
-                    provider: provider
-                });
-                
-                if (response && response.success) {
-                    this.showSuccess(`Switched to ${provider} sync provider.`);
-                    await this.updateSyncStatus();
-                } else {
-                    throw new Error(response?.error || 'Failed to change provider');
-                }
-            } catch (error) {
-                console.error('Error changing provider:', error);
-                this.showError('Failed to change provider: ' + error.message);
-            }
-        }
-    }
-
-    /**
-     * Trigger manual sync
-     */
-    async syncNow() {
-        if (!this.syncEnable.checked) {
-            this.showError('Sync is not enabled. Please enable sync first.');
-            return;
-        }
+    async handleDatabaseProviderChange() {
+        const isFirestore = this.getElementById('database_provider_firestore').checked;
+        const provider = isFirestore ? 'firestore' : 'indexeddb';
         
         try {
-            this.showLoading('Syncing data...');
+            this.showLoading('Switching database provider...');
             
             const response = await chrome.runtime.sendMessage({
-                action: 'database-sync-now'
+                action: 'database-provider-switch',
+                provider: provider
             });
-            
-            this.hideLoading();
-            
+
             if (response && response.success) {
-                this.showSuccess(response.message || 'Sync completed successfully.');
-                await this.updateSyncStatus();
-                await this.updateDatabaseSize(); // Refresh database size in case data was merged
+                this.showSuccess(`Switched to ${provider} database`);
+                this.toggleFirestoreConfig();
+                
+                // Reload database size
+                await this.updateDatabaseSize();
             } else {
-                throw new Error(response?.error || 'Sync failed');
+                this.showError('Failed to switch database provider');
+                // Revert the radio button
+                if (isFirestore) {
+                    this.getElementById('database_provider_indexeddb').checked = true;
+                } else {
+                    this.getElementById('database_provider_firestore').checked = true;
+                }
             }
         } catch (error) {
+            console.error('Error switching database provider:', error);
+            this.showError('Failed to switch database provider');
+        } finally {
             this.hideLoading();
-            console.error('Error during manual sync:', error);
-            this.showError('Sync failed: ' + error.message);
         }
     }
 
     /**
-     * Check sync status
+     * Handle sync toggle
      */
-    async checkSyncStatus() {
+    async handleSyncToggle() {
+        const syncEnabled = this.getElementById('database_sync_enabled').checked;
+        
         try {
-            await this.updateSyncStatus();
-            this.showSuccess('Sync status updated.');
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-provider-config',
+                syncEnabled: syncEnabled
+            });
+
+            if (response && response.success) {
+                this.showSuccess(`Database sync ${syncEnabled ? 'enabled' : 'disabled'}`);
+            } else {
+                this.showError('Failed to update sync settings');
+                // Revert the checkbox
+                this.getElementById('database_sync_enabled').checked = !syncEnabled;
+            }
         } catch (error) {
-            console.error('Error checking sync status:', error);
-            this.showError('Failed to check sync status: ' + error.message);
+            console.error('Error updating sync settings:', error);
+            this.showError('Failed to update sync settings');
+        }
+    }
+
+    /**
+     * Toggle Firestore configuration visibility
+     */
+    toggleFirestoreConfig() {
+        const isFirestore = this.getElementById('database_provider_firestore').checked;
+        const configDiv = this.getElementById('firestore-config');
+        
+        if (isFirestore) {
+            configDiv.style.display = 'block';
+        } else {
+            configDiv.style.display = 'none';
+        }
+    }
+
+    /**
+     * Save Firestore configuration
+     */
+    async saveFirestoreConfig() {
+        try {
+            const config = {
+                enabled: this.getElementById('database_provider_firestore').checked,
+                projectId: this.getElementById('firestore_project_id').value.trim(),
+                apiKey: this.getElementById('firestore_api_key').value.trim(),
+                authDomain: this.getElementById('firestore_auth_domain').value.trim(),
+                collectionName: this.getElementById('firestore_collection_name').value.trim() || 'watchmarker_videos',
+                useEmulator: this.getElementById('firestore_use_emulator').checked
+            };
+
+            // Validate required fields
+            if (config.enabled && (!config.projectId || !config.apiKey)) {
+                this.showError('Project ID and API Key are required for Firestore');
+                return;
+            }
+
+            this.showLoading('Saving Firestore configuration...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'firestore-config-save',
+                ...config
+            });
+
+            if (response && response.success) {
+                this.showSuccess('Firestore configuration saved successfully');
+            } else {
+                this.showError('Failed to save Firestore configuration');
+            }
+        } catch (error) {
+            console.error('Error saving Firestore configuration:', error);
+            this.showError('Failed to save Firestore configuration');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Test Firestore connection
+     */
+    async testFirestoreConnection() {
+        try {
+            const config = {
+                projectId: this.getElementById('firestore_project_id').value.trim(),
+                apiKey: this.getElementById('firestore_api_key').value.trim(),
+                authDomain: this.getElementById('firestore_auth_domain').value.trim(),
+                useEmulator: this.getElementById('firestore_use_emulator').checked
+            };
+
+            if (!config.projectId || !config.apiKey) {
+                this.showError('Project ID and API Key are required to test connection');
+                return;
+            }
+
+            this.showLoading('Testing Firestore connection...');
+            
+            // Test connection by trying to initialize Firebase
+            try {
+                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+                const { getFirestore, connectFirestoreEmulator } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                
+                const app = initializeApp(config);
+                const firestore = getFirestore(app);
+                
+                if (config.useEmulator) {
+                    connectFirestoreEmulator(firestore, 'localhost', 8080);
+                }
+                
+                this.showSuccess('Firestore connection successful!');
+            } catch (error) {
+                console.error('Firestore connection test failed:', error);
+                this.showError(`Connection failed: ${error.message}`);
+            }
+        } catch (error) {
+            console.error('Error testing Firestore connection:', error);
+            this.showError('Failed to test Firestore connection');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Sync databases
+     */
+    async syncDatabases() {
+        try {
+            this.showLoading('Synchronizing databases...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-provider-sync'
+            });
+
+            if (response && response.success) {
+                this.showSuccess('Database synchronization completed');
+                
+                // Reload database size
+                await this.updateDatabaseSize();
+            } else {
+                this.showError('Database synchronization failed');
+            }
+        } catch (error) {
+            console.error('Error synchronizing databases:', error);
+            this.showError('Database synchronization failed');
+        } finally {
+            this.hideLoading();
         }
     }
 }

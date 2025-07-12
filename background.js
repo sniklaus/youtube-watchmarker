@@ -10,6 +10,8 @@ import {
 } from "./utils.js";
 
 import { Database } from "./bg-database.js";
+import { DatabaseProviderInstance } from "./bg-database-provider.js";
+import { SyncManagerInstance } from "./bg-sync-manager.js";
 import { History } from "./bg-history.js";
 import { Youtube } from "./bg-youtube.js";
 import { Search } from "./bg-search.js";
@@ -36,6 +38,8 @@ class ExtensionManager {
         {
           settings: this.initializeSettings.bind(this),
           database: this.moduleInitializer(Database.init.bind(Database)),
+          databaseProvider: this.moduleInitializer(DatabaseProviderInstance.init.bind(DatabaseProviderInstance)),
+          syncManager: this.moduleInitializer(SyncManagerInstance.init.bind(SyncManagerInstance)),
           history: this.moduleInitializer(History.init.bind(History)),
           youtube: this.moduleInitializer(Youtube.init.bind(Youtube)),
           search: this.moduleInitializer(Search.init.bind(Search)),
@@ -241,20 +245,6 @@ class ExtensionManager {
             this.getDatabaseSize(res);
           },
           
-          // Sync actions
-          "database-sync-enable": (req, res) => {
-            Database.enableSync({ provider: req.provider }, res);
-          },
-          "database-sync-disable": (req, res) => {
-            Database.disableSync({}, res);
-          },
-          "database-sync-now": (req, res) => {
-            Database.syncNow({}, res);
-          },
-          "database-sync-status": (req, res) => {
-            Database.getSyncStatus({}, res);
-          },
-          
           // Search actions
           "search-videos": (req, res) => {
             const page = req.page || 1;
@@ -338,6 +328,28 @@ class ExtensionManager {
           },
           "set-setting": (req, res) => {
             this.setSetting(req.key, req.value, res);
+          },
+          
+          // Database provider actions
+          "database-provider-status": (req, res) => {
+            this.getDatabaseProviderStatus(res);
+          },
+          "database-provider-switch": (req, res) => {
+            this.switchDatabaseProvider(req.provider, res);
+          },
+          "database-provider-sync": (req, res) => {
+            this.syncDatabases(res);
+          },
+          "database-provider-config": (req, res) => {
+            this.updateDatabaseProviderConfig(req, res);
+          },
+          
+          // Firestore configuration actions
+          "firestore-config-save": (req, res) => {
+            this.saveFirestoreConfig(req, res);
+          },
+          "firestore-config-load": (req, res) => {
+            this.loadFirestoreConfig(res);
           }
         };
 
@@ -830,6 +842,150 @@ class ExtensionManager {
       callback({ success: true });
     } catch (error) {
       console.error("Error setting setting:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Get database provider status
+   * @param {Function} callback - Response callback
+   */
+  async getDatabaseProviderStatus(callback) {
+    try {
+      const status = await DatabaseProviderInstance.getStatus();
+      callback({ success: true, status });
+    } catch (error) {
+      console.error("Error getting database provider status:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Switch database provider
+   * @param {string} provider - Database provider ('indexeddb' or 'firestore')
+   * @param {Function} callback - Response callback
+   */
+  async switchDatabaseProvider(provider, callback) {
+    try {
+      await new Promise((resolve, reject) => {
+        DatabaseProviderInstance.switchDatabase({ provider }, (response) => {
+          if (response && response.success) {
+            resolve(response);
+          } else {
+            reject(new Error('Failed to switch database provider'));
+          }
+        });
+      });
+      
+      callback({ success: true, provider });
+    } catch (error) {
+      console.error("Error switching database provider:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Sync databases
+   * @param {Function} callback - Response callback
+   */
+  async syncDatabases(callback) {
+    try {
+      await new Promise((resolve, reject) => {
+        DatabaseProviderInstance.syncDatabases({}, (response) => {
+          if (response && !response.error) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.error || 'Failed to sync databases'));
+          }
+        }, (progress) => {
+          console.log("Sync progress:", progress);
+        });
+      });
+      
+      callback({ success: true });
+    } catch (error) {
+      console.error("Error syncing databases:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Update database provider configuration
+   * @param {Object} request - Configuration request
+   * @param {Function} callback - Response callback
+   */
+  async updateDatabaseProviderConfig(request, callback) {
+    try {
+      await new Promise((resolve, reject) => {
+        DatabaseProviderInstance.updateConfiguration(request, (response) => {
+          if (response && response.success) {
+            resolve(response);
+          } else {
+            reject(new Error('Failed to update database provider configuration'));
+          }
+        });
+      });
+      
+      callback({ success: true });
+    } catch (error) {
+      console.error("Error updating database provider config:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Save Firestore configuration
+   * @param {Object} request - Firestore configuration
+   * @param {Function} callback - Response callback
+   */
+  async saveFirestoreConfig(request, callback) {
+    try {
+      // Save Firestore configuration to Chrome sync storage
+      await chrome.storage.sync.set({
+        firestore_enabled: request.enabled,
+        firestore_project_id: request.projectId,
+        firestore_api_key: request.apiKey,
+        firestore_auth_domain: request.authDomain,
+        firestore_collection_name: request.collectionName || 'watchmarker_videos',
+        firestore_use_emulator: request.useEmulator || false
+      });
+      
+      console.log("Firestore configuration saved");
+      callback({ success: true });
+    } catch (error) {
+      console.error("Error saving Firestore config:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Load Firestore configuration
+   * @param {Function} callback - Response callback
+   */
+  async loadFirestoreConfig(callback) {
+    try {
+      const result = await chrome.storage.sync.get([
+        'firestore_enabled',
+        'firestore_project_id',
+        'firestore_api_key',
+        'firestore_auth_domain',
+        'firestore_collection_name',
+        'firestore_use_emulator'
+      ]);
+      
+      callback({ 
+        success: true, 
+        config: {
+          enabled: result.firestore_enabled || false,
+          projectId: result.firestore_project_id || '',
+          apiKey: result.firestore_api_key || '',
+          authDomain: result.firestore_auth_domain || '',
+          collectionName: result.firestore_collection_name || 'watchmarker_videos',
+          useEmulator: result.firestore_use_emulator || false
+        }
+      });
+    } catch (error) {
+      console.error("Error loading Firestore config:", error);
       callback({ success: false, error: error.message });
     }
   }
