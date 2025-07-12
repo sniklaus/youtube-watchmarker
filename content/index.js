@@ -124,6 +124,7 @@ class OptionsPageManager {
         this.setupToggleSwitch('idCondition_Youprog');
         this.setupToggleSwitch('idCondition_Youbadge');
         this.setupToggleSwitch('idCondition_Youhist');
+        this.setupToggleSwitch('idCondition_Yourating');
 
         // Toggle switches for visualization
         this.setupToggleSwitch('idVisualization_Fadeout');
@@ -282,6 +283,7 @@ class OptionsPageManager {
             'idCondition_Youprog': 'YouTube Progress',
             'idCondition_Youbadge': 'YouTube Badge',
             'idCondition_Youhist': 'YouTube History',
+            'idCondition_Yourating': 'Video Rating',
             'idVisualization_Fadeout': 'Fade Out',
             'idVisualization_Grayout': 'Grayscale',
             'idVisualization_Showbadge': 'Show Badge',
@@ -843,6 +845,7 @@ class OptionsPageManager {
      */
     async setToggleState(elementId, state) {
         try {
+            // Store in sync storage - now used by both options page and background script
             await chrome.storage.sync.set({ [elementId]: state });
         } catch (error) {
             console.error(`Error setting toggle state for ${elementId}:`, error);

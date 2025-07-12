@@ -32,6 +32,9 @@ class YouTubeWatchMarker {
     
     // Set up periodic refresh for dynamic content
     this.setupPeriodicRefresh();
+    
+    // Set up rating detection
+    this.setupRatingDetection();
   }
 
   /**
@@ -294,6 +297,186 @@ class YouTubeWatchMarker {
     }
     
     sendResponse(null);
+  }
+
+  /**
+   * Set up rating detection for like/dislike buttons
+   */
+  setupRatingDetection() {
+    // Check if rating condition is enabled
+    this.checkRatingConditionEnabled().then(isEnabled => {
+      if (!isEnabled) return;
+      
+      this.setupRatingObserver();
+    });
+  }
+
+  /**
+   * Check if rating condition is enabled
+   * @returns {Promise<boolean>} Whether rating condition is enabled
+   */
+  async checkRatingConditionEnabled() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(['idCondition_Yourating'], (result) => {
+        resolve(result.idCondition_Yourating === true);
+      });
+    });
+  }
+
+  /**
+   * Set up observer for rating button interactions
+   */
+  setupRatingObserver() {
+    // Use event delegation to catch dynamically loaded content
+    document.addEventListener('click', this.handleRatingClick.bind(this), true);
+    
+    // Also observe for button state changes via MutationObserver
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && 
+            (mutation.attributeName === 'aria-pressed' || mutation.attributeName === 'class')) {
+          const target = mutation.target;
+          if (this.isRatingButton(target)) {
+            this.handleRatingButtonChange(target);
+          }
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-pressed', 'class']
+    });
+  }
+
+  /**
+   * Handle click events on rating buttons
+   * @param {Event} event - Click event
+   */
+  handleRatingClick(event) {
+    const target = event.target.closest('button, [role="button"]');
+    if (target && this.isRatingButton(target)) {
+      // Small delay to ensure state has updated
+      setTimeout(() => {
+        this.handleRatingButtonChange(target);
+      }, 100);
+    }
+  }
+
+  /**
+   * Check if element is a like or dislike button
+   * @param {Element} element - Element to check
+   * @returns {boolean} Whether element is a rating button
+   */
+  isRatingButton(element) {
+    if (!element) return false;
+    
+    // Check various selectors for like/dislike buttons
+    const ratingSelectors = [
+      'ytd-toggle-button-renderer[target-id="watch-like"]',
+      'ytd-toggle-button-renderer[target-id="watch-dislike"]',
+      '#segmented-like-button button',
+      '#segmented-dislike-button button',
+      'button[aria-label*="like"]',
+      'button[aria-label*="dislike"]',
+      '.ytd-video-primary-info-renderer button[aria-pressed]'
+    ];
+    
+    return ratingSelectors.some(selector => {
+      try {
+        return element.matches(selector) || element.closest(selector);
+      } catch (e) {
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Handle rating button state change
+   * @param {Element} button - Rating button element
+   */
+  handleRatingButtonChange(button) {
+    try {
+      // Check if button is now pressed/active
+      const isPressed = button.getAttribute('aria-pressed') === 'true' || 
+                       button.classList.contains('style-default-active');
+      
+      if (isPressed) {
+        // Get current video ID from URL
+        const videoId = this.getCurrentVideoId();
+        if (videoId) {
+          const title = this.getCurrentVideoTitle();
+          this.markVideoAsWatchedFromRating(videoId, title);
+        }
+      }
+    } catch (error) {
+      console.error("Error handling rating button change:", error);
+    }
+  }
+
+  /**
+   * Get current video ID from page URL
+   * @returns {string|null} Current video ID
+   */
+  getCurrentVideoId() {
+    const url = window.location.href;
+    const match = url.match(/[?&]v=([^&]+)/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Get current video title from page
+   * @returns {string} Current video title
+   */
+  getCurrentVideoTitle() {
+    const titleSelectors = [
+      'h1.ytd-video-primary-info-renderer',
+      'h1.ytd-watch-metadata',
+      '.ytd-video-primary-info-renderer h1',
+      'meta[property="og:title"]'
+    ];
+    
+    for (const selector of titleSelectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        if (element.tagName === 'META') {
+          return element.getAttribute('content') || '';
+        }
+        return element.textContent?.trim() || '';
+      }
+    }
+    
+    return document.title.replace(' - YouTube', '') || '';
+  }
+
+  /**
+   * Mark video as watched when user rates it
+   * @param {string} videoId - Video ID
+   * @param {string} title - Video title
+   */
+  markVideoAsWatchedFromRating(videoId, title) {
+    console.log("Video rated, marking as watched:", videoId, title);
+    
+    chrome.runtime.sendMessage(
+      {
+        action: "youtube-ensure",
+        videoId: videoId,
+        title: title,
+      },
+      (response) => {
+        if (response && response.strIdent) {
+          this.watchDates[response.strIdent] = response.intTimestamp;
+          
+          // Mark all videos with this ID on current page
+          const videosWithId = this.findVideos(response.strIdent);
+          videosWithId.forEach(video => this.markVideo(video, response.strIdent));
+          
+          console.log("Video marked as watched from rating:", videoId);
+        }
+      }
+    );
   }
 
   /**

@@ -77,70 +77,62 @@ class ExtensionManager {
    */
   async initializeSettings(args, callback) {
     try {
-      // Initialize integer settings
+      // Initialize integer settings using sync storage
       const integerSettings = [
-        "Database.intSize",
-        "History.intTimestamp",
-        "Youtube.intTimestamp",
+        { key: "databaseSize", defaultValue: 0 },
+        { key: "historyTimestamp", defaultValue: 0 },
+        { key: "youtubeTimestamp", defaultValue: 0 },
       ];
 
-      for (const setting of integerSettings) {
-        await setDefaultInStorageIfNull(
-          `extensions.Youwatch.${setting}`,
-          "0"
-        );
+      for (const { key, defaultValue } of integerSettings) {
+        await this.setDefaultInSyncStorageIfNull(key, defaultValue);
       }
 
-      // Initialize boolean settings
+      // Initialize boolean settings using sync storage with consistent naming
       const booleanSettings = [
-        "Condition.boolBrownav",
-        "Condition.boolBrowhist",
-        "Condition.boolYouprog",
-        "Condition.boolYoubadge",
-        "Condition.boolYouhist",
-        "Visualization.boolFadeout",
-        "Visualization.boolGrayout",
-        "Visualization.boolShowbadge",
-        "Visualization.boolShowdate",
-        "Visualization.boolHideprogress",
+        { key: "idCondition_Brownav", defaultValue: true },
+        { key: "idCondition_Browhist", defaultValue: true },
+        { key: "idCondition_Youprog", defaultValue: true },
+        { key: "idCondition_Youbadge", defaultValue: true },
+        { key: "idCondition_Youhist", defaultValue: true },
+        { key: "idCondition_Yourating", defaultValue: true },
+        { key: "idVisualization_Fadeout", defaultValue: true },
+        { key: "idVisualization_Grayout", defaultValue: true },
+        { key: "idVisualization_Showbadge", defaultValue: true },
+        { key: "idVisualization_Showdate", defaultValue: true },
+        { key: "idVisualization_Hideprogress", defaultValue: true },
       ];
 
-      for (const setting of booleanSettings) {
-        await setDefaultInStorageIfNull(
-          `extensions.Youwatch.${setting}`,
-          "true"
-        );
+      for (const { key, defaultValue } of booleanSettings) {
+        await this.setDefaultInSyncStorageIfNull(key, defaultValue);
       }
 
-      // Initialize stylesheet settings
+      // Initialize stylesheet settings using sync storage
       const stylesheetSettings = [
         {
-          key: "extensions.Youwatch.Stylesheet.strFadeout",
+          key: "stylesheet_Fadeout",
           defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }",
         },
         {
-          key: "extensions.Youwatch.Stylesheet.strGrayout",
+          key: "stylesheet_Grayout",
           defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }",
         },
         {
-          key: "extensions.Youwatch.Stylesheet.strShowbadge",
+          key: "stylesheet_Showbadge",
           defaultValue: '.youwatch-mark::after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }',
         },
         {
-          key: "extensions.Youwatch.Stylesheet.strShowdate",
+          key: "stylesheet_Showdate",
           defaultValue: '.youwatch-mark::after { content:"WATCHED" attr(watchdate); white-space:nowrap; }',
         },
         {
-          key: "extensions.Youwatch.Stylesheet.strHideprogress",
+          key: "stylesheet_Hideprogress",
           defaultValue: "ytd-thumbnail-overlay-resume-playback-renderer, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }",
         },
       ];
 
       for (const { key, defaultValue } of stylesheetSettings) {
-        const value = await getStorageAsync(key);
-        if (value === null) {
-          await setStorageAsync(key, defaultValue);
-        }
+        await this.setDefaultInSyncStorageIfNull(key, defaultValue);
       }
 
       callback({});
@@ -292,6 +284,14 @@ class ExtensionManager {
           },
           "youtube-synchronize": (req, res) => {
             this.synchronizeYoutubeAction(res);
+          },
+          
+          // Settings actions
+          "get-setting": (req, res) => {
+            this.getSetting(req.key, res);
+          },
+          "set-setting": (req, res) => {
+            this.setSetting(req.key, req.value, res);
           }
         };
 
@@ -541,20 +541,24 @@ class ExtensionManager {
    */
   async performSynchronization() {
     try {
-      const shouldSyncHistory = await getStorageAsync(
-        "extensions.Youwatch.Condition.boolBrowhist"
-      );
+      const shouldSyncHistory = await new Promise((resolve) => {
+        chrome.storage.sync.get(['idCondition_Browhist'], (result) => {
+          resolve(result.idCondition_Browhist === true);
+        });
+      });
       
-      if (shouldSyncHistory === "true") {
+      if (shouldSyncHistory) {
         console.log("Performing automatic history synchronization");
         await this.syncHistory();
       }
 
-      const shouldSyncYoutube = await getStorageAsync(
-        "extensions.Youwatch.Condition.boolYouhist"
-      );
+      const shouldSyncYoutube = await new Promise((resolve) => {
+        chrome.storage.sync.get(['idCondition_Youhist'], (result) => {
+          resolve(result.idCondition_Youhist === true);
+        });
+      });
       
-      if (shouldSyncYoutube === "true") {
+      if (shouldSyncYoutube) {
         console.log("Performing automatic YouTube synchronization");
         await this.syncYoutube();
       }
@@ -570,14 +574,17 @@ class ExtensionManager {
     return new Promise(async (resolve, reject) => {
       try {
         // Get the last sync timestamp, or use 0 for full history if never synced
-        const lastSyncTimestamp = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
-        const syncFromTimestamp = lastSyncTimestamp ? parseInt(lastSyncTimestamp) : 0;
+        const lastSyncTimestamp = await new Promise((resolve) => {
+          chrome.storage.sync.get(['historyTimestamp'], (result) => {
+            resolve(result.historyTimestamp || 0);
+          });
+        });
         
-        console.log("Starting history synchronization from timestamp:", syncFromTimestamp, 
-                   syncFromTimestamp === 0 ? "(full history)" : `(${new Date(syncFromTimestamp).toLocaleString()})`);
+        console.log("Starting history synchronization from timestamp:", lastSyncTimestamp, 
+                   lastSyncTimestamp === 0 ? "(full history)" : `(${new Date(lastSyncTimestamp).toLocaleString()})`);
         
         History.synchronize(
-          { intTimestamp: syncFromTimestamp },
+          { intTimestamp: lastSyncTimestamp },
           (response) => {
             if (response === null) {
               console.error("History synchronization failed - null response");
@@ -636,10 +643,13 @@ class ExtensionManager {
    */
   async getHistoryTimestamp(callback) {
     try {
-      const timestamp = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
-      const parsedTimestamp = timestamp ? parseInt(timestamp) : null;
+      const timestamp = await new Promise((resolve) => {
+        chrome.storage.sync.get(['historyTimestamp'], (result) => {
+          resolve(result.historyTimestamp || 0);
+        });
+      });
       // Return null if timestamp is 0 (never synchronized) or null
-      callback({ success: true, timestamp: parsedTimestamp && parsedTimestamp !== 0 ? parsedTimestamp : null });
+      callback({ success: true, timestamp: timestamp && timestamp !== 0 ? timestamp : null });
     } catch (error) {
       console.error("Error getting history timestamp:", error);
       callback({ success: false, error: error.message });
@@ -652,12 +662,91 @@ class ExtensionManager {
    */
   async getYoutubeTimestamp(callback) {
     try {
-      const timestamp = await getStorageAsync("extensions.Youwatch.Youtube.intTimestamp");
-      const parsedTimestamp = timestamp ? parseInt(timestamp) : null;
+      const timestamp = await new Promise((resolve) => {
+        chrome.storage.sync.get(['youtubeTimestamp'], (result) => {
+          resolve(result.youtubeTimestamp || 0);
+        });
+      });
       // Return null if timestamp is 0 (never synchronized) or null
-      callback({ success: true, timestamp: parsedTimestamp && parsedTimestamp !== 0 ? parsedTimestamp : null });
+      callback({ success: true, timestamp: timestamp && timestamp !== 0 ? timestamp : null });
     } catch (error) {
       console.error("Error getting YouTube timestamp:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Sets a default value in sync storage if the key doesn't exist
+   * @param {string} key - Storage key
+   * @param {any} defaultValue - Default value to set
+   * @returns {Promise<void>}
+   */
+  async setDefaultInSyncStorageIfNull(key, defaultValue) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.sync.get([key], (result) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(`Failed to get ${key} from chrome.storage.sync: ${chrome.runtime.lastError.message}`));
+          return;
+        }
+        
+        if (result[key] === undefined) {
+          chrome.storage.sync.set({ [key]: defaultValue }, () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(`Failed to set ${key} in chrome.storage.sync: ${chrome.runtime.lastError.message}`));
+            } else {
+              resolve();
+            }
+          });
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
+   * Get a setting value from sync storage
+   * @param {string} key - Setting key
+   * @param {Function} callback - Response callback
+   */
+  async getSetting(key, callback) {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        chrome.storage.sync.get([key], (result) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(`Failed to get ${key} from chrome.storage.sync: ${chrome.runtime.lastError.message}`));
+          } else {
+            resolve(result[key]);
+          }
+        });
+      });
+      callback({ success: true, value: result });
+    } catch (error) {
+      console.error("Error getting setting:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Set a setting value in sync storage
+   * @param {string} key - Setting key
+   * @param {any} value - Value to set
+   * @param {Function} callback - Response callback
+   */
+  async setSetting(key, value, callback) {
+    try {
+      await new Promise((resolve, reject) => {
+        chrome.storage.sync.set({ [key]: value }, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(`Failed to set ${key} in chrome.storage.sync: ${chrome.runtime.lastError.message}`));
+          } else {
+            resolve();
+          }
+        });
+      });
+      callback({ success: true });
+    } catch (error) {
+      console.error("Error setting setting:", error);
       callback({ success: false, error: error.message });
     }
   }
@@ -721,6 +810,11 @@ class ExtensionManager {
       const response = await this.syncHistory();
       console.log("Manual history synchronization completed successfully");
       
+      // Update timestamp in sync storage
+      await new Promise((resolve) => {
+        chrome.storage.sync.set({ historyTimestamp: Date.now() }, resolve);
+      });
+      
       // Extract video count from response if available
       let videoCount = 0;
       if (response && response.videoCount !== undefined) {
@@ -743,6 +837,12 @@ class ExtensionManager {
   async synchronizeYoutubeAction(callback) {
     try {
       const response = await this.syncYoutube();
+      
+      // Update timestamp in sync storage
+      await new Promise((resolve) => {
+        chrome.storage.sync.set({ youtubeTimestamp: Date.now() }, resolve);
+      });
+      
       callback({ success: true, response: response });
     } catch (error) {
       console.error("Error synchronizing YouTube:", error);
