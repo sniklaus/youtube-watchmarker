@@ -101,6 +101,7 @@ class ExtensionManager {
         { key: "idVisualization_Showbadge", defaultValue: true },
         { key: "idVisualization_Showdate", defaultValue: true },
         { key: "idVisualization_Hideprogress", defaultValue: true },
+        { key: "idVisualization_Showpublishdate", defaultValue: false },
       ];
 
       for (const { key, defaultValue } of booleanSettings) {

@@ -174,6 +174,83 @@
   --yt-dark: #ffffff;
 }
 
+/* Custom Tooltip Styles */
+.youwatch-custom-tooltip {
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-width: 300px;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  animation: tooltipFadeIn 0.2s ease-out forwards;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.youwatch-tooltip-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.youwatch-tooltip-channel {
+  color: #aaa;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.youwatch-tooltip-views {
+  color: #aaa;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.youwatch-tooltip-date {
+  color: #ffd700;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Dark theme adjustments for tooltips */
+[data-bs-theme="dark"] .youwatch-custom-tooltip {
+  background: rgba(45, 45, 45, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-bs-theme="dark"] .youwatch-tooltip-title {
+  color: #ffffff;
+}
+
+[data-bs-theme="dark"] .youwatch-tooltip-channel,
+[data-bs-theme="dark"] .youwatch-tooltip-views {
+  color: #b0b0b0;
+}
+
+[data-bs-theme="dark"] .youwatch-tooltip-date {
+  color: #ffeb3b;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 /* Base Styles */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

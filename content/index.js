@@ -134,6 +134,7 @@ class OptionsPageManager {
         this.setupToggleSwitch('idVisualization_Showbadge');
         this.setupToggleSwitch('idVisualization_Showdate');
         this.setupToggleSwitch('idVisualization_Hideprogress');
+        this.setupToggleSwitch('idVisualization_Showpublishdate');
 
         // Search functionality
         this.setupSearchListeners();
@@ -290,7 +291,8 @@ class OptionsPageManager {
             'idVisualization_Grayout': 'Grayscale',
             'idVisualization_Showbadge': 'Show Badge',
             'idVisualization_Showdate': 'Show Date',
-            'idVisualization_Hideprogress': 'Hide Progress Bar'
+            'idVisualization_Hideprogress': 'Hide Progress Bar',
+            'idVisualization_Showpublishdate': 'Show Publication Date'
         };
         return nameMap[elementId] || elementId;
     }
