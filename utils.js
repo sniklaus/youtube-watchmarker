@@ -279,9 +279,12 @@ export class BackgroundUtils {
           args.intExisting = 0;
         }
 
-        progressCallback({
-          strProgress: `imported ${args.intNew + args.intExisting} videos - ${args.intNew} were new`,
-        });
+        // Only call progress callback if it's provided and is a function
+        if (progressCallback && typeof progressCallback === 'function') {
+          progressCallback({
+            strProgress: `imported ${args.intNew + args.intExisting} videos - ${args.intNew} were new`,
+          });
+        }
 
         // Handle legacy timestamp field
         if (args.objVideo.intTimestamp === undefined) {

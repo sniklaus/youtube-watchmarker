@@ -194,13 +194,38 @@ class ExtensionManager {
             this.exportDatabaseData(res);
           },
           "database-import": (req, res) => {
-            Database.import({ objVideos: JSON.parse(req.data) }, (response) => {
-              if (response) {
-                res({ success: true });
-              } else {
-                res({ success: false, error: "Import failed" });
+            try {
+              let parsedData;
+              
+              // Try to parse as JSON first (new format)
+              try {
+                parsedData = JSON.parse(req.data);
+              } catch (jsonError) {
+                // If JSON parsing fails, try the old format (base64 + URL encoding)
+                try {
+                  console.log("Trying old database format (base64 + URL encoded)");
+                  parsedData = JSON.parse(decodeURIComponent(escape(atob(req.data))));
+                } catch (legacyError) {
+                  console.error("Failed to parse database in both formats:", { jsonError, legacyError });
+                  res({ success: false, error: "Invalid database format" });
+                  return;
+                }
               }
-            });
+              
+              Database.import({ objVideos: parsedData }, (response) => {
+                if (response) {
+                  res({ success: true });
+                } else {
+                  res({ success: false, error: "Import failed" });
+                }
+              }, (progress) => {
+                // Progress callback for database import
+                console.log("Database import progress:", progress);
+              });
+            } catch (error) {
+              console.error("Database import error:", error);
+              res({ success: false, error: "Import failed: " + error.message });
+            }
           },
           "database-reset": (req, res) => {
             Database.reset({}, (response) => {
