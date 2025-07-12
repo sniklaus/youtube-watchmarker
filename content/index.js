@@ -151,26 +151,51 @@ class OptionsPageManager {
     setupSearchListeners() {
         const searchQuery = this.getElementById('idSearch_Query');
         const searchButton = this.getElementById('idSearch_Lookup');
-        const searchResults = this.getElementById('idSearch_Results');
 
+        // Initialize pagination state
+        this.searchState = {
+            currentQuery: '',
+            currentPage: 1,
+            pageSize: 50,
+            totalResults: 0,
+            isSearching: false
+        };
+
+        // Search button click
         searchButton.addEventListener('click', () => this.performSearch());
+        
+        // Enter key search
         searchQuery.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
+                event.preventDefault();
                 this.performSearch();
             }
         });
         
-        // Add input debouncing for live search
+        // Auto-search with debounce (1 second delay)
         let searchTimeout;
         searchQuery.addEventListener('input', () => {
             clearTimeout(searchTimeout);
+            
             searchTimeout = setTimeout(() => {
-                if (searchQuery.value.trim().length > 2) {
-                    this.performSearch();
-                } else if (searchQuery.value.trim().length === 0) {
-                    searchResults.innerHTML = '';
-                }
-            }, 500);
+                const query = searchQuery.value.trim();
+                
+                // Reset to first page when query changes
+                this.searchState.currentPage = 1;
+                this.searchState.currentQuery = query;
+                
+                // Always search (empty query shows all videos)
+                this.performSearch();
+            }, 1000);
+        });
+
+        // Prevent input expansion issues
+        searchQuery.addEventListener('focus', (event) => {
+            event.target.style.width = 'auto';
+        });
+        
+        searchQuery.addEventListener('blur', (event) => {
+            event.target.style.width = 'auto';
         });
     }
 
@@ -527,42 +552,88 @@ class OptionsPageManager {
      * Perform search
      */
     async performSearch() {
+        // Prevent multiple concurrent searches
+        if (this.searchState.isSearching) return;
+        
         const searchQuery = this.getElementById('idSearch_Query');
         const searchButton = this.getElementById('idSearch_Lookup');
         const searchResults = this.getElementById('idSearch_Results');
         const query = searchQuery.value.trim();
 
-        if (!query) {
-            this.showError('Please enter a search query');
-            return;
-        }
+        // Update search state
+        this.searchState.isSearching = true;
+        this.searchState.currentQuery = query;
 
         try {
             // Update button state
             this.searchIcon.classList.add('d-none');
             this.searchSpinner.classList.remove('d-none');
             searchButton.disabled = true;
+            searchResults.classList.add('search-loading');
 
             const response = await chrome.runtime.sendMessage({
                 action: 'search-videos',
-                query: query
+                query: query, // Send query (empty shows all videos, non-empty filters)
+                page: this.searchState.currentPage,
+                pageSize: this.searchState.pageSize
             });
 
             if (response && response.success) {
                 this.displaySearchResults(response.results);
+                this.searchState.totalResults = response.totalResults;
             } else {
-                this.showError(response?.error || 'Search failed');
-                searchResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>Search failed. Please try again.</div>';
+                const errorMessage = query 
+                    ? 'Search failed. Please try again.' 
+                    : 'Failed to load watch history.';
+                this.showError(response?.error || errorMessage);
+                searchResults.innerHTML = `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}</div>`;
             }
         } catch (error) {
             console.error('Search error:', error);
-            this.showError('Search failed. Please try again.');
-            searchResults.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Search error occurred. Please try again.</div>';
+            const errorMessage = query 
+                ? 'Search failed. Please try again.' 
+                : 'Failed to load watch history.';
+            this.showError(errorMessage);
+            searchResults.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>An error occurred. Please try again.</div>`;
         } finally {
             // Reset button state
             this.searchIcon.classList.remove('d-none');
             this.searchSpinner.classList.add('d-none');
             searchButton.disabled = false;
+            searchResults.classList.remove('search-loading');
+            this.searchState.isSearching = false;
+        }
+    }
+
+    /**
+     * Perform initial search on page load (no error messages)
+     */
+    async performInitialSearch() {
+        try {
+            // Initialize search state for initial load
+            this.searchState.currentQuery = '';
+            this.searchState.currentPage = 1;
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'search-videos',
+                query: '', // Empty query to show all videos
+                page: 1,
+                pageSize: 50
+            });
+
+            if (response && response.success) {
+                this.displaySearchResults(response.results);
+                this.searchState.totalResults = response.totalResults;
+            } else {
+                // Don't show error on initial load, just show empty state
+                const searchResults = this.getElementById('idSearch_Results');
+                searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history.</div>';
+            }
+        } catch (error) {
+            console.error('Initial search error:', error);
+            // Don't show error toast on initial load
+            const searchResults = this.getElementById('idSearch_Results');
+            searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history.</div>';
         }
     }
 
@@ -574,7 +645,10 @@ class OptionsPageManager {
         const searchResults = this.getElementById('idSearch_Results');
         
         if (!results || results.length === 0) {
-            searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found matching your search.</div>';
+            const message = this.searchState.currentQuery 
+                ? 'No videos found matching your search.' 
+                : 'No videos found in your watch history.';
+            searchResults.innerHTML = `<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>${message}</div>`;
             return;
         }
 
@@ -584,7 +658,8 @@ class OptionsPageManager {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0 text-primary">
                         <i class="fas fa-video me-2"></i>
-                        Found ${results.length} video${results.length !== 1 ? 's' : ''}
+                        Found ${this.searchState.totalResults} video${this.searchState.totalResults !== 1 ? 's' : ''}
+                        ${this.searchState.currentQuery ? ` for "${this.escapeHtml(this.searchState.currentQuery)}"` : ''}
                     </h6>
                     <small class="text-muted">
                         <i class="fas fa-external-link-alt me-1"></i>
@@ -593,7 +668,7 @@ class OptionsPageManager {
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover table-striped">
-                        <thead class="table-dark">
+                        <thead class="table-secondary">
                             <tr>
                                 <th class="text-center" style="width: 200px;">
                                     <i class="fas fa-clock me-2"></i>Watch Time
@@ -642,6 +717,7 @@ class OptionsPageManager {
                         </tbody>
                     </table>
                 </div>
+                ${this.renderPagination()}
             </div>
         `;
 
@@ -649,6 +725,9 @@ class OptionsPageManager {
         
         // Add fade-in animation
         searchResults.classList.add('animate-fade-in');
+        
+        // Set up pagination event listeners
+        this.setupPaginationListeners(searchResults);
         
         // Add event listeners for delete buttons
         const deleteButtons = searchResults.querySelectorAll('.delete-video-btn');
@@ -679,7 +758,14 @@ class OptionsPageManager {
 
             if (response && response.success) {
                 this.showSuccess('Video deleted successfully');
-                // Refresh the search results
+                
+                // Refresh the search results, but check if we need to go back a page
+                const totalPagesAfterDelete = Math.ceil((this.searchState.totalResults - 1) / this.searchState.pageSize);
+                if (this.searchState.currentPage > totalPagesAfterDelete && totalPagesAfterDelete > 0) {
+                    this.searchState.currentPage = totalPagesAfterDelete;
+                }
+                
+                // Refresh the current search
                 await this.performSearch();
             } else {
                 this.showError('Failed to delete video');
@@ -759,7 +845,7 @@ class OptionsPageManager {
                 this.updateDatabaseSize(),
                 this.updateHistoryTimestamp(),
                 this.updateYoutubeTimestamp(),
-                this.performSearch() // Show all videos by default
+                this.performInitialSearch() // Show all videos by default without errors
             ]);
         } catch (error) {
             console.error('Error loading initial data:', error);
@@ -922,6 +1008,87 @@ class OptionsPageManager {
                 this.srAnnouncements.textContent = '';
             }, 1000);
         }
+    }
+
+    /**
+     * Render pagination controls
+     * @returns {string} HTML for pagination controls
+     */
+    renderPagination() {
+        const totalPages = Math.ceil(this.searchState.totalResults / this.searchState.pageSize);
+        if (totalPages <= 1) return '';
+
+        const currentPage = this.searchState.currentPage;
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        let paginationHtml = `
+            <nav aria-label="Search results pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <button class="page-link" data-page="1" ${currentPage === 1 ? 'disabled' : ''} aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </button>
+                    </li>
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </button>
+                    </li>`;
+
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHtml += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link" data-page="${i}" ${i === currentPage ? 'aria-current="page"' : ''}>${i}</button>
+                </li>`;
+        }
+
+        paginationHtml += `
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </button>
+                    </li>
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${totalPages}" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </button>
+                    </li>
+                </ul>
+                <div class="text-center text-muted small mt-2">
+                    Page ${currentPage} of ${totalPages} (${this.searchState.totalResults} total videos)
+                </div>
+            </nav>
+        `;
+
+        return paginationHtml;
+    }
+
+    /**
+     * Set up pagination event listeners
+     * @param {Element} container - Container element with pagination buttons
+     */
+    setupPaginationListeners(container) {
+        const paginationButtons = container.querySelectorAll('.page-link[data-page]');
+        paginationButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = parseInt(e.target.getAttribute('data-page'));
+                if (page && !e.target.disabled) {
+                    this.goToPage(page);
+                }
+            });
+        });
+    }
+
+    /**
+     * Go to a specific page
+     * @param {number} page - Page number to go to
+     */
+    async goToPage(page) {
+        this.searchState.currentPage = page;
+        await this.performSearch();
     }
 }
 

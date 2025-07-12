@@ -225,11 +225,16 @@ class ExtensionManager {
           
           // Search actions
           "search-videos": (req, res) => {
+            const page = req.page || 1;
+            const pageSize = req.pageSize || 50;
+            const skip = (page - 1) * pageSize;
+            
             const searchRequest = { 
-              strQuery: req.query, 
-              intSkip: 0, 
-              intLength: 50 
+              strQuery: req.query || '', 
+              intSkip: skip, 
+              intLength: pageSize 
             };
+            
             Search.lookup(searchRequest, (response) => {
               if (response && response.objVideos) {
                 const results = response.objVideos.map(video => ({
@@ -238,9 +243,26 @@ class ExtensionManager {
                   timestamp: video.intTimestamp,
                   count: video.intCount
                 }));
-                res({ success: true, results });
+                
+                // Get total count for pagination
+                const countRequest = { 
+                  strQuery: req.query || '', 
+                  intSkip: 0, 
+                  intLength: 999999 // Large number to get all results for counting
+                };
+                
+                Search.lookup(countRequest, (countResponse) => {
+                  const totalResults = countResponse && countResponse.objVideos ? countResponse.objVideos.length : 0;
+                  res({ 
+                    success: true, 
+                    results, 
+                    totalResults,
+                    currentPage: page,
+                    pageSize: pageSize
+                  });
+                });
               } else {
-                res({ success: false, results: [] });
+                res({ success: false, results: [], totalResults: 0 });
               }
             });
           },
