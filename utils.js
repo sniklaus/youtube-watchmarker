@@ -236,12 +236,25 @@ export class BackgroundUtils {
   static database(mode = 'readwrite') {
     return (args, callback) => {
       const Database = globalThis.Database;
-      if (!Database || !Database.database) {
-        console.error("Database not initialized or not available");
+      if (!Database) {
+        console.error("Database object not available in globalThis");
+        return callback(null);
+      }
+      if (!Database.database) {
+        console.error("Database not initialized - database property is null");
+        return callback(null);
+      }
+      if (!Database.isInitialized) {
+        console.error("Database not fully initialized - isInitialized flag is false");
         return callback(null);
       }
       try {
-        return callback(Database.getObjectStore(mode));
+        const objectStore = Database.getObjectStore(mode);
+        if (!objectStore) {
+          console.error("Failed to get object store from database");
+          return callback(null);
+        }
+        return callback(objectStore);
       } catch (error) {
         console.error("Error getting database object store:", error);
         return callback(null);

@@ -546,6 +546,7 @@ class ExtensionManager {
       );
       
       if (shouldSyncHistory === "true") {
+        console.log("Performing automatic history synchronization");
         await this.syncHistory();
       }
 
@@ -554,6 +555,7 @@ class ExtensionManager {
       );
       
       if (shouldSyncYoutube === "true") {
+        console.log("Performing automatic YouTube synchronization");
         await this.syncYoutube();
       }
     } catch (error) {
@@ -565,19 +567,34 @@ class ExtensionManager {
    * Synchronize browser history
    */
   async syncHistory() {
-    return new Promise((resolve) => {
-      const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-      
-      History.synchronize(
-        { intTimestamp: sevenDaysAgo },
-        (response) => {
-          console.debug("History synchronized:", response);
-          resolve(response);
-        },
-        (progress) => {
-          console.debug("History sync progress:", progress);
-        }
-      );
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Get the last sync timestamp, or use 0 for full history if never synced
+        const lastSyncTimestamp = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
+        const syncFromTimestamp = lastSyncTimestamp ? parseInt(lastSyncTimestamp) : 0;
+        
+        console.log("Starting history synchronization from timestamp:", syncFromTimestamp, 
+                   syncFromTimestamp === 0 ? "(full history)" : `(${new Date(syncFromTimestamp).toLocaleString()})`);
+        
+        History.synchronize(
+          { intTimestamp: syncFromTimestamp },
+          (response) => {
+            if (response === null) {
+              console.error("History synchronization failed - null response");
+              reject(new Error("History synchronization failed"));
+            } else {
+              console.log("History synchronized successfully:", response);
+              resolve(response);
+            }
+          },
+          (progress) => {
+            console.log("History sync progress:", progress);
+          }
+        );
+      } catch (error) {
+        console.error("Error getting sync timestamp:", error);
+        reject(error);
+      }
     });
   }
 
@@ -682,8 +699,37 @@ class ExtensionManager {
    */
   async synchronizeHistoryAction(callback) {
     try {
+      console.log("Manual history synchronization requested");
+      
+      // Debug: Check extension initialization status
+      console.log("Extension initialization status:", {
+        isInitialized: this.isInitialized,
+        databaseAvailable: !!globalThis.Database,
+        databaseInitialized: globalThis.Database?.isInitialized
+      });
+      
+      // Check if extension is fully initialized
+      if (!this.isInitialized) {
+        throw new Error("Extension not fully initialized");
+      }
+      
+      // Check if database is available
+      if (!globalThis.Database || !globalThis.Database.isInitialized) {
+        throw new Error("Database not initialized");
+      }
+      
       const response = await this.syncHistory();
-      callback({ success: true, response: response });
+      console.log("Manual history synchronization completed successfully");
+      
+      // Extract video count from response if available
+      let videoCount = 0;
+      if (response && response.videoCount !== undefined) {
+        videoCount = response.videoCount;
+      } else if (response && response.objVideos && response.objVideos.length) {
+        videoCount = response.objVideos.length;
+      }
+      
+      callback({ success: true, response: response, videoCount: videoCount });
     } catch (error) {
       console.error("Error synchronizing history:", error);
       callback({ success: false, error: error.message });
@@ -703,6 +749,8 @@ class ExtensionManager {
       callback({ success: false, error: error.message });
     }
   }
+
+
 }
 
 // Initialize the extension manager

@@ -503,23 +503,29 @@ class OptionsPageManager {
      */
     async synchronizeHistory() {
         try {
-            this.showLoading('Synchronizing history...');
+            console.log('Requesting history synchronization from background script...');
             
             const response = await chrome.runtime.sendMessage({
                 action: 'history-synchronize'
             });
 
+            console.log('History synchronization response:', response);
+
             if (response && response.success) {
-                this.showSuccess('History synchronized successfully');
+                const videoCount = response.videoCount || 0;
+                const message = videoCount > 0 
+                    ? `History synchronized successfully! Found ${videoCount} YouTube videos.`
+                    : 'History synchronized successfully! No new YouTube videos found.';
+                this.showSuccess(message);
                 await this.loadInitialData(); // Refresh displayed data
             } else {
-                this.showError('Failed to synchronize history');
+                const errorMessage = response?.error || 'Unknown error occurred';
+                console.error('History synchronization failed:', errorMessage);
+                this.showError(`Failed to synchronize history: ${errorMessage}`);
             }
         } catch (error) {
             console.error('History sync error:', error);
             this.showError('History sync failed: ' + error.message);
-        } finally {
-            this.hideLoading();
         }
     }
 
@@ -528,8 +534,6 @@ class OptionsPageManager {
      */
     async synchronizeYoutube() {
         try {
-            this.showLoading('Synchronizing YouTube data...');
-            
             const response = await chrome.runtime.sendMessage({
                 action: 'youtube-synchronize'
             });
@@ -543,8 +547,6 @@ class OptionsPageManager {
         } catch (error) {
             console.error('YouTube sync error:', error);
             this.showError('YouTube sync failed: ' + error.message);
-        } finally {
-            this.hideLoading();
         }
     }
 
