@@ -1,440 +1,609 @@
-import { getStorageAsync, setStorageAsync } from '../utils.js';
-
 /**
- * Extension options page manager
+ * Modern Options Page Manager for YouTube Watch Marker Extension
+ * Replaces jQuery with vanilla JavaScript for better performance and modern standards
  */
 class OptionsPageManager {
-  constructor() {
-    this.connections = {
-      database: chrome.runtime.connect({ name: "database" }),
-      history: chrome.runtime.connect({ name: "history" }),
-      youtube: chrome.runtime.connect({ name: "youtube" }),
-      search: chrome.runtime.connect({ name: "search" })
-    };
-    
-    this.init();
-  }
+    constructor() {
+        this.isInitialized = false;
+        this.loadingContainer = null;
+        this.loadingMessage = null;
+        this.loadingProgress = null;
+        this.loadingClose = null;
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.initialize());
+        } else {
+            this.initialize();
+        }
+    }
 
-  /**
-   * Initialize the options page
-   */
-  async init() {
-    await this.setupTheme();
-    await this.setupEventListeners();
-    await this.loadInitialData();
-  }
+    /**
+     * Initialize the options page
+     */
+    async initialize() {
+        if (this.isInitialized) return;
+        
+        try {
+            // Cache DOM elements
+            this.cacheElements();
+            
+            // Set up event listeners
+            this.setupEventListeners();
+            
+            // Initialize theme
+            await this.initializeTheme();
+            
+            // Load initial data
+            await this.loadInitialData();
+            
+            this.isInitialized = true;
+            console.log('Options page initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize options page:', error);
+        }
+    }
 
-  /**
-   * Setup theme switching based on user preference
-   */
-  async setupTheme() {
-    const updateTheme = () => {
-      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      jQuery("html").attr("data-bs-theme", isDark ? "dark" : "");
-    };
+    /**
+     * Cache frequently used DOM elements
+     */
+    cacheElements() {
+        // Loading elements
+        this.loadingContainer = document.getElementById('idLoading_Container');
+        this.loadingMessage = document.getElementById('idLoading_Message');
+        this.loadingProgress = document.getElementById('idLoading_Progress');
+        this.loadingClose = document.getElementById('idLoading_Close');
+        
+        // Database elements
+        this.databaseSize = document.getElementById('idDatabase_Size');
+        
+        // Timestamp elements
+        this.historyTimestamp = document.getElementById('idHistory_Timestamp');
+        this.youtubeTimestamp = document.getElementById('idYoutube_Timestamp');
+    }
 
-    // Initial theme setup
-    updateTheme();
+    /**
+     * Set up all event listeners
+     */
+    setupEventListeners() {
+        // Database operations
+        this.getElementById('idDatabase_Export').addEventListener('click', () => this.exportDatabase());
+        this.getElementById('idDatabase_Import').querySelector('input[type=file]').addEventListener('change', (event) => this.importDatabase(event));
+        this.getElementById('idDatabase_Reset').addEventListener('click', () => this.resetDatabase());
 
-    // Listen for theme changes
-    window.matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", updateTheme);
-  }
+        // Synchronization
+        this.getElementById('idHistory_Synchronize').addEventListener('click', () => this.synchronizeHistory());
+        this.getElementById('idYoutube_Synchronize').addEventListener('click', () => this.synchronizeYoutube());
 
-  /**
-   * Setup all event listeners for the options page
-   */
-  async setupEventListeners() {
-    // Database operations
-    this.setupDatabaseListeners();
-    
-    // History operations
-    this.setupHistoryListeners();
-    
-    // YouTube operations
-    this.setupYouTubeListeners();
-    
-    // Search operations
-    this.setupSearchListeners();
-    
-    // Settings operations
-    this.setupSettingsListeners();
-  }
+        // Toggle buttons for conditions
+        this.setupToggleButton('idCondition_Brownav');
+        this.setupToggleButton('idCondition_Browhist');
+        this.setupToggleButton('idCondition_Youprog');
+        this.setupToggleButton('idCondition_Youbadge');
+        this.setupToggleButton('idCondition_Youhist');
 
-  /**
-   * Setup database-related event listeners
-   */
-  setupDatabaseListeners() {
-    // Export database
-    jQuery("#idDatabase_Export").on("click", () => {
-      this.showLoading("exporting database");
-      this.connections.database.postMessage({
-        strMessage: "databaseExport",
-        objRequest: {},
-      });
-    });
+        // Toggle buttons for visualization
+        this.setupToggleButton('idVisualization_Fadeout');
+        this.setupToggleButton('idVisualization_Grayout');
+        this.setupToggleButton('idVisualization_Showbadge');
+        this.setupToggleButton('idVisualization_Showdate');
+        this.setupToggleButton('idVisualization_Hideprogress');
 
-    // Import database
-    jQuery("#idDatabase_Import input[type=file]").on("change", (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        this.handleDatabaseImport(file);
-      }
-    });
+        // Search functionality
+        this.setupSearchListeners();
 
-    // Reset database
-    jQuery("#idDatabase_Reset").on("click", () => {
-      if (confirm("Are you sure you want to reset the database? This will delete all your watch history.")) {
-        this.showLoading("resetting database");
-        this.connections.database.postMessage({
-          strMessage: "databaseReset",
-          objRequest: {},
+        // Loading modal close
+        this.loadingClose.addEventListener('click', () => this.hideLoading());
+    }
+
+    /**
+     * Set up search functionality
+     */
+    setupSearchListeners() {
+        const searchQuery = this.getElementById('idSearch_Query');
+        const searchButton = this.getElementById('idSearch_Lookup');
+        const searchResults = this.getElementById('idSearch_Results');
+
+        searchButton.addEventListener('click', () => this.performSearch());
+        searchQuery.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                this.performSearch();
+            }
         });
-      }
-    });
-
-    // Database message listener
-    this.connections.database.onMessage.addListener((data) => {
-      this.handleDatabaseMessage(data);
-    });
-  }
-
-  /**
-   * Handle database file import
-   * @param {File} file - The database file to import
-   */
-  async handleDatabaseImport(file) {
-    try {
-      this.showLoading("importing database");
-      
-      const text = await this.readFileAsText(file);
-      const videos = JSON.parse(text);
-      
-      this.connections.database.postMessage({
-        strMessage: "databaseImport",
-        objRequest: { objVideos: videos },
-      });
-    } catch (error) {
-      console.error("Error importing database:", error);
-      this.showError("Failed to import database. Please check the file format.");
     }
-  }
 
-  /**
-   * Read file as text
-   * @param {File} file - File to read
-   * @returns {Promise<string>} File content as text
-   */
-  readFileAsText(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = (e) => reject(e);
-      reader.readAsText(file);
-    });
-  }
-
-  /**
-   * Handle database-related messages
-   * @param {Object} data - Message data
-   */
-  handleDatabaseMessage(data) {
-    switch (data.strMessage) {
-      case "databaseExport":
-        this.hideLoading();
-        if (data.objResponse === null) {
-          this.showError("Error exporting database");
-        } else {
-          this.showSuccess("Database exported successfully");
+    /**
+     * Get element by ID with error handling
+     * @param {string} id - Element ID
+     * @returns {HTMLElement} DOM element
+     */
+    getElementById(id) {
+        const element = document.getElementById(id);
+        if (!element) {
+            throw new Error(`Element with ID '${id}' not found`);
         }
-        break;
+        return element;
+    }
+
+    /**
+     * Set up toggle button functionality
+     * @param {string} elementId - Button element ID
+     */
+    setupToggleButton(elementId) {
+        const button = this.getElementById(elementId);
+        const icons = button.querySelectorAll('i');
         
-      case "databaseImport":
-        this.hideLoading();
-        if (data.objResponse === null) {
-          this.showError("Error importing database");
-        } else {
-          this.showSuccess("Database imported successfully");
-          this.loadDatabaseSize();
+        if (icons.length !== 2) {
+            console.warn(`Toggle button ${elementId} should have exactly 2 icons`);
+            return;
         }
-        break;
-        
-      case "databaseReset":
-        this.hideLoading();
-        window.location.reload();
-        break;
-        
-      case "databaseExport-progress":
-      case "databaseImport-progress":
-        this.updateProgress(data.objResponse.strProgress);
-        break;
+
+        button.addEventListener('click', async () => {
+            try {
+                const isEnabled = await this.getToggleState(elementId);
+                await this.setToggleState(elementId, !isEnabled);
+                this.updateToggleVisuals(button, !isEnabled);
+            } catch (error) {
+                console.error(`Error toggling ${elementId}:`, error);
+            }
+        });
+
+        // Initialize visual state
+        this.getToggleState(elementId).then(isEnabled => {
+            this.updateToggleVisuals(button, isEnabled);
+        });
     }
-  }
 
-  /**
-   * Setup history-related event listeners
-   */
-  setupHistoryListeners() {
-    jQuery("#idHistory_Synchronize").on("click", () => {
-      this.showLoading("synchronizing history");
-      this.connections.history.postMessage({
-        strMessage: "historySynchronize",
-        objRequest: { intTimestamp: 0 },
-      });
-    });
-
-    this.connections.history.onMessage.addListener((data) => {
-      this.handleHistoryMessage(data);
-    });
-  }
-
-  /**
-   * Handle history-related messages
-   * @param {Object} data - Message data
-   */
-  handleHistoryMessage(data) {
-    switch (data.strMessage) {
-      case "historySynchronize":
-        this.hideLoading();
-        if (data.objResponse === null) {
-          this.showError("Error synchronizing history");
-        } else {
-          this.showSuccess("History synchronized successfully");
-          this.loadHistoryTimestamp();
+    /**
+     * Update toggle button visual state
+     * @param {HTMLElement} button - Button element
+     * @param {boolean} isEnabled - Whether toggle is enabled
+     */
+    updateToggleVisuals(button, isEnabled) {
+        const icons = button.querySelectorAll('i');
+        if (icons.length === 2) {
+            icons[0].style.display = isEnabled ? 'none' : 'inline';
+            icons[1].style.display = isEnabled ? 'inline' : 'none';
         }
-        break;
-        
-      case "historySynchronize-progress":
-        this.updateProgress(data.objResponse.strProgress);
-        break;
     }
-  }
 
-  /**
-   * Setup YouTube-related event listeners
-   */
-  setupYouTubeListeners() {
-    jQuery("#idYoutube_Synchronize").on("click", () => {
-      this.showLoading("synchronizing youtube");
-      this.connections.youtube.postMessage({
-        strMessage: "youtubeSynchronize",
-        objRequest: { intThreshold: 1000000 },
-      });
-    });
-
-    this.connections.youtube.onMessage.addListener((data) => {
-      this.handleYouTubeMessage(data);
-    });
-  }
-
-  /**
-   * Handle YouTube-related messages
-   * @param {Object} data - Message data
-   */
-  handleYouTubeMessage(data) {
-    switch (data.strMessage) {
-      case "youtubeSynchronize":
-        this.hideLoading();
-        if (data.objResponse === null) {
-          this.showError("Error synchronizing YouTube");
-        } else {
-          this.showSuccess("YouTube synchronized successfully");
-          this.loadYouTubeTimestamp();
+    /**
+     * Initialize theme based on system preference
+     */
+    async initializeTheme() {
+        try {
+            const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-bs-theme', isDarkMode ? 'dark' : '');
+            
+            // Listen for theme changes
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                    document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : '');
+                });
+            }
+        } catch (error) {
+            console.error('Error initializing theme:', error);
         }
-        break;
+    }
+
+    /**
+     * Export database
+     */
+    async exportDatabase() {
+        try {
+            this.showLoading('Exporting database...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-export'
+            });
+
+            if (response && response.success) {
+                const blob = new Blob([response.data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `youtube-watchmarker-${new Date().toISOString().split('T')[0]}.database`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showSuccess('Database exported successfully');
+            } else {
+                this.showError('Failed to export database');
+            }
+        } catch (error) {
+            console.error('Export error:', error);
+            this.showError('Export failed: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Import database from file
+     * @param {Event} event - File input change event
+     */
+    async importDatabase(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            this.showLoading('Importing database...');
+            
+            const fileContent = await this.readFileAsText(file);
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-import',
+                data: fileContent
+            });
+
+            if (response && response.success) {
+                this.showSuccess('Database imported successfully');
+                await this.loadInitialData(); // Refresh displayed data
+            } else {
+                this.showError('Failed to import database');
+            }
+        } catch (error) {
+            console.error('Import error:', error);
+            this.showError('Import failed: ' + error.message);
+        } finally {
+            this.hideLoading();
+            event.target.value = ''; // Clear file input
+        }
+    }
+
+    /**
+     * Read file as text using modern FileReader API
+     * @param {File} file - File to read
+     * @returns {Promise<string>} File content as text
+     */
+    readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+
+    /**
+     * Reset database
+     */
+    async resetDatabase() {
+        if (!confirm('Are you sure you want to reset the database? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            this.showLoading('Resetting database...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-reset'
+            });
+
+            if (response && response.success) {
+                this.showSuccess('Database reset successfully');
+                await this.loadInitialData(); // Refresh displayed data
+            } else {
+                this.showError('Failed to reset database');
+            }
+        } catch (error) {
+            console.error('Reset error:', error);
+            this.showError('Reset failed: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Synchronize browser history
+     */
+    async synchronizeHistory() {
+        try {
+            this.showLoading('Synchronizing history...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'history-synchronize'
+            });
+
+            if (response && response.success) {
+                this.showSuccess('History synchronized successfully');
+                await this.loadInitialData(); // Refresh displayed data
+            } else {
+                this.showError('Failed to synchronize history');
+            }
+        } catch (error) {
+            console.error('History sync error:', error);
+            this.showError('History sync failed: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Synchronize YouTube data
+     */
+    async synchronizeYoutube() {
+        try {
+            this.showLoading('Synchronizing YouTube data...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'youtube-synchronize'
+            });
+
+            if (response && response.success) {
+                this.showSuccess('YouTube data synchronized successfully');
+                await this.loadInitialData(); // Refresh displayed data
+            } else {
+                this.showError('Failed to synchronize YouTube data');
+            }
+        } catch (error) {
+            console.error('YouTube sync error:', error);
+            this.showError('YouTube sync failed: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Perform search
+     */
+    async performSearch() {
+        const searchQuery = this.getElementById('idSearch_Query');
+        const searchButton = this.getElementById('idSearch_Lookup');
+        const searchResults = this.getElementById('idSearch_Results');
+        const query = searchQuery.value.trim();
+
+        if (!query) {
+            searchResults.innerHTML = '<p class="text-muted">Please enter a search query</p>';
+            return;
+        }
+
+        try {
+            // Update button state
+            const icons = searchButton.querySelectorAll('i');
+            if (icons.length === 2) {
+                icons[0].style.display = 'none';
+                icons[1].style.display = 'inline';
+            }
+
+            const response = await chrome.runtime.sendMessage({
+                action: 'search-videos',
+                query: query
+            });
+
+            if (response && response.success) {
+                this.displaySearchResults(response.results);
+            } else {
+                searchResults.innerHTML = '<p class="text-danger">Search failed</p>';
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            searchResults.innerHTML = '<p class="text-danger">Search error: ' + error.message + '</p>';
+        } finally {
+            // Reset button state
+            const icons = searchButton.querySelectorAll('i');
+            if (icons.length === 2) {
+                icons[0].style.display = 'inline';
+                icons[1].style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Display search results
+     * @param {Array} results - Search results
+     */
+    displaySearchResults(results) {
+        const searchResults = this.getElementById('idSearch_Results');
         
-      case "youtubeSynchronize-progress":
-        this.updateProgress(data.objResponse.strProgress);
-        break;
+        if (!results || results.length === 0) {
+            searchResults.innerHTML = '<p class="text-muted">No results found</p>';
+            return;
+        }
+
+        const html = results.map(result => `
+            <div class="card mb-2">
+                <div class="card-body">
+                    <h6 class="card-title">${this.escapeHtml(result.title)}</h6>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Watched: ${this.formatDate(new Date(result.timestamp))} 
+                            (${result.count} time${result.count !== 1 ? 's' : ''})
+                        </small>
+                    </p>
+                    <a href="https://www.youtube.com/watch?v=${result.id}" 
+                       class="btn btn-sm btn-primary" target="_blank">
+                        Watch Again
+                    </a>
+                </div>
+            </div>
+        `).join('');
+
+        searchResults.innerHTML = html;
     }
-  }
 
-  /**
-   * Setup search-related event listeners
-   */
-  setupSearchListeners() {
-    // Search functionality would go here
-    // This is a placeholder for future search features
-  }
-
-  /**
-   * Setup settings-related event listeners
-   */
-  setupSettingsListeners() {
-    // Settings toggles and other configuration options
-    // This would handle the various checkboxes and settings in the UI
-    this.setupConditionToggles();
-    this.setupVisualizationToggles();
-  }
-
-  /**
-   * Setup condition toggle buttons
-   */
-  setupConditionToggles() {
-    const conditions = ['Brownav', 'Browhist', 'Youprog', 'Youbadge', 'Youhist'];
-    
-    conditions.forEach(condition => {
-      this.setupToggle(`idCondition_${condition}`, `extensions.Youwatch.Condition.bool${condition}`);
-    });
-  }
-
-  /**
-   * Setup visualization toggle buttons
-   */
-  setupVisualizationToggles() {
-    const visualizations = ['Fadeout', 'Grayout', 'Showbadge', 'Showdate', 'Hideprogress'];
-    
-    visualizations.forEach(visualization => {
-      this.setupToggle(`idVisualization_${visualization}`, `extensions.Youwatch.Visualization.bool${visualization}`);
-    });
-  }
-
-  /**
-   * Setup a toggle button
-   * @param {string} elementId - Element ID
-   * @param {string} storageKey - Storage key
-   */
-  async setupToggle(elementId, storageKey) {
-    const element = jQuery(`#${elementId}`);
-    if (element.length === 0) return;
-
-    // Load initial state
-    const isEnabled = await getStorageAsync(storageKey) === "true";
-    this.updateToggleState(element, isEnabled);
-
-    // Handle clicks
-    element.on("click", async () => {
-      const currentState = await getStorageAsync(storageKey) === "true";
-      const newState = !currentState;
-      
-      await setStorageAsync(storageKey, String(newState));
-      this.updateToggleState(element, newState);
-    });
-  }
-
-  /**
-   * Update toggle button visual state
-   * @param {jQuery} element - jQuery element
-   * @param {boolean} isEnabled - Whether the toggle is enabled
-   */
-  updateToggleState(element, isEnabled) {
-    const uncheckedIcon = element.find('.fa-square');
-    const checkedIcon = element.find('.fa-check-square');
-    
-    if (isEnabled) {
-      uncheckedIcon.hide();
-      checkedIcon.show();
-      element.addClass('active');
-    } else {
-      uncheckedIcon.show();
-      checkedIcon.hide();
-      element.removeClass('active');
+    /**
+     * Escape HTML to prevent XSS
+     * @param {string} text - Text to escape
+     * @returns {string} Escaped text
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
-  }
 
-  /**
-   * Load initial data for the options page
-   */
-  async loadInitialData() {
-    await this.loadDatabaseSize();
-    await this.loadHistoryTimestamp();
-    await this.loadYouTubeTimestamp();
-  }
-
-  /**
-   * Load and display database size
-   */
-  async loadDatabaseSize() {
-    try {
-      const size = await getStorageAsync("extensions.Youwatch.Database.intSize");
-      jQuery("#idDatabase_Size").text(parseInt(size || 0));
-    } catch (error) {
-      console.error("Error loading database size:", error);
+    /**
+     * Get toggle state from storage
+     * @param {string} elementId - Element ID
+     * @returns {Promise<boolean>} Toggle state
+     */
+    async getToggleState(elementId) {
+        try {
+            const result = await chrome.storage.sync.get([elementId]);
+            return result[elementId] || false;
+        } catch (error) {
+            console.error(`Error getting toggle state for ${elementId}:`, error);
+            return false;
+        }
     }
-  }
 
-  /**
-   * Load and display history timestamp
-   */
-  async loadHistoryTimestamp() {
-    try {
-      const timestamp = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
-      const date = new Date(parseInt(timestamp || 0));
-      jQuery("#idHistory_Timestamp").text(this.formatDate(date));
-    } catch (error) {
-      console.error("Error loading history timestamp:", error);
+    /**
+     * Set toggle state in storage
+     * @param {string} elementId - Element ID
+     * @param {boolean} state - New state
+     */
+    async setToggleState(elementId, state) {
+        try {
+            await chrome.storage.sync.set({ [elementId]: state });
+        } catch (error) {
+            console.error(`Error setting toggle state for ${elementId}:`, error);
+        }
     }
-  }
 
-  /**
-   * Load and display YouTube timestamp
-   */
-  async loadYouTubeTimestamp() {
-    try {
-      const timestamp = await getStorageAsync("extensions.Youwatch.Youtube.intTimestamp");
-      const date = new Date(parseInt(timestamp || 0));
-      jQuery("#idYoutube_Timestamp").text(this.formatDate(date));
-    } catch (error) {
-      console.error("Error loading YouTube timestamp:", error);
+    /**
+     * Load initial data
+     */
+    async loadInitialData() {
+        try {
+            await Promise.all([
+                this.updateDatabaseSize(),
+                this.updateHistoryTimestamp(),
+                this.updateYoutubeTimestamp()
+            ]);
+        } catch (error) {
+            console.error('Error loading initial data:', error);
+        }
     }
-  }
 
-  /**
-   * Format date for display
-   * @param {Date} date - Date to format
-   * @returns {string} Formatted date string
-   */
-  formatDate(date) {
-    return date.toLocaleDateString() + " - " + date.toLocaleTimeString();
-  }
+    /**
+     * Update database size display
+     */
+    async updateDatabaseSize() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'database-size'
+            });
 
-  /**
-   * Show loading dialog
-   * @param {string} message - Loading message
-   */
-  showLoading(message) {
-    jQuery("#idLoading_Container").show();
-    jQuery("#idLoading_Message").text(message);
-    jQuery("#idLoading_Progress").text("...");
-    jQuery("#idLoading_Close").addClass("disabled");
-  }
+            if (response && response.success) {
+                this.databaseSize.textContent = parseInt(response.size || 0).toLocaleString();
+            }
+        } catch (error) {
+            console.error('Error updating database size:', error);
+            this.databaseSize.textContent = 'Error';
+        }
+    }
 
-  /**
-   * Hide loading dialog
-   */
-  hideLoading() {
-    jQuery("#idLoading_Container").hide();
-    jQuery("#idLoading_Close").removeClass("disabled");
-  }
+    /**
+     * Update history timestamp display
+     */
+    async updateHistoryTimestamp() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'history-timestamp'
+            });
 
-  /**
-   * Update progress text
-   * @param {string} progress - Progress message
-   */
-  updateProgress(progress) {
-    jQuery("#idLoading_Progress").text(progress);
-  }
+            if (response && response.success && response.timestamp) {
+                const date = new Date(response.timestamp);
+                this.historyTimestamp.textContent = this.formatDate(date);
+            } else {
+                this.historyTimestamp.textContent = 'Never';
+            }
+        } catch (error) {
+            console.error('Error updating history timestamp:', error);
+            this.historyTimestamp.textContent = 'Error';
+        }
+    }
 
-  /**
-   * Show success message
-   * @param {string} message - Success message
-   */
-  showSuccess(message) {
-    // This would show a success notification
-    console.log("Success:", message);
-  }
+    /**
+     * Update YouTube timestamp display
+     */
+    async updateYoutubeTimestamp() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'youtube-timestamp'
+            });
 
-  /**
-   * Show error message
-   * @param {string} message - Error message
-   */
-  showError(message) {
-    // This would show an error notification
-    console.error("Error:", message);
-  }
+            if (response && response.success && response.timestamp) {
+                const date = new Date(response.timestamp);
+                this.youtubeTimestamp.textContent = this.formatDate(date);
+            } else {
+                this.youtubeTimestamp.textContent = 'Never';
+            }
+        } catch (error) {
+            console.error('Error updating YouTube timestamp:', error);
+            this.youtubeTimestamp.textContent = 'Error';
+        }
+    }
+
+    /**
+     * Format date for display
+     * @param {Date} date - Date to format
+     * @returns {string} Formatted date string
+     */
+    formatDate(date) {
+        if (!date || isNaN(date.getTime())) {
+            return 'Invalid Date';
+        }
+        
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    }
+
+    /**
+     * Show loading modal
+     * @param {string} message - Loading message
+     */
+    showLoading(message) {
+        if (this.loadingContainer && this.loadingMessage && this.loadingProgress && this.loadingClose) {
+            this.loadingContainer.style.display = 'block';
+            this.loadingMessage.textContent = message;
+            this.loadingProgress.textContent = '...';
+            this.loadingClose.classList.add('disabled');
+        }
+    }
+
+    /**
+     * Hide loading modal
+     */
+    hideLoading() {
+        if (this.loadingContainer && this.loadingClose) {
+            this.loadingContainer.style.display = 'none';
+            this.loadingClose.classList.remove('disabled');
+        }
+    }
+
+    /**
+     * Update loading progress
+     * @param {string} progress - Progress text
+     */
+    updateLoadingProgress(progress) {
+        if (this.loadingProgress) {
+            this.loadingProgress.textContent = progress;
+        }
+    }
+
+    /**
+     * Show success message
+     * @param {string} message - Success message
+     */
+    showSuccess(message) {
+        console.log('Success:', message);
+        // Could implement toast notifications here
+        alert(message); // Simple fallback
+    }
+
+    /**
+     * Show error message
+     * @param {string} message - Error message
+     */
+    showError(message) {
+        console.error('Error:', message);
+        // Could implement toast notifications here
+        alert('Error: ' + message); // Simple fallback
+    }
 }
 
-// Initialize the options page when DOM is ready
-jQuery(document).ready(() => {
-  new OptionsPageManager();
-});
+// Initialize the options page manager
+new OptionsPageManager();

@@ -58,8 +58,9 @@ npm run format:check
 2. **Maintainability**: Clear separation of concerns and modular design
 3. **Error Handling**: Comprehensive error handling with meaningful messages
 4. **Modern Syntax**: Arrow functions, destructuring, template literals
-5. **Type Safety**: JSDoc annotations for better IDE support
-6. **Memory Management**: Proper cleanup of observers and event listeners
+5. **No jQuery**: Removed jQuery dependency, using vanilla JavaScript for better performance
+6. **Type Safety**: JSDoc annotations for better IDE support
+7. **Memory Management**: Proper cleanup of observers and event listeners
 
 ## questions
 

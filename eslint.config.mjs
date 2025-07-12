@@ -11,8 +11,7 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.webextensions,
-        jQuery: 'readonly',
-        $: 'readonly',
+        moment: 'readonly',
       },
     },
   },
