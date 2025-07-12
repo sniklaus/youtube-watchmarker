@@ -53,11 +53,12 @@
   --shadow-lg: 0 1rem 3rem rgba(2, 48, 71, 0.175);
   --shadow-xl: 0 2rem 4rem rgba(2, 48, 71, 0.2);
   
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  --gradient-accent: linear-gradient(135deg, var(--color-accent), var(--color-secondary));
-  --gradient-warm: linear-gradient(135deg, var(--color-warning), var(--color-danger));
-  --gradient-cool: linear-gradient(135deg, var(--color-accent), var(--color-primary));
+  /* Solid Colors (no gradients) */
+  --solid-primary: var(--color-primary);
+  --solid-secondary: var(--color-secondary);
+  --solid-accent: var(--color-accent);
+  --solid-warning: var(--color-warning);
+  --solid-danger: var(--color-danger);
   
   /* Bootstrap Override Variables */
   --bs-primary: var(--color-primary);
@@ -195,7 +196,7 @@ body {
 
 /* Professional Header Styling */
 header.bg-primary {
-  background: var(--gradient-primary) !important;
+  background-color: var(--color-primary) !important;
   box-shadow: var(--shadow-md);
 }
 
@@ -224,20 +225,20 @@ header.bg-primary {
 }
 
 .card-header.bg-primary {
-  background: var(--gradient-primary) !important;
+  background-color: var(--color-primary) !important;
 }
 
 .card-header.bg-success {
-  background: var(--gradient-cool) !important;
+  background-color: var(--color-secondary) !important;
 }
 
 .card-header.bg-warning {
-  background: var(--gradient-warm) !important;
+  background-color: var(--color-warning) !important;
   color: var(--color-text-inverse);
 }
 
 .card-header.bg-info {
-  background: var(--gradient-accent) !important;
+  background-color: var(--color-accent) !important;
 }
 
 .card-header.bg-dark {
@@ -285,7 +286,7 @@ header.bg-primary {
 
 /* Professional Button Variants */
 .btn-primary {
-  background: var(--gradient-primary);
+  background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
 }
@@ -313,8 +314,8 @@ header.bg-primary {
 }
 
 .btn-success {
-  background: var(--gradient-cool);
-  border-color: var(--color-success);
+  background-color: var(--color-secondary);
+  border-color: var(--color-secondary);
   color: white;
 }
 
@@ -324,7 +325,7 @@ header.bg-primary {
 }
 
 .btn-warning {
-  background: var(--gradient-warm);
+  background-color: var(--color-warning);
   border-color: var(--color-warning);
   color: white;
 }
@@ -340,7 +341,7 @@ header.bg-primary {
 }
 
 .btn-outline-primary:hover {
-  background: var(--gradient-primary);
+  background-color: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
 }
@@ -448,25 +449,25 @@ header.bg-primary {
 }
 
 .alert-info {
-  background: linear-gradient(135deg, var(--color-accent-light), rgba(var(--bs-info-rgb), 0.1));
+  background-color: var(--color-accent-light);
   border-left: 4px solid var(--color-info);
   color: var(--color-primary-dark);
 }
 
 .alert-success {
-  background: linear-gradient(135deg, var(--color-success-light), rgba(var(--bs-success-rgb), 0.1));
+  background-color: var(--color-success-light);
   border-left: 4px solid var(--color-success);
   color: var(--color-success-dark);
 }
 
 .alert-warning {
-  background: linear-gradient(135deg, var(--color-warning-light), rgba(var(--bs-warning-rgb), 0.1));
+  background-color: var(--color-warning-light);
   border-left: 4px solid var(--color-warning);
   color: var(--color-warning-dark);
 }
 
 .alert-danger {
-  background: linear-gradient(135deg, var(--color-danger-light), rgba(var(--bs-danger-rgb), 0.1));
+  background-color: var(--color-danger-light);
   border-left: 4px solid var(--color-danger);
   color: var(--color-danger-dark);
 }
@@ -603,7 +604,7 @@ header.bg-primary {
 }
 
 .progress-bar {
-  background: var(--gradient-primary);
+  background-color: var(--color-primary);
   transition: width var(--transition-normal);
 }
 
@@ -785,11 +786,8 @@ header.bg-primary {
 }
 
 /* Utility Classes */
-.text-gradient {
-  background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.text-primary-color {
+  color: var(--color-primary);
 }
 
 .glass-effect {
