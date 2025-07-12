@@ -1,510 +1,440 @@
 import { getStorageAsync, setStorageAsync } from '../utils.js';
 
-let objDatabase = chrome.runtime.connect({ name: "database" });
-let objHistory = chrome.runtime.connect({ name: "history" });
-let objYoutube = chrome.runtime.connect({ name: "youtube" });
-let objSearch = chrome.runtime.connect({ name: "search" });
+/**
+ * Extension options page manager
+ */
+class OptionsPageManager {
+  constructor() {
+    this.connections = {
+      database: chrome.runtime.connect({ name: "database" }),
+      history: chrome.runtime.connect({ name: "history" }),
+      youtube: chrome.runtime.connect({ name: "youtube" }),
+      search: chrome.runtime.connect({ name: "search" })
+    };
+    
+    this.init();
+  }
 
-jQuery(window.document).ready(async () => {
-  jQuery("html").attr({
-    "data-bs-theme":
-      window.matchMedia("(prefers-color-scheme: dark)").matches === true
-        ? "dark"
-        : "",
-  });
+  /**
+   * Initialize the options page
+   */
+  async init() {
+    await this.setupTheme();
+    await this.setupEventListeners();
+    await this.loadInitialData();
+  }
 
-  window
-    .matchMedia("(prefers-color-scheme: dark)")
-    .addEventListener("change", function (objEvent) {
-      jQuery("html").attr({
-        "data-bs-theme":
-          window.matchMedia("(prefers-color-scheme: dark)").matches === true
-            ? "dark"
-            : "",
+  /**
+   * Setup theme switching based on user preference
+   */
+  async setupTheme() {
+    const updateTheme = () => {
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      jQuery("html").attr("data-bs-theme", isDark ? "dark" : "");
+    };
+
+    // Initial theme setup
+    updateTheme();
+
+    // Listen for theme changes
+    window.matchMedia("(prefers-color-scheme: dark)")
+      .addEventListener("change", updateTheme);
+  }
+
+  /**
+   * Setup all event listeners for the options page
+   */
+  async setupEventListeners() {
+    // Database operations
+    this.setupDatabaseListeners();
+    
+    // History operations
+    this.setupHistoryListeners();
+    
+    // YouTube operations
+    this.setupYouTubeListeners();
+    
+    // Search operations
+    this.setupSearchListeners();
+    
+    // Settings operations
+    this.setupSettingsListeners();
+  }
+
+  /**
+   * Setup database-related event listeners
+   */
+  setupDatabaseListeners() {
+    // Export database
+    jQuery("#idDatabase_Export").on("click", () => {
+      this.showLoading("exporting database");
+      this.connections.database.postMessage({
+        strMessage: "databaseExport",
+        objRequest: {},
       });
     });
 
-  jQuery("#idDatabase_Export").on("click", function () {
-    jQuery("#idLoading_Container").css({
-      display: "block",
-    });
-
-    jQuery("#idLoading_Message").text("exporting database");
-
-    jQuery("#idLoading_Progress").text("...");
-
-    jQuery("#idLoading_Close").addClass("disabled");
-
-    objDatabase.postMessage({
-      strMessage: "databaseExport",
-      objRequest: {},
-    });
-  });
-
-  objDatabase.onMessage.addListener(function (objData) {
-    if (objData.strMessage === "databaseExport") {
-      if (objData.objResponse === null) {
-        jQuery("#idLoading_Message").text("error exporting database");
-      } else if (objData.objResponse !== null) {
-        jQuery("#idLoading_Message").text("finished exporting database");
+    // Import database
+    jQuery("#idDatabase_Import input[type=file]").on("change", (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        this.handleDatabaseImport(file);
       }
+    });
 
-      jQuery("#idLoading_Close").removeClass("disabled");
-    }
-
-    if (objData.strMessage === "databaseExport-progress") {
-      jQuery("#idLoading_Progress").text(objData.objResponse.strProgress);
-    }
-  });
-
-  jQuery("#idDatabase_Import")
-    .find("input")
-    .on("change", function () {
-      jQuery("#idLoading_Container").css({
-        display: "block",
-      });
-
-      jQuery("#idLoading_Message").text("importing database");
-
-      jQuery("#idLoading_Progress").text("...");
-
-      jQuery("#idLoading_Close").addClass("disabled");
-
-      let objFilereader = new FileReader();
-
-      objFilereader.onload = function (objEvent) {
-        objDatabase.postMessage({
-          strMessage: "databaseImport",
-          objRequest: {
-            objVideos: JSON.parse(
-              decodeURIComponent(escape(atob(objEvent.target.result))),
-            ),
-          },
+    // Reset database
+    jQuery("#idDatabase_Reset").on("click", () => {
+      if (confirm("Are you sure you want to reset the database? This will delete all your watch history.")) {
+        this.showLoading("resetting database");
+        this.connections.database.postMessage({
+          strMessage: "databaseReset",
+          objRequest: {},
         });
-      };
-
-      if (
-        jQuery("#idDatabase_Import").find("input").get(0).files !== undefined
-      ) {
-        if (
-          jQuery("#idDatabase_Import").find("input").get(0).files.length === 1
-        ) {
-          objFilereader.readAsText(
-            jQuery("#idDatabase_Import").find("input").get(0).files[0],
-            "utf-8",
-          );
-        }
       }
     });
 
-  objDatabase.onMessage.addListener(function (objData) {
-    if (objData.strMessage === "databaseImport") {
-      if (objData.objResponse === null) {
-        jQuery("#idLoading_Message").text("error importing database");
-      } else if (objData.objResponse !== null) {
-        jQuery("#idLoading_Message").text("finished importing database");
-      }
-
-      jQuery("#idLoading_Close").removeClass("disabled");
-    }
-
-    if (objData.strMessage === "databaseImport-progress") {
-      jQuery("#idLoading_Progress").text(objData.objResponse.strProgress);
-    }
-  });
-
-  jQuery("#idDatabase_Reset").on("click", function () {
-    jQuery(this).css({
-      display: "none",
+    // Database message listener
+    this.connections.database.onMessage.addListener((data) => {
+      this.handleDatabaseMessage(data);
     });
+  }
 
-    jQuery("#idDatabase_Resyes").closest(".input-group").css({
-      display: "inline",
-    });
-  });
-
-  jQuery("#idDatabase_Resyes").on("click", function () {
-    objDatabase.postMessage({
-      strMessage: "databaseReset",
-      objRequest: {},
-    });
-  });
-
-  objDatabase.onMessage.addListener(function (objData) {
-    if (objData.strMessage === "databaseReset") {
-      window.location.reload();
-    }
-  });
-
-  const intSize = await getStorageAsync("extensions.Youwatch.Database.intSize")
-  jQuery("#idDatabase_Size").text(
-    parseInt(intSize),
-  );
-
-  jQuery("#idHistory_Synchronize").on("click", function () {
-    jQuery("#idLoading_Container").css({
-      display: "block",
-    });
-
-    jQuery("#idLoading_Message").text("synchronizing history");
-
-    jQuery("#idLoading_Progress").text("...");
-
-    jQuery("#idLoading_Close").addClass("disabled");
-
-    objHistory.postMessage({
-      strMessage: "historySynchronize",
-      objRequest: {
-        intTimestamp: 0,
-      },
-    });
-  });
-
-  objHistory.onMessage.addListener(function (objData) {
-    if (objData.strMessage === "historySynchronize") {
-      if (objData.objResponse === null) {
-        jQuery("#idLoading_Message").text("error synchronizing history");
-      } else if (objData.objResponse !== null) {
-        jQuery("#idLoading_Message").text("finished synchronizing history");
-      }
-
-      jQuery("#idLoading_Close").removeClass("disabled");
-    }
-
-    if (objData.strMessage === "historySynchronize-progress") {
-      jQuery("#idLoading_Progress").text(objData.objResponse.strProgress);
-    }
-  });
-
-  const intTimestampHistory = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
-  jQuery("#idHistory_Timestamp").text(
-    moment(
-      parseInt(intTimestampHistory),
-    ).format("YYYY.MM.DD - HH:mm:ss"),
-  );
-
-  jQuery("#idYoutube_Synchronize").on("click", function () {
-    jQuery("#idLoading_Container").css({
-      display: "block",
-    });
-
-    jQuery("#idLoading_Message").text("synchronizing youtube");
-
-    jQuery("#idLoading_Progress").text("...");
-
-    jQuery("#idLoading_Close").addClass("disabled");
-
-    objYoutube.postMessage({
-      strMessage: "youtubeSynchronize",
-      objRequest: {
-        intThreshold: 1000000,
-      },
-    });
-  });
-
-  objYoutube.onMessage.addListener(function (objData) {
-    if (objData.strMessage === "youtubeSynchronize") {
-      if (objData.objResponse === null) {
-        jQuery("#idLoading_Message").text("error synchronizing youtube");
-      } else if (objData.objResponse !== null) {
-        jQuery("#idLoading_Message").text("finished synchronizing youtube");
-      }
-
-      jQuery("#idLoading_Close").removeClass("disabled");
-    }
-
-    if (objData.strMessage === "youtubeSynchronize-progress") {
-      jQuery("#idLoading_Progress").text(objData.objResponse.strProgress);
-    }
-  });
-
-  const intTimestampYoutube = await getStorageAsync("extensions.Youwatch.Youtube.intTimestamp");
-  jQuery("#idYoutube_Timestamp").text(
-    moment(
-      parseInt(intTimestampYoutube),
-    ).format("YYYY.MM.DD - HH:mm:ss"),
-  );
-
-  // TODO: consider using css instead of manually setting the display
-  // setup the display of checkboxes and click event handlers
-  function updateCheckboxStates(boolState, $icons) {
-    if (boolState === String(true)) {
-      $icons.eq(0).hide().end().eq(1).show();
-    } else {
-      $icons.eq(0).show().end().eq(1).hide();
+  /**
+   * Handle database file import
+   * @param {File} file - The database file to import
+   */
+  async handleDatabaseImport(file) {
+    try {
+      this.showLoading("importing database");
+      
+      const text = await this.readFileAsText(file);
+      const videos = JSON.parse(text);
+      
+      this.connections.database.postMessage({
+        strMessage: "databaseImport",
+        objRequest: { objVideos: videos },
+      });
+    } catch (error) {
+      console.error("Error importing database:", error);
+      this.showError("Failed to import database. Please check the file format.");
     }
   }
-  const elements = [
-    { id: "#idCondition_Brownav", key: "extensions.Youwatch.Condition.boolBrownav" },
-    { id: "#idCondition_Browhist", key: "extensions.Youwatch.Condition.boolBrowhist" },
-    { id: "#idCondition_Youprog", key: "extensions.Youwatch.Condition.boolYouprog" },
-    { id: "#idCondition_Youbadge", key: "extensions.Youwatch.Condition.boolYoubadge" },
-    { id: "#idCondition_Youhist", key: "extensions.Youwatch.Condition.boolYouhist" },
-    { id: "#idVisualization_Fadeout", key: "extensions.Youwatch.Visualization.boolFadeout" },
-    { id: "#idVisualization_Grayout", key: "extensions.Youwatch.Visualization.boolGrayout" },
-    { id: "#idVisualization_Showbadge", key: "extensions.Youwatch.Visualization.boolShowbadge" },
-    { id: "#idVisualization_Showdate", key: "extensions.Youwatch.Visualization.boolShowdate" },
-    { id: "#idVisualization_Hideprogress", key: "extensions.Youwatch.Visualization.boolHideprogress" }
-  ];
-  elements.forEach(async (element) => {
-    const $icons = jQuery(element.id).find("i");
-    const boolState = await getStorageAsync(element.key);
-    updateCheckboxStates(boolState, $icons);
 
-    jQuery(element.id).on("click", async function () {
-      const oldState = await getStorageAsync(element.key);
-      const newState = String(oldState === String(false));
-      await setStorageAsync(element.key, newState);
-      updateCheckboxStates(newState, $icons);
+  /**
+   * Read file as text
+   * @param {File} file - File to read
+   * @returns {Promise<string>} File content as text
+   */
+  readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(e);
+      reader.readAsText(file);
     });
-  });
+  }
 
-  jQuery("#idSearch_Query").on("keydown", function (objEvent) {
-    if (objEvent.keyCode === 13) {
-      jQuery("#idSearch_Lookup").data({
-        intSkip: 0,
-      });
-
-      jQuery("#idSearch_Lookup").triggerHandler("click");
+  /**
+   * Handle database-related messages
+   * @param {Object} data - Message data
+   */
+  handleDatabaseMessage(data) {
+    switch (data.strMessage) {
+      case "databaseExport":
+        this.hideLoading();
+        if (data.objResponse === null) {
+          this.showError("Error exporting database");
+        } else {
+          this.showSuccess("Database exported successfully");
+        }
+        break;
+        
+      case "databaseImport":
+        this.hideLoading();
+        if (data.objResponse === null) {
+          this.showError("Error importing database");
+        } else {
+          this.showSuccess("Database imported successfully");
+          this.loadDatabaseSize();
+        }
+        break;
+        
+      case "databaseReset":
+        this.hideLoading();
+        window.location.reload();
+        break;
+        
+      case "databaseExport-progress":
+      case "databaseImport-progress":
+        this.updateProgress(data.objResponse.strProgress);
+        break;
     }
-  });
+  }
 
-  jQuery("#idSearch_Lookup")
-    .data({
-      intSkip: 0,
-    })
-    .on("click", function (objEvent) {
-      if (objEvent.originalEvent !== undefined) {
-        jQuery("#idSearch_Lookup").data({
-          intSkip: 0,
-        });
-      }
-
-      jQuery("#idSearch_Lookup")
-        .addClass("disabled")
-        .find("i")
-        .eq(0)
-        .css({
-          display: "none",
-        })
-        .end()
-        .eq(1)
-        .css({
-          display: "inline",
-        })
-        .end()
-        .end();
-
-      objSearch.postMessage({
-        strMessage: "searchLookup",
-        objRequest: {
-          strQuery: jQuery("#idSearch_Query").val(),
-          intSkip: jQuery("#idSearch_Lookup").data("intSkip"),
-          intLength: 10,
-        },
+  /**
+   * Setup history-related event listeners
+   */
+  setupHistoryListeners() {
+    jQuery("#idHistory_Synchronize").on("click", () => {
+      this.showLoading("synchronizing history");
+      this.connections.history.postMessage({
+        strMessage: "historySynchronize",
+        objRequest: { intTimestamp: 0 },
       });
-    })
-    .each(function () {
-      jQuery(this).triggerHandler("click");
     });
 
-  objSearch.onMessage.addListener(function (objData) {
-    if (objData.strMessage === "searchLookup") {
-      if (objData.objResponse === null) {
-        return;
-      }
+    this.connections.history.onMessage.addListener((data) => {
+      this.handleHistoryMessage(data);
+    });
+  }
 
-      jQuery("#idSearch_Lookup")
-        .removeClass("disabled")
-        .find("i")
-        .eq(0)
-        .css({
-          display: "inline",
-        })
-        .end()
-        .eq(1)
-        .css({
-          display: "none",
-        })
-        .end()
-        .end();
-
-      if (jQuery("#idSearch_Lookup").data("intSkip") === 0) {
-        jQuery("#idSearch_Results")
-          .empty()
-          .append(
-            jQuery("<table></table>")
-              .addClass("table")
-              .addClass("table-sm")
-              .css({
-                margin: "0px",
-              })
-              .append(
-                jQuery("<thead></thead>").append(
-                  jQuery("<tr></tr>")
-                    .append(
-                      jQuery("<th></th>")
-                        .attr({
-                          width: "1%",
-                        })
-                        .text("Time"),
-                    )
-                    .append(jQuery("<th></th>").text("Title"))
-                    .append(
-                      jQuery("<th></th>")
-                        .attr({
-                          width: "1%",
-                        })
-                        .css({
-                          "text-align": "right",
-                        })
-                        .text("Visits"),
-                    )
-                    .append(
-                      jQuery("<th></th>").attr({
-                        width: "1%",
-                      }),
-                    ),
-                ),
-              )
-              .append(jQuery("<tbody></tbody>")),
-          );
-      }
-
-      jQuery("#idSearch_Results")
-        .find("tbody")
-        .each(function () {
-          for (let objVideo of objData.objResponse.objVideos) {
-            jQuery(this).append(
-              jQuery("<tr></tr>")
-                .append(
-                  jQuery("<td></td>").append(
-                    jQuery("<div></div>")
-                      .css({
-                        "white-space": "nowrap",
-                      })
-                      .text(
-                        moment(objVideo.intTimestamp).format(
-                          "YYYY.MM.DD - HH:mm",
-                        ),
-                      ),
-                  ),
-                )
-                .append(
-                  jQuery("<td></td>")
-                    .css({
-                      position: "relative",
-                    })
-                    .append(
-                      jQuery("<div></div>")
-                        .css({
-                          left: "8px",
-                          overflow: "hidden",
-                          position: "absolute",
-                          right: "-8px",
-                          "text-overflow": "ellipsis",
-                          "white-space": "nowrap",
-                        })
-                        .append(
-                          jQuery("<a></a>")
-                            .attr({
-                              href:
-                                "https://www.youtube.com/watch?v=" +
-                                objVideo.strIdent,
-                            })
-                            .css({
-                              "text-decoration": "none",
-                            })
-                            .text(objVideo.strTitle),
-                        ),
-                    ),
-                )
-                .append(
-                  jQuery("<td></td>").append(
-                    jQuery("<div></div>")
-                      .css({
-                        "white-space": "nowrap",
-                        "text-align": "right",
-                      })
-                      .text(objVideo.intCount),
-                  ),
-                )
-                .append(
-                  jQuery("<td></td>").append(
-                    jQuery("<div></div>")
-                      .css({
-                        "white-space": "nowrap",
-                      })
-                      .append(
-                        jQuery("<a></a>")
-                          .addClass("fa-regular")
-                          .addClass("fa-trash-can")
-                          .css({
-                            cursor: "pointer",
-                          })
-                          .data({
-                            strIdent: objVideo.strIdent,
-                          })
-                          .on("click", function () {
-                            jQuery("#idLoading_Container").css({
-                              display: "block",
-                            });
-
-                            jQuery("#idLoading_Message").text("deleting video");
-
-                            jQuery("#idLoading_Progress").text("...");
-
-                            jQuery("#idLoading_Close").addClass("disabled");
-
-                            objSearch.postMessage({
-                              strMessage: "searchDelete",
-                              objRequest: {
-                                strIdent: jQuery(this).data("strIdent"),
-                              },
-                            });
-                          }),
-                      ),
-                  ),
-                ),
-            );
-          }
-        });
-
-      if (objData.objResponse.objVideos.length === 10) {
-        jQuery("#idSearch_Results")
-          .find("tr:last")
-          .each(function () {
-            new IntersectionObserver(function (objEntries, objObserver) {
-              if (objEntries[0].isIntersecting === true) {
-                objObserver.unobserve(objEntries[0].target);
-
-                jQuery("#idSearch_Lookup").data({
-                  intSkip: jQuery("#idSearch_Lookup").data("intSkip") + 10,
-                });
-
-                jQuery("#idSearch_Lookup").triggerHandler("click");
-              }
-            }).observe(this);
-          });
-      }
+  /**
+   * Handle history-related messages
+   * @param {Object} data - Message data
+   */
+  handleHistoryMessage(data) {
+    switch (data.strMessage) {
+      case "historySynchronize":
+        this.hideLoading();
+        if (data.objResponse === null) {
+          this.showError("Error synchronizing history");
+        } else {
+          this.showSuccess("History synchronized successfully");
+          this.loadHistoryTimestamp();
+        }
+        break;
+        
+      case "historySynchronize-progress":
+        this.updateProgress(data.objResponse.strProgress);
+        break;
     }
+  }
 
-    if (objData.strMessage === "searchDelete") {
-      if (objData.objResponse === null) {
-        jQuery("#idLoading_Message").text("error deleting video");
-      } else if (objData.objResponse !== null) {
-        jQuery("#idLoading_Message").text("finished deleting video");
-      }
+  /**
+   * Setup YouTube-related event listeners
+   */
+  setupYouTubeListeners() {
+    jQuery("#idYoutube_Synchronize").on("click", () => {
+      this.showLoading("synchronizing youtube");
+      this.connections.youtube.postMessage({
+        strMessage: "youtubeSynchronize",
+        objRequest: { intThreshold: 1000000 },
+      });
+    });
 
-      jQuery("#idLoading_Close").removeClass("disabled");
+    this.connections.youtube.onMessage.addListener((data) => {
+      this.handleYouTubeMessage(data);
+    });
+  }
+
+  /**
+   * Handle YouTube-related messages
+   * @param {Object} data - Message data
+   */
+  handleYouTubeMessage(data) {
+    switch (data.strMessage) {
+      case "youtubeSynchronize":
+        this.hideLoading();
+        if (data.objResponse === null) {
+          this.showError("Error synchronizing YouTube");
+        } else {
+          this.showSuccess("YouTube synchronized successfully");
+          this.loadYouTubeTimestamp();
+        }
+        break;
+        
+      case "youtubeSynchronize-progress":
+        this.updateProgress(data.objResponse.strProgress);
+        break;
     }
+  }
 
-    if (objData.strMessage === "searchDelete-progress") {
-      jQuery("#idLoading_Progress").text(objData.objResponse.strProgress);
+  /**
+   * Setup search-related event listeners
+   */
+  setupSearchListeners() {
+    // Search functionality would go here
+    // This is a placeholder for future search features
+  }
+
+  /**
+   * Setup settings-related event listeners
+   */
+  setupSettingsListeners() {
+    // Settings toggles and other configuration options
+    // This would handle the various checkboxes and settings in the UI
+    this.setupConditionToggles();
+    this.setupVisualizationToggles();
+  }
+
+  /**
+   * Setup condition toggle buttons
+   */
+  setupConditionToggles() {
+    const conditions = ['Brownav', 'Browhist', 'Youprog', 'Youbadge', 'Youhist'];
+    
+    conditions.forEach(condition => {
+      this.setupToggle(`idCondition_${condition}`, `extensions.Youwatch.Condition.bool${condition}`);
+    });
+  }
+
+  /**
+   * Setup visualization toggle buttons
+   */
+  setupVisualizationToggles() {
+    const visualizations = ['Fadeout', 'Grayout', 'Showbadge', 'Showdate', 'Hideprogress'];
+    
+    visualizations.forEach(visualization => {
+      this.setupToggle(`idVisualization_${visualization}`, `extensions.Youwatch.Visualization.bool${visualization}`);
+    });
+  }
+
+  /**
+   * Setup a toggle button
+   * @param {string} elementId - Element ID
+   * @param {string} storageKey - Storage key
+   */
+  async setupToggle(elementId, storageKey) {
+    const element = jQuery(`#${elementId}`);
+    if (element.length === 0) return;
+
+    // Load initial state
+    const isEnabled = await getStorageAsync(storageKey) === "true";
+    this.updateToggleState(element, isEnabled);
+
+    // Handle clicks
+    element.on("click", async () => {
+      const currentState = await getStorageAsync(storageKey) === "true";
+      const newState = !currentState;
+      
+      await setStorageAsync(storageKey, String(newState));
+      this.updateToggleState(element, newState);
+    });
+  }
+
+  /**
+   * Update toggle button visual state
+   * @param {jQuery} element - jQuery element
+   * @param {boolean} isEnabled - Whether the toggle is enabled
+   */
+  updateToggleState(element, isEnabled) {
+    const uncheckedIcon = element.find('.fa-square');
+    const checkedIcon = element.find('.fa-check-square');
+    
+    if (isEnabled) {
+      uncheckedIcon.hide();
+      checkedIcon.show();
+      element.addClass('active');
+    } else {
+      uncheckedIcon.show();
+      checkedIcon.hide();
+      element.removeClass('active');
     }
-  });
+  }
 
-  jQuery("#idLoading_Close").on("click", function () {
-    window.location.reload();
-  });
+  /**
+   * Load initial data for the options page
+   */
+  async loadInitialData() {
+    await this.loadDatabaseSize();
+    await this.loadHistoryTimestamp();
+    await this.loadYouTubeTimestamp();
+  }
+
+  /**
+   * Load and display database size
+   */
+  async loadDatabaseSize() {
+    try {
+      const size = await getStorageAsync("extensions.Youwatch.Database.intSize");
+      jQuery("#idDatabase_Size").text(parseInt(size || 0));
+    } catch (error) {
+      console.error("Error loading database size:", error);
+    }
+  }
+
+  /**
+   * Load and display history timestamp
+   */
+  async loadHistoryTimestamp() {
+    try {
+      const timestamp = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
+      const date = new Date(parseInt(timestamp || 0));
+      jQuery("#idHistory_Timestamp").text(this.formatDate(date));
+    } catch (error) {
+      console.error("Error loading history timestamp:", error);
+    }
+  }
+
+  /**
+   * Load and display YouTube timestamp
+   */
+  async loadYouTubeTimestamp() {
+    try {
+      const timestamp = await getStorageAsync("extensions.Youwatch.Youtube.intTimestamp");
+      const date = new Date(parseInt(timestamp || 0));
+      jQuery("#idYoutube_Timestamp").text(this.formatDate(date));
+    } catch (error) {
+      console.error("Error loading YouTube timestamp:", error);
+    }
+  }
+
+  /**
+   * Format date for display
+   * @param {Date} date - Date to format
+   * @returns {string} Formatted date string
+   */
+  formatDate(date) {
+    return date.toLocaleDateString() + " - " + date.toLocaleTimeString();
+  }
+
+  /**
+   * Show loading dialog
+   * @param {string} message - Loading message
+   */
+  showLoading(message) {
+    jQuery("#idLoading_Container").show();
+    jQuery("#idLoading_Message").text(message);
+    jQuery("#idLoading_Progress").text("...");
+    jQuery("#idLoading_Close").addClass("disabled");
+  }
+
+  /**
+   * Hide loading dialog
+   */
+  hideLoading() {
+    jQuery("#idLoading_Container").hide();
+    jQuery("#idLoading_Close").removeClass("disabled");
+  }
+
+  /**
+   * Update progress text
+   * @param {string} progress - Progress message
+   */
+  updateProgress(progress) {
+    jQuery("#idLoading_Progress").text(progress);
+  }
+
+  /**
+   * Show success message
+   * @param {string} message - Success message
+   */
+  showSuccess(message) {
+    // This would show a success notification
+    console.log("Success:", message);
+  }
+
+  /**
+   * Show error message
+   * @param {string} message - Error message
+   */
+  showError(message) {
+    // This would show an error notification
+    console.error("Error:", message);
+  }
+}
+
+// Initialize the options page when DOM is ready
+jQuery(document).ready(() => {
+  new OptionsPageManager();
 });

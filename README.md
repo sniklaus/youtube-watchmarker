@@ -10,6 +10,57 @@ Firefox: https://addons.mozilla.org/en-US/firefox/addon/watchmarker-for-youtube/
 <br />
 Chrome: [https://chrome.google.com/webstore/detail/watchmarker-for-youtube/](https://chrome.google.com/webstore/detail/watchmarker-for-youtube/pfkkfbfdhomeagojoahjmkojeeepcolc)
 
+## development
+
+This extension has been modernized to use contemporary JavaScript practices and patterns:
+
+### Code Structure
+
+- **ES6+ Modules**: All code uses modern ES6 imports/exports
+- **Classes**: Object-oriented design with proper encapsulation
+- **Async/Await**: Modern asynchronous programming patterns
+- **Type Annotations**: Comprehensive JSDoc documentation
+- **Error Handling**: Proper try/catch blocks and error propagation
+
+### Architecture
+
+- `utils.js` - Core utilities and helper functions
+- `background.js` - Main extension background script with ExtensionManager class
+- `bg-database.js` - Database operations using DatabaseManager class
+- `bg-history.js` - Browser history synchronization
+- `bg-youtube.js` - YouTube API integration
+- `bg-search.js` - Search functionality
+- `youtube.js` - Content script with YouTubeWatchMarker class
+- `content/index.js` - Options page with OptionsPageManager class
+
+### Development Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Lint code
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Format code
+npm run format
+
+# Check formatting
+npm run format:check
+```
+
+### Key Improvements
+
+1. **Performance**: Optimized DOM queries and batch processing
+2. **Maintainability**: Clear separation of concerns and modular design
+3. **Error Handling**: Comprehensive error handling with meaningful messages
+4. **Modern Syntax**: Arrow functions, destructuring, template literals
+5. **Type Safety**: JSDoc annotations for better IDE support
+6. **Memory Management**: Proper cleanup of observers and event listeners
+
 ## questions
 
 <b>How can the persistence of the database be ensured?</b> There is an export and import feature, which makes it easy to create a backup of the history. This backup can easily be archived such that you can ensure that you never lose your history.

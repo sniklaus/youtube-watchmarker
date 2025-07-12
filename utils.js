@@ -1,101 +1,121 @@
 console.log("utils.js: file loaded");
-export const funcBrowser = function () {
+
+/**
+ * Detects the browser type
+ * @returns {string|null} Browser type ('firefox', 'chrome', or null)
+ */
+export const getBrowserType = () => {
   if (typeof browser !== "undefined") {
     return "firefox";
   }
-
   if (typeof chrome !== "undefined") {
     return "chrome";
   }
-
   return null;
 };
 
-export const funcHackyparse = function (strJson) {
-  let intLength = 1;
+/**
+ * Parses JSON with hacky bracket counting for incomplete JSON strings
+ * @param {string} jsonString - The JSON string to parse
+ * @returns {Object|null} Parsed JSON object or null if parsing fails
+ */
+export const parseIncompleteJson = (jsonString) => {
+  let length = 1;
+  let count = 0;
 
-  for (let intCount = 0; intLength < strJson.length; intLength += 1) {
-    if (strJson[intLength - 1] === "{") {
-      intCount += 1;
-    } else if (strJson[intLength - 1] === "}") {
-      intCount -= 1;
+  for (let i = 0; length < jsonString.length; length++) {
+    if (jsonString[length - 1] === "{") {
+      count++;
+    } else if (jsonString[length - 1] === "}") {
+      count--;
     }
 
-    if (intCount === 0) {
+    if (count === 0) {
       break;
     }
   }
 
   try {
-    return JSON.parse(strJson.substr(0, intLength));
-  } catch (objError) {
-    // ...
+    return JSON.parse(jsonString.substr(0, length));
+  } catch (error) {
+    console.warn("Failed to parse incomplete JSON:", error);
+    return null;
   }
-
-  return null;
 };
 
-export const funcSendmessage = function (intTab, objMessage, intRetry) {
-  if (intRetry === 0) {
+/**
+ * Sends a message to a tab with retry logic
+ * @param {number} tabId - The tab ID to send the message to
+ * @param {Object} message - The message to send
+ * @param {number} [retryCount=100] - Number of retry attempts
+ */
+export const sendMessageToTab = (tabId, message, retryCount = 100) => {
+  if (retryCount === 0) {
+    console.warn(`Failed to send message to tab ${tabId} after all retries`);
     return;
-  } else if (intRetry === undefined) {
-    intRetry = 100;
   }
 
-  chrome.tabs.sendMessage(intTab, objMessage, {}, function (objResponse) {
-    if (
-      chrome.runtime.lastError !== undefined &&
-      chrome.runtime.lastError !== null
-    ) {
-      setTimeout(funcSendmessage, 100, intTab, objMessage, intRetry - 1);
+  chrome.tabs.sendMessage(tabId, message, {}, (response) => {
+    if (chrome.runtime.lastError) {
+      setTimeout(() => sendMessageToTab(tabId, message, retryCount - 1), 100);
     }
   });
 };
 
 /**
- * Creates a response callback function.
- * Handles the null case by propagating null.
- * For non-null inputs, it applies the provided transformation logic.
- *
- * @param {Function} transformArgs - A function to transforms the non-null objArgs,
- *                                     or () => staticValue to return a static value
- * @param {Function} funcResponse - The callback function to be called with the transformed arguments.
- * @returns {Function} A callback function (objArgs, funcResponse) => void
+ * Creates a response callback function that handles null propagation
+ * @param {Function} transformArgs - Function to transform non-null arguments
+ * @param {Function} responseCallback - The callback function to be called
+ * @returns {Function} A callback function
  */
-export const createResponseCallback = function (transformArgs, funcResponse) {
-  return function (objArgs) {
-    if (objArgs === null) {
-      funcResponse(null);
+export const createResponseCallback = (transformArgs, responseCallback) => {
+  return (args) => {
+    if (args === null) {
+      responseCallback(null);
     } else {
-      funcResponse(transformArgs(objArgs));
+      responseCallback(transformArgs(args));
     }
   };
-}
+};
 
-export const setDefaultInLocalStorageIfNullAsync = async function (key, defaultValue) {
+/**
+ * Sets a default value in local storage if the key doesn't exist
+ * @param {string} key - Storage key
+ * @param {string} defaultValue - Default value to set
+ * @returns {Promise<void>}
+ */
+export const setDefaultInStorageIfNull = async (key, defaultValue) => {
   const value = await getStorageAsync(key);
   if (value === null) {
     await setStorageAsync(key, String(defaultValue));
   }
-}
+};
 
-export const getStorageAsync = function (key) {
+/**
+ * Gets a value from Chrome storage asynchronously
+ * @param {string} key - Storage key
+ * @returns {Promise<string|null>} The stored value or null if not found
+ */
+export const getStorageAsync = (key) => {
   return new Promise((resolve, reject) => {
-
-    {
-      // No localStorage value, check chrome.storage.local
-      chrome.storage.local.get([key], (result) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(`Failed to get ${key} from chrome.storage.local: ${chrome.runtime.lastError.message}`));
-        } else {
-          resolve(result[key] || null); // Return null if key doesn’t exist, mimicking localStorage
-        }
-      });
-    }
+    chrome.storage.local.get([key], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(`Failed to get ${key} from chrome.storage.local: ${chrome.runtime.lastError.message}`));
+      } else {
+        resolve(result[key] || null);
+      }
+    });
   });
 };
 
-export const setStorageAsync = function (key, value, errorMessage) {
+/**
+ * Sets a value in Chrome storage asynchronously
+ * @param {string} key - Storage key
+ * @param {string} value - Value to store
+ * @param {string} [errorMessage] - Custom error message
+ * @returns {Promise<void>}
+ */
+export const setStorageAsync = (key, value, errorMessage) => {
   return new Promise((resolve, reject) => {
     chrome.storage.local.set({ [key]: value }, () => {
       if (chrome.runtime.lastError) {
@@ -108,287 +128,333 @@ export const setStorageAsync = function (key, value, errorMessage) {
   });
 };
 
-export const Node = {
-  series: function (objFunctions, funcCallback) {
-    let strFunctions = Object.keys(objFunctions);
+/**
+ * Utility class for handling asynchronous series operations
+ */
+export class AsyncSeries {
+  /**
+   * Executes functions in series, passing results between them
+   * @param {Object} functions - Object containing functions to execute
+   * @param {Function} callback - Final callback function
+   */
+  static async run(functions, callback) {
+    const functionNames = Object.keys(functions);
+    const workspace = {};
 
-    let objWorkspace = {};
-
-    let funcNext = async function (objArgs, objOverwrite) {
-      if (objArgs === null) {
-        return funcCallback(null);
+    const executeNext = async (args, overwrite) => {
+      if (args === null) {
+        return callback(null);
       }
 
-      objWorkspace[strFunctions[0]] = objArgs;
+      workspace[functionNames[0]] = args;
+      functionNames.shift();
 
-      strFunctions.shift();
-
-      if (objOverwrite !== undefined) {
-        if (typeof objOverwrite === "string") {
-          strFunctions = Object.keys(objFunctions);
-
-          while (strFunctions.length > 0 && strFunctions[0] !== objOverwrite) {
-            strFunctions.shift();
+      if (overwrite !== undefined) {
+        if (typeof overwrite === "string") {
+          const allNames = Object.keys(functions);
+          const index = allNames.indexOf(overwrite);
+          if (index !== -1) {
+            functionNames.splice(0, functionNames.length, ...allNames.slice(index));
           }
-        } else if (typeof objOverwrite === "object") {
-          strFunctions = objOverwrite;
+        } else if (Array.isArray(overwrite)) {
+          functionNames.splice(0, functionNames.length, ...overwrite);
         }
       }
 
-      if (strFunctions.length === 0) {
-        return funcCallback(objWorkspace);
+      if (functionNames.length === 0) {
+        return callback(workspace);
       }
 
       try {
-        await objFunctions[strFunctions[0]](objWorkspace, funcNext);
+        await functions[functionNames[0]](workspace, executeNext);
       } catch (error) {
-        console.error("Error in series step:", strFunctions[0], error);
-        // Decide how to handle the error
+        console.error("Error in series step:", functionNames[0], error);
+        callback(null);
       }
     };
 
-    // Wrap the initial call in an async IIFE to handle potential async first function
-    (async () => {
-      try {
-        await objFunctions[strFunctions[0]](objWorkspace, funcNext);
-      } catch (error) {
-        console.error("Error in initial series step:", strFunctions[0], error);
-      }
-    })();
-  },
+    try {
+      await functions[functionNames[0]](workspace, executeNext);
+    } catch (error) {
+      console.error("Error in initial series step:", functionNames[0], error);
+      callback(null);
+    }
+  }
 }
 
-export const bgObject = {
-  messaging: (portName, messageHandlers) => (objArgs, funcCallback) => {
-    chrome.runtime.onConnect.addListener((objPort) => {
-      if (objPort.name === portName) {
-        objPort.onMessage.addListener((objData) => {
-          const strMessage = objData.strMessage;
-          const objRequest = objData.objRequest;
+// Legacy compatibility - keeping the old Node.series for backward compatibility
+export const Node = {
+  series: AsyncSeries.run
+};
 
-          // Common response function
-          const funcResponse = (objResponse) => {
-            objPort.postMessage({
-              strMessage: strMessage, // Echo the original message type
-              objResponse: objResponse,
-            });
-          };
+/**
+ * Background script utilities for Chrome extension
+ */
+export class BackgroundUtils {
+  /**
+   * Creates a messaging handler for background scripts
+   * @param {string} portName - Name of the port to listen on
+   * @param {Object} messageHandlers - Object mapping message types to handlers
+   * @returns {Function} Function that can be used in AsyncSeries
+   */
+  static messaging(portName, messageHandlers) {
+    return (args, callback) => {
+      chrome.runtime.onConnect.addListener((port) => {
+        if (port.name === portName) {
+          port.onMessage.addListener((data) => {
+            const { strMessage: messageType, objRequest: request } = data;
 
-          // Common progress function
-          const funcProgress = (objResponse) => {
-            objPort.postMessage({
-              strMessage: `${strMessage}-progress`, // Indicate progress for the original message
-              objResponse: objResponse,
-            });
-          };
+            const sendResponse = (response) => {
+              port.postMessage({
+                strMessage: messageType,
+                objResponse: response,
+              });
+            };
 
-          // Look up the handler for the received message
-          const handler = messageHandlers[strMessage];
+            const sendProgress = (response) => {
+              port.postMessage({
+                strMessage: `${messageType}-progress`,
+                objResponse: response,
+              });
+            };
 
-          if (handler) {
-            // Call the specific handler function
-            // We need a way to determine if the handler needs funcProgress.
-            // One way is to check the function's arity (number of expected args).
-            // Or, more simply, always pass it and let the handler ignore it if unused.
-            handler(objRequest, funcResponse, funcProgress);
-          } else {
-            console.error(`[${portName}] Received unexpected message:`, strMessage);
-          }
-        });
-      }
-    });
-    return funcCallback({});
-  },
-  database: () => (objArgs, funcCallback) => {
-    // Access the global Database instance that should be set by bg-database.js
-    const Database = globalThis.Database;
-    if (!Database || !Database.objDatabase) {
-      throw new Error("Database not initialized or not available");
-    }
-    return funcCallback(
-      Database.objDatabase
-        .transaction(["storeDatabase"], "readwrite")
-        .objectStore("storeDatabase"),
-    );
-  },
-  get: (funcProgress) => (objArgs, funcCallback) => {
-    let objQuery = objArgs.objDatabase
-      .index("strIdent")
-      .get(objArgs.objVideo.strIdent);
-
-    objQuery.onsuccess = function () {
-      if (objArgs.intNew === undefined) {
-        objArgs.intNew = 0;
-        objArgs.intExisting = 0;
-      }
-
-      funcProgress({
-        strProgress:
-          "imported " +
-          (objArgs.intNew + objArgs.intExisting) +
-          " videos - " +
-          objArgs.intNew +
-          " were new",
+            const handler = messageHandlers[messageType];
+            if (handler) {
+              handler(request, sendResponse, sendProgress);
+            } else {
+              console.error(`[${portName}] Received unexpected message:`, messageType);
+            }
+          });
+        }
       });
+      return callback({});
+    };
+  }
 
-      // TODO: this part was only in Database.import.objGet, but there's no harm 
-      // to have it here as well. As if longTimestamp is undefined, intTimestamp
-      // simply stays undefined.
-      if (objArgs.objVideo.intTimestamp === undefined) {
-        objArgs.objVideo.intTimestamp = objArgs.objVideo.longTimestamp; // legacy
+  /**
+   * Gets database connection
+   * @returns {Function} Function that returns database object store
+   */
+  static database() {
+    return (args, callback) => {
+      const Database = globalThis.Database;
+      if (!Database || !Database.objDatabase) {
+        throw new Error("Database not initialized or not available");
       }
-      ////////////////////////////////////////////////////////
+      return callback(
+        Database.objDatabase
+          .transaction(["storeDatabase"], "readwrite")
+          .objectStore("storeDatabase")
+      );
+    };
+  }
 
-      if (objQuery.result === undefined || objQuery.result === null) {
-        objArgs.intNew += 1;
+  /**
+   * Gets video data from database with progress reporting
+   * @param {Function} progressCallback - Progress reporting function
+   * @returns {Function} Function for AsyncSeries
+   */
+  static get(progressCallback) {
+    return (args, callback) => {
+      const query = args.objDatabase
+        .index("strIdent")
+        .get(args.objVideo.strIdent);
 
-        return funcCallback({
-          strIdent: objArgs.objVideo.strIdent,
-          intTimestamp:
-            objArgs.objVideo.intTimestamp || new Date().getTime(),
-          strTitle: objArgs.objVideo.strTitle || "",
-          intCount: objArgs.objVideo.intCount || 1,
+      query.onsuccess = () => {
+        if (args.intNew === undefined) {
+          args.intNew = 0;
+          args.intExisting = 0;
+        }
+
+        progressCallback({
+          strProgress: `imported ${args.intNew + args.intExisting} videos - ${args.intNew} were new`,
         });
-      } else if (
-        objQuery.result !== undefined &&
-        objQuery.result !== null
-      ) {
-        objArgs.intExisting += 1;
 
-        return funcCallback({
-          strIdent: objQuery.result.strIdent,
-          intTimestamp:
-            Math.max(
-              objQuery.result.intTimestamp,
-              objArgs.objVideo.intTimestamp,
-            ) || new Date().getTime(),
-          // TODO: in Youtube.synchronize.objGet this was:
-          // "intTimestamp: objArgs.objVideo.intTimestamp || objQuery.result.intTimestamp || new Date().getTime(),"
-          // but I assume that was outdated code and Math.max should be used. I might be wrong.
-          strTitle:
-            objQuery.result.strTitle || objArgs.objVideo.strTitle || "",
-          intCount:
-            Math.max(
-              objQuery.result.intCount,
-              objArgs.objVideo.intCount,
+        // Handle legacy timestamp field
+        if (args.objVideo.intTimestamp === undefined) {
+          args.objVideo.intTimestamp = args.objVideo.longTimestamp;
+        }
+
+        if (!query.result) {
+          args.intNew++;
+          return callback({
+            strIdent: args.objVideo.strIdent,
+            intTimestamp: args.objVideo.intTimestamp || Date.now(),
+            strTitle: args.objVideo.strTitle || "",
+            intCount: args.objVideo.intCount || 1,
+          });
+        } else {
+          args.intExisting++;
+          return callback({
+            strIdent: query.result.strIdent,
+            intTimestamp: Math.max(
+              query.result.intTimestamp,
+              args.objVideo.intTimestamp
+            ) || Date.now(),
+            strTitle: query.result.strTitle || args.objVideo.strTitle || "",
+            intCount: Math.max(
+              query.result.intCount,
+              args.objVideo.intCount
             ) || 1,
-          // TODO: in Youtube.synchronize.objGet this was "intCount: objArgs.objVideo.intCount || objQuery.result.intCount || 1"
-          // but I assume that was outdated code and Math.max should be used. I might be wrong.
-        });
-      }
+          });
+        }
+      };
     };
-  },
-  put: () => (objArgs, funcCallback) => {
-    if (objArgs.objGet.strIdent.trim() === "") {
-      return funcCallback({});
-    } else if (objArgs.objGet.strTitle.trim() === "") {
-      return funcCallback({});
-    }
+  }
 
-    const objQuery = objArgs.objDatabase.put(objArgs.objGet);
-
-    objQuery.onsuccess = () => {
-      return funcCallback({});
-    };
-  },
-  videoNext: () => (objArgs, funcCallback) => {
-    objArgs.intVideo += 1;
-
-    if (objArgs.intVideo < objArgs.objVideos.length) {
-      return funcCallback({}, "objVideo");
-    }
-
-    objArgs.intVideo = 0;
-
-    return funcCallback({});
-  },
-  count: () => (objArgs, funcCallback) => {
-    let objQuery = objArgs.objDatabase.count();
-
-    objQuery.onsuccess = async () => { // TODO: not sure if this being async causes any issues
-      await setStorageAsync(
-        "extensions.Youwatch.Database.intSize",
-        String(objQuery.result),
-      );
-
-      return funcCallback({});
-    };
-  },
-  time: (key) => async (objArgs, funcCallback) => {
-    await setStorageAsync(key, String(new Date().getTime()),
-    );
-
-    return funcCallback({});
-  },
-  cookies: () => (objArgs, funcCallback) => {
-    let strCookies = ["SAPISID", "__Secure-3PAPISID"];
-    let objCookies = {};
-
-    let funcCookie = () => {
-      if (strCookies.length === 0) {
-        return funcCallback(objCookies);
+  /**
+   * Puts video data into database
+   * @returns {Function} Function for AsyncSeries
+   */
+  static put() {
+    return (args, callback) => {
+      if (!args.objGet.strIdent.trim() || !args.objGet.strTitle.trim()) {
+        return callback({});
       }
 
-      let strCookie = strCookies.shift();
+      const query = args.objDatabase.put(args.objGet);
+      query.onsuccess = () => callback({});
+    };
+  }
 
-      chrome.cookies.get(
-        {
-          url: "https://www.youtube.com",
-          name: strCookie,
-        },
-        (objCookie) => {
-          if (objCookie === null) {
-            objCookies[strCookie] = null;
-          } else if (objCookie !== null) {
-            objCookies[strCookie] = objCookie.value;
+  /**
+   * Moves to next video in processing queue
+   * @returns {Function} Function for AsyncSeries
+   */
+  static videoNext() {
+    return (args, callback) => {
+      args.intVideo++;
+
+      if (args.intVideo < args.objVideos.length) {
+        return callback({}, "objVideo");
+      }
+
+      args.intVideo = 0;
+      return callback({});
+    };
+  }
+
+  /**
+   * Counts items in database and updates storage
+   * @returns {Function} Function for AsyncSeries
+   */
+  static count() {
+    return (args, callback) => {
+      const query = args.objDatabase.count();
+
+      query.onsuccess = async () => {
+        await setStorageAsync(
+          "extensions.Youwatch.Database.intSize",
+          String(query.result)
+        );
+        return callback({});
+      };
+    };
+  }
+
+  /**
+   * Sets current timestamp in storage
+   * @param {string} key - Storage key for timestamp
+   * @returns {Function} Function for AsyncSeries
+   */
+  static time(key) {
+    return async (args, callback) => {
+      await setStorageAsync(key, String(Date.now()));
+      return callback({});
+    };
+  }
+
+  /**
+   * Gets YouTube cookies
+   * @returns {Function} Function for AsyncSeries
+   */
+  static cookies() {
+    return (args, callback) => {
+      const cookieNames = ["SAPISID", "__Secure-3PAPISID"];
+      const cookies = {};
+
+      const getCookie = () => {
+        if (cookieNames.length === 0) {
+          return callback(cookies);
+        }
+
+        const cookieName = cookieNames.shift();
+        chrome.cookies.get(
+          {
+            url: "https://www.youtube.com",
+            name: cookieName,
+          },
+          (cookie) => {
+            cookies[cookieName] = cookie ? cookie.value : null;
+            getCookie();
           }
+        );
+      };
 
-          funcCookie();
-        },
-      );
+      getCookie();
     };
+  }
 
-    funcCookie();
-  },
-  contauth: () => (objArgs, funcCallback) => {
-    let intTime = Math.round(new Date().getTime() / 1000.0);
-    let strCookie =
-      objArgs.objCookies["SAPISID"] ||
-      objArgs.objCookies["__Secure-3PAPISID"];
-    let strOrigin = "https://www.youtube.com";
+  /**
+   * Creates YouTube authentication header
+   * @returns {Function} Function for AsyncSeries
+   */
+  static contauth() {
+    return (args, callback) => {
+      const time = Math.round(Date.now() / 1000);
+      const cookie = args.objCookies["SAPISID"] || args.objCookies["__Secure-3PAPISID"];
+      const origin = "https://www.youtube.com";
 
-    // https://stackoverflow.com/a/32065323
+      crypto.subtle
+        .digest("SHA-1", new TextEncoder().encode(`${time} ${cookie} ${origin}`))
+        .then((hash) => {
+          const hashArray = Array.from(new Uint8Array(hash));
+          const hashHex = hashArray
+            .map((byte) => byte.toString(16).padStart(2, "0"))
+            .join("");
 
-    crypto.subtle
-      .digest(
-        "SHA-1",
-        new TextEncoder().encode(
-          intTime + " " + strCookie + " " + strOrigin,
-        ),
-      )
-      .then((strHash) => {
-        return funcCallback({
-          strAuth:
-            "SAPISIDHASH " +
-            intTime +
-            "_" +
-            Array.from(new Uint8Array(strHash))
-              .map(function (intByte) {
-                return intByte.toString(16).padStart(2, "0");
-              })
-              .join(""),
+          return callback({
+            strAuth: `SAPISIDHASH ${time}_${hashHex}`,
+          });
         });
-      });
-  },
-  video: () => function (objArgs, funcCallback) {
-    if (Object.hasOwn(objArgs, "intVideo") === false) {
-      objArgs.intVideo = 0;
-    }
+    };
+  }
 
-    if (objArgs.intVideo >= objArgs.objVideos.length) {
-      return funcCallback({}, "objVideo-Next");
-    }
+  /**
+   * Gets current video from processing queue
+   * @returns {Function} Function for AsyncSeries
+   */
+  static video() {
+    return (args, callback) => {
+      if (!Object.hasOwn(args, "intVideo")) {
+        args.intVideo = 0;
+      }
 
-    return funcCallback(objArgs.objVideos[objArgs.intVideo]);
-  },
+      if (args.intVideo >= args.objVideos.length) {
+        return callback({}, "objVideo-Next");
+      }
+
+      return callback(args.objVideos[args.intVideo]);
+    };
+  }
 }
+
+// Legacy compatibility - keeping the old bgObject for backward compatibility
+export const bgObject = {
+  messaging: BackgroundUtils.messaging,
+  database: BackgroundUtils.database,
+  get: BackgroundUtils.get,
+  put: BackgroundUtils.put,
+  videoNext: BackgroundUtils.videoNext,
+  count: BackgroundUtils.count,
+  time: BackgroundUtils.time,
+  cookies: BackgroundUtils.cookies,
+  contauth: BackgroundUtils.contauth,
+  video: BackgroundUtils.video,
+};
+
+// Legacy exports for backward compatibility
+export const funcBrowser = getBrowserType;
+export const funcHackyparse = parseIncompleteJson;
+export const funcSendmessage = sendMessageToTab;
+export const setDefaultInLocalStorageIfNullAsync = setDefaultInStorageIfNull;

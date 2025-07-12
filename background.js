@@ -1,12 +1,14 @@
 "use strict";
 
 import {
-  funcBrowser,
-  funcSendmessage,
+  getBrowserType,
+  sendMessageToTab,
   createResponseCallback,
   getStorageAsync,
   setStorageAsync,
-  setDefaultInLocalStorageIfNullAsync,
+  setDefaultInStorageIfNull,
+  AsyncSeries,
+  // Legacy compatibility
   Node,
 } from "./utils.js";
 
@@ -15,33 +17,85 @@ import { History } from "./bg-history.js";
 import { Youtube } from "./bg-youtube.js";
 import { Search } from "./bg-search.js";
 
-let strTitlecache = {};
+/**
+ * Extension background script manager
+ */
+class ExtensionManager {
+  constructor() {
+    this.titleCache = new Map();
+    this.isInitialized = false;
+    
+    this.init();
+  }
 
-// ##########################################################
+  /**
+   * Initialize the extension
+   */
+  async init() {
+    if (this.isInitialized) return;
+    
+    try {
+      await AsyncSeries.run(
+        {
+          settings: this.initializeSettings.bind(this),
+          database: this.moduleInitializer(Database.init),
+          history: this.moduleInitializer(History.init),
+          youtube: this.moduleInitializer(Youtube.init),
+          search: this.moduleInitializer(Search.init),
+          action: this.setupActionHandler.bind(this),
+          message: this.setupMessageHandler.bind(this),
+          tabHook: this.setupTabHook.bind(this),
+          requestHook: this.setupRequestHook.bind(this),
+          synchronize: this.setupSynchronization.bind(this),
+        },
+        (result) => {
+          if (result === null) {
+            console.error("Error initializing extension");
+          } else {
+            console.log("Extension initialized successfully");
+            this.isInitialized = true;
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Failed to initialize extension:", error);
+    }
+  }
 
-function moduleInitializer(moduleInit) {
-  return function (objArgs, funcCallback) {
-    moduleInit({}, createResponseCallback(() => { }, funcCallback));
-  };
-}
+  /**
+   * Creates a module initializer function
+   * @param {Function} moduleInit - Module initialization function
+   * @returns {Function} Initializer function
+   */
+  moduleInitializer(moduleInit) {
+    return (args, callback) => {
+      moduleInit({}, createResponseCallback(() => ({}), callback));
+    };
+  }
 
-Node.series(
-  {
-    objSettings: async (objArgs, funcCallback) => {
-      const categoriesInt = [
+  /**
+   * Initialize extension settings
+   * @param {Object} args - Arguments
+   * @param {Function} callback - Callback function
+   */
+  async initializeSettings(args, callback) {
+    try {
+      // Initialize integer settings
+      const integerSettings = [
         "Database.intSize",
         "History.intTimestamp",
         "Youtube.intTimestamp",
       ];
 
-      for (const catKey of categoriesInt) {
-        await setDefaultInLocalStorageIfNullAsync(
-          `extensions.Youwatch.${catKey}`,
-          String(0),
+      for (const setting of integerSettings) {
+        await setDefaultInStorageIfNull(
+          `extensions.Youwatch.${setting}`,
+          "0"
         );
       }
 
-      const categoriesBool = [
+      // Initialize boolean settings
+      const booleanSettings = [
         "Condition.boolBrownav",
         "Condition.boolBrowhist",
         "Condition.boolYouprog",
@@ -54,320 +108,395 @@ Node.series(
         "Visualization.boolHideprogress",
       ];
 
-      for (const catKey of categoriesBool) {
-        await setDefaultInLocalStorageIfNullAsync(
-          `extensions.Youwatch.${catKey}`,
-          String(true),
+      for (const setting of booleanSettings) {
+        await setDefaultInStorageIfNull(
+          `extensions.Youwatch.${setting}`,
+          "true"
         );
       }
 
-      const defaultStylesheets = [
+      // Initialize stylesheet settings
+      const stylesheetSettings = [
         {
           key: "extensions.Youwatch.Stylesheet.strFadeout",
-          defaultValue:
-            ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }",
+          defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }",
         },
         {
           key: "extensions.Youwatch.Stylesheet.strGrayout",
-          defaultValue:
-            ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }",
+          defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }",
         },
         {
           key: "extensions.Youwatch.Stylesheet.strShowbadge",
-          defaultValue:
-            '.youwatch-mark::after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }',
+          defaultValue: '.youwatch-mark::after { background-color:#000000; border-radius:2px; color:#FFFFFF; content:"WATCHED"; font-size:11px; left:4px; opacity:0.8; padding:3px 4px 3px 4px; position:absolute; top:4px; }',
         },
         {
           key: "extensions.Youwatch.Stylesheet.strShowdate",
-          defaultValue:
-            '.youwatch-mark::after { content:"WATCHED" attr(watchdate); white-space:nowrap; }',
+          defaultValue: '.youwatch-mark::after { content:"WATCHED" attr(watchdate); white-space:nowrap; }',
         },
         {
           key: "extensions.Youwatch.Stylesheet.strHideprogress",
-          defaultValue:
-            "ytd-thumbnail-overlay-resume-playback-renderer, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }",
+          defaultValue: "ytd-thumbnail-overlay-resume-playback-renderer, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }",
         },
       ];
 
-      for (const { key, defaultValue } of defaultStylesheets) {
+      for (const { key, defaultValue } of stylesheetSettings) {
         const value = await getStorageAsync(key);
-        if (
-          value === null ||
-          value.indexOf("do not modify") === -1 // TODO: this condition seems unnecessary as "do not modify" is not found anywhere else in the repo.
-        ) {
+        if (value === null) {
           await setStorageAsync(key, defaultValue);
         }
       }
 
-      return funcCallback({});
-    },
-    objDatabase: moduleInitializer(Database.init),
-    objHistory: moduleInitializer(History.init),
-    objYoutube: moduleInitializer(Youtube.init),
-    objSearch: moduleInitializer(Search.init),
-    objAction: function (objArgs, funcCallback) {
-      chrome.action.onClicked.addListener(function () {
-        chrome.tabs.create({
-          url: "content/index.html",
-        });
+      callback({});
+    } catch (error) {
+      console.error("Failed to initialize settings:", error);
+      callback(null);
+    }
+  }
+
+  /**
+   * Setup action handler for extension icon clicks
+   * @param {Object} args - Arguments
+   * @param {Function} callback - Callback function
+   */
+  setupActionHandler(args, callback) {
+    chrome.action.onClicked.addListener(() => {
+      chrome.tabs.create({
+        url: "content/index.html",
       });
+    });
 
-      return funcCallback({});
-    },
-    objMessage: function (objArgs, funcCallback) {
-      chrome.runtime.onMessage.addListener(
-        function (objRequest, objSender, funcResponse) {
-          const strMessage = objRequest.strMessage;
-          const strIdent = objRequest.strIdent;
-          const strTitle = objRequest.strTitle;
-          const newObjRequest = {
-            strIdent: strIdent,
-            strTitle: strTitle,
-          };
-          const newFuncResponse = function (objResponse) {
-            console.debug(strMessage, objRequest, objResponse);
+    callback({});
+  }
 
-            funcResponse(objResponse);
-          }
-
-          const youtubeActions = {
-            "youtubeLookup": Youtube.lookup,
-            "youtubeEnsure": Youtube.ensure,
-          };
-
-          const youtubeAction = youtubeActions[strMessage];
-
-          if (youtubeAction) {
-            if (strTitle !== "") {
-              strTitlecache[strIdent] = strTitle;
-            }
-            youtubeAction(newObjRequest, newFuncResponse);
-            return true; // indicate asynchronous response
-          } else {
-            console.error("Unknown message type:", strMessage);
-            // return false; // the old code before refactoring didn't return anything here. I'm not sure if this is necessary.
-          }
-
-          funcResponse(null);
-        },
-      );
-
-      return funcCallback({});
-    },
-    objTabhook: function (objArgs, funcCallback) {
-      chrome.tabs.onUpdated.addListener(async (intTab, objChange, objTab) => {
-        if (objTab.id < 0) {
-          return;
-        } else if (
-          objTab.url.indexOf("https://www.youtube.com") !== 0 &&
-          objTab.url.indexOf("https://m.youtube.com") !== 0
-        ) {
-          return;
-        }
-
-        const boolBrownav = await getStorageAsync(
-          "extensions.Youwatch.Condition.boolBrownav",
-        );
-        if (boolBrownav === String(true)) {
-          if (
-            objTab.url.indexOf("https://www.youtube.com/watch?v=") === 0 ||
-            objTab.url.indexOf("https://www.youtube.com/shorts/") === 0 ||
-            objTab.url.indexOf("https://m.youtube.com/watch?v=") === 0
-          ) {
-            if (objChange.title !== undefined && objChange.title !== null) {
-              if (objChange.title.slice(-10) === " - YouTube") {
-                objChange.title = objChange.title.slice(0, -10);
-              }
-
-              let strIdent = objTab.url.split("&")[0].slice(-11);
-              let strTitle = objChange.title;
-
-              Youtube.mark(
-                {
-                  strIdent: strIdent,
-                  strTitle: strTitle,
-                },
-                function (objResponse) {
-                  console.debug("mark video");
-                },
-              );
-
-              chrome.tabs.query(
-                {
-                  url: "*://*.youtube.com/*",
-                },
-                function (objTabs) {
-                  for (let objTab of objTabs) {
-                    funcSendmessage(objTab.id, {
-                      strMessage: "youtubeMark",
-                      strIdent: strIdent,
-                      intTimestamp: 0,
-                      strTitle: strTitle,
-                      intCount: 0,
-                    });
-                  }
-                },
-              );
-            }
-          }
-        }
-
-        const boolYoubadge = await getStorageAsync(
-          "extensions.Youwatch.Condition.boolYoubadge",
-        );
-        if (boolYoubadge === String(true)) {
-          chrome.scripting.executeScript({
-            target: { tabId: objTab.id },
-            files: ['content/progress-hook.js'],
-          });
-        }
-
-        // Inject CSS based on visualization settings
-        const visualizationFeatures = ['Fadeout', 'Grayout', 'Showbadge', 'Showdate', 'Hideprogress'];
-        for (const feature of visualizationFeatures) {
-          const boolValue = await getStorageAsync(`extensions.Youwatch.Visualization.bool${feature}`);
-
-          // Check if the feature is enabled in localStorage
-          if (boolValue === String(true)) {
-            // Ensure CSS code exists before trying to inject it
-            const cssCode = await getStorageAsync(`extensions.Youwatch.Stylesheet.str${feature}`);
-            if (cssCode) {
-              chrome.scripting.insertCSS({
-                target: { tabId: objTab.id },
-                css: cssCode,
-              }, () => {
-                // Optional: Handle potential injection errors
-                if (chrome.runtime.lastError) {
-                  console.error(`Error injecting CSS for ${feature}:`, chrome.runtime.lastError.message);
-                }
-              });
-            } else {
-              console.warn(`CSS code for feature '${feature}' not found in chrome.storage.local.`);
-            }
-          }
+  /**
+   * Setup message handler for content script communication
+   * @param {Object} args - Arguments
+   * @param {Function} callback - Callback function
+   */
+  setupMessageHandler(args, callback) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      try {
+        const { strMessage: messageType, strIdent: videoId, strTitle: title } = request;
+        
+        const messageRequest = { strIdent: videoId, strTitle: title };
+        
+        const responseHandler = (response) => {
+          console.debug(messageType, request, response);
+          sendResponse(response);
         };
-      });
 
-      return funcCallback({});
-    },
-    objReqhook: async (objArgs, funcCallback) => {
-      const boolYouprog = await getStorageAsync(
-        "extensions.Youwatch.Condition.boolYouprog",
-      );
-      if (boolYouprog === String(true)) {
-        chrome.webRequest.onSendHeaders.addListener(
-          function (objData) {
-            if (objData.url.indexOf("muted=1") !== -1) {
-              return;
-            }
+        const youtubeActions = {
+          "youtubeLookup": Youtube.lookup,
+          "youtubeEnsure": Youtube.ensure,
+        };
 
-            for (let strElapsed of objData.url
-              .split("&et=")[1]
-              .split("&")[0]
-              .split(",")) {
-              if (parseFloat(strElapsed) < 3.0) {
-                continue;
-              }
+        const action = youtubeActions[messageType];
+        if (action) {
+          if (title) {
+            this.titleCache.set(videoId, title);
+          }
+          action(messageRequest, responseHandler);
+          return true; // Indicate asynchronous response
+        } else {
+          console.warn("Unknown message type:", messageType);
+          sendResponse(null);
+        }
+      } catch (error) {
+        console.error("Error handling message:", error);
+        sendResponse(null);
+      }
+    });
 
-              let strIdent = objData.url.split("&docid=")[1].split("&")[0];
-              let strTitle =
-                Object.hasOwn(strTitlecache, strIdent) === true
-                  ? strTitlecache[strIdent]
-                  : "";
+    callback({});
+  }
 
-              if (strIdent.length !== 11) {
-                continue;
-              } else if (strTitle === "") {
-                continue;
-              }
+  /**
+   * Setup tab update hook for tracking navigation
+   * @param {Object} args - Arguments
+   * @param {Function} callback - Callback function
+   */
+  setupTabHook(args, callback) {
+    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+      try {
+        if (tabId < 0 || !this.isYouTubeUrl(tab.url)) {
+          return;
+        }
 
-              Youtube.ensure(
-                {
-                  strIdent: strIdent,
-                  strTitle: strTitle,
-                },
-                function (objResponse) {
-                  console.debug("ensure video");
-                },
-              );
-
-              chrome.tabs.query(
-                {
-                  url: "*://*.youtube.com/*",
-                },
-                function (objTabs) {
-                  for (let objTab of objTabs) {
-                    funcSendmessage(objTab.id, {
-                      strMessage: "youtubeMark",
-                      strIdent: strIdent,
-                      intTimestamp: 0,
-                      strTitle: strTitle,
-                      intCount: 0,
-                    });
-                  }
-                },
-              );
-            }
-          },
-          {
-            urls: ["https://www.youtube.com/api/stats/watchtime*"],
-          },
+        const shouldTrackNavigation = await getStorageAsync(
+          "extensions.Youwatch.Condition.boolBrownav"
         );
+        
+        if (shouldTrackNavigation === "true") {
+          await this.handleTabNavigation(tabId, changeInfo, tab);
+        }
+      } catch (error) {
+        console.error("Error in tab hook:", error);
+      }
+    });
+
+    callback({});
+  }
+
+  /**
+   * Checks if URL is a YouTube URL
+   * @param {string} url - URL to check
+   * @returns {boolean} True if YouTube URL
+   */
+  isYouTubeUrl(url) {
+    return url && (
+      url.startsWith("https://www.youtube.com") ||
+      url.startsWith("https://m.youtube.com")
+    );
+  }
+
+  /**
+   * Checks if URL is a YouTube video URL
+   * @param {string} url - URL to check
+   * @returns {boolean} True if YouTube video URL
+   */
+  isYouTubeVideoUrl(url) {
+    return url && (
+      url.startsWith("https://www.youtube.com/watch?v=") ||
+      url.startsWith("https://www.youtube.com/shorts/") ||
+      url.startsWith("https://m.youtube.com/watch?v=")
+    );
+  }
+
+  /**
+   * Handle tab navigation to YouTube videos
+   * @param {number} tabId - Tab ID
+   * @param {Object} changeInfo - Change information
+   * @param {Object} tab - Tab object
+   */
+  async handleTabNavigation(tabId, changeInfo, tab) {
+    if (!this.isYouTubeVideoUrl(tab.url) || !changeInfo.title) {
+      return;
+    }
+
+    let title = changeInfo.title;
+    if (title.endsWith(" - YouTube")) {
+      title = title.slice(0, -10);
+    }
+
+    const videoId = tab.url.split("&")[0].slice(-11);
+
+    try {
+      // Mark video as watched
+      await this.markVideoAsWatched(videoId, title);
+      
+      // Notify all YouTube tabs
+      await this.notifyYouTubeTabs(videoId, title);
+    } catch (error) {
+      console.error("Error handling tab navigation:", error);
+    }
+  }
+
+  /**
+   * Mark a video as watched
+   * @param {string} videoId - Video ID
+   * @param {string} title - Video title
+   */
+  async markVideoAsWatched(videoId, title) {
+    return new Promise((resolve, reject) => {
+      Youtube.mark(
+        { strIdent: videoId, strTitle: title },
+        (response) => {
+          if (response) {
+            console.debug("Video marked as watched:", videoId);
+            resolve(response);
+          } else {
+            reject(new Error("Failed to mark video as watched"));
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * Notify all YouTube tabs about a marked video
+   * @param {string} videoId - Video ID
+   * @param {string} title - Video title
+   */
+  async notifyYouTubeTabs(videoId, title) {
+    return new Promise((resolve) => {
+      chrome.tabs.query(
+        { url: "*://*.youtube.com/*" },
+        (tabs) => {
+          tabs.forEach(tab => {
+            sendMessageToTab(tab.id, {
+              strMessage: "youtubeMark",
+              strIdent: videoId,
+              intTimestamp: 0,
+              strTitle: title,
+              intCount: 0,
+            });
+          });
+          resolve();
+        }
+      );
+    });
+  }
+
+  /**
+   * Setup request hook for tracking video progress
+   * @param {Object} args - Arguments
+   * @param {Function} callback - Callback function
+   */
+  async setupRequestHook(args, callback) {
+    const shouldTrackProgress = await getStorageAsync(
+      "extensions.Youwatch.Condition.boolYouprog"
+    );
+    
+    if (shouldTrackProgress === "true") {
+      chrome.webRequest.onSendHeaders.addListener(
+        (details) => this.handleProgressRequest(details),
+        { urls: ["https://www.youtube.com/api/stats/watchtime*"] }
+      );
+    }
+
+    callback({});
+  }
+
+  /**
+   * Handle progress tracking requests
+   * @param {Object} details - Request details
+   */
+  async handleProgressRequest(details) {
+    try {
+      if (details.url.includes("muted=1")) {
+        return;
       }
 
-      return funcCallback({});
-    },
-    objSynchronize: function (objArgs, funcCallback) {
-      chrome.alarms.create("synchronize", {
-        periodInMinutes: 60,
-      });
+      const urlParams = new URLSearchParams(details.url.split('?')[1]);
+      const elapsedTimes = urlParams.get('et')?.split(',') || [];
+      const videoId = urlParams.get('docid');
 
-      chrome.alarms.onAlarm.addListener(async (objAlarm) => {
-        if (objAlarm.name === "synchronize") {
-          const boolBrowhist = await getStorageAsync(
-            "extensions.Youwatch.Condition.boolBrowhist",
-          );
-          if (boolBrowhist === String(true)) {
-            History.synchronize(
-              {
-                intTimestamp: new Date().getTime() - 7 * 24 * 60 * 60 * 1000,  // TODO: refactor this using const date = new Date(); date.setDate(date.getDate() - 7);
-              },
-              function (objResponse) {
-                console.debug("synchronized history");
-              },
-              function (objResponse) {
-                // ...
-              },
-            );
-          }
+      if (!videoId || videoId.length !== 11) {
+        return;
+      }
 
-          const boolYouhist = await getStorageAsync(
-            "extensions.Youwatch.Condition.boolYouhist",
-          );
-          if (boolYouhist === String(true)) {
-            Youtube.synchronize(
-              {
-                intThreshold: 512,
-              },
-              function (objResponse) {
-                console.debug("synchronized youtube");
-              },
-              function (objResponse) {
-                // ...
-              },
-            );
+      const title = this.titleCache.get(videoId) || "";
+      if (!title) {
+        return;
+      }
+
+      // Check if any elapsed time is significant (> 3 seconds)
+      const hasSignificantProgress = elapsedTimes.some(time => 
+        parseFloat(time) >= 3.0
+      );
+
+      if (hasSignificantProgress) {
+        await this.ensureVideoTracked(videoId, title);
+        await this.notifyYouTubeTabs(videoId, title);
+      }
+    } catch (error) {
+      console.error("Error handling progress request:", error);
+    }
+  }
+
+  /**
+   * Ensure a video is tracked in the database
+   * @param {string} videoId - Video ID
+   * @param {string} title - Video title
+   */
+  async ensureVideoTracked(videoId, title) {
+    return new Promise((resolve, reject) => {
+      Youtube.ensure(
+        { strIdent: videoId, strTitle: title },
+        (response) => {
+          if (response) {
+            console.debug("Video ensured:", videoId);
+            resolve(response);
+          } else {
+            reject(new Error("Failed to ensure video"));
           }
         }
-      });
+      );
+    });
+  }
 
-      return funcCallback({});
-    },
-  },
-  function (objArgs) {
-    if (objArgs === null) {
-      console.debug("error initializing commons");
-    } else if (objArgs !== null) {
-      console.debug("initialized commons succesfully");
+  /**
+   * Setup periodic synchronization
+   * @param {Object} args - Arguments
+   * @param {Function} callback - Callback function
+   */
+  setupSynchronization(args, callback) {
+    chrome.alarms.create("synchronize", {
+      periodInMinutes: 60,
+    });
+
+    chrome.alarms.onAlarm.addListener(async (alarm) => {
+      if (alarm.name === "synchronize") {
+        await this.performSynchronization();
+      }
+    });
+
+    callback({});
+  }
+
+  /**
+   * Perform periodic synchronization
+   */
+  async performSynchronization() {
+    try {
+      const shouldSyncHistory = await getStorageAsync(
+        "extensions.Youwatch.Condition.boolBrowhist"
+      );
+      
+      if (shouldSyncHistory === "true") {
+        await this.syncHistory();
+      }
+
+      const shouldSyncYoutube = await getStorageAsync(
+        "extensions.Youwatch.Condition.boolYouhist"
+      );
+      
+      if (shouldSyncYoutube === "true") {
+        await this.syncYoutube();
+      }
+    } catch (error) {
+      console.error("Error during synchronization:", error);
     }
-  },
-);
+  }
+
+  /**
+   * Synchronize browser history
+   */
+  async syncHistory() {
+    return new Promise((resolve) => {
+      const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      
+      History.synchronize(
+        { intTimestamp: sevenDaysAgo },
+        (response) => {
+          console.debug("History synchronized:", response);
+          resolve(response);
+        },
+        (progress) => {
+          console.debug("History sync progress:", progress);
+        }
+      );
+    });
+  }
+
+  /**
+   * Synchronize YouTube history
+   */
+  async syncYoutube() {
+    return new Promise((resolve) => {
+      Youtube.synchronize(
+        { intThreshold: 512 },
+        (response) => {
+          console.debug("YouTube synchronized:", response);
+          resolve(response);
+        },
+        (progress) => {
+          console.debug("YouTube sync progress:", progress);
+        }
+      );
+    });
+  }
+}
+
+// Initialize the extension manager
+const extensionManager = new ExtensionManager();

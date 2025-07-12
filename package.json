@@ -1,4 +1,30 @@
 {
+  "name": "youtube-watchmarker",
+  "version": "4.7.1",
+  "description": "Chrome extension that automatically marks videos on YouTube that you have already watched",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Development mode - load unpacked extension from this directory'",
+    "build": "echo 'Production build - create distributable extension'",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "echo 'No tests yet - consider adding tests for utility functions'"
+  },
+  "keywords": [
+    "youtube",
+    "chrome-extension",
+    "watch-history",
+    "video-tracking"
+  ],
+  "author": "Simon Niklaus",
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://sniklaus.com/youwatch",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sniklaus/youtube-watchmarker"
+  },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
     "eslint": "^9.24.0",
