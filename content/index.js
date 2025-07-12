@@ -397,8 +397,6 @@ class OptionsPageManager {
      */
     async exportDatabase() {
         try {
-            this.showLoading('Exporting database...');
-            
             const response = await chrome.runtime.sendMessage({
                 action: 'database-export'
             });
@@ -421,8 +419,6 @@ class OptionsPageManager {
         } catch (error) {
             console.error('Export error:', error);
             this.showError('Export failed: ' + error.message);
-        } finally {
-            this.hideLoading();
         }
     }
 
