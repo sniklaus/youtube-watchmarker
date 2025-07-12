@@ -1,19 +1,18 @@
 import {
-  Node,
   createResponseCallback,
   funcHackyparse,
-  bgObject,
+  BackgroundUtils,
+  AsyncSeries
 } from "./utils.js";
-import { Database } from "./bg-database.js";
 
 export const Search = {
   init: function (objRequest, funcResponse) {
     console.log("Search.init called");
-    Node.series(
+    AsyncSeries.run(
       {
-        objMessaging: bgObject.messaging('search', {
-          'searchLookup': Search.lookup,
-          'searchDelete': Search.delete
+        objMessaging: BackgroundUtils.messaging('search', {
+          'search-lookup': Search.lookup,
+          'search-delete': Search.delete
         }),
       },
       createResponseCallback(() => { }, funcResponse),
@@ -21,9 +20,9 @@ export const Search = {
   },
 
   lookup: function (objRequest, funcResponse) {
-    Node.series(
+    AsyncSeries.run(
       {
-        objDatabase: bgObject.database(),
+        objDatabase: BackgroundUtils.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("intTimestamp")
@@ -70,9 +69,9 @@ export const Search = {
   },
 
   delete: function (objRequest, funcResponse, funcProgress) {
-    Node.series(
+    AsyncSeries.run(
       {
-        objDatabase: bgObject.database(),
+        objDatabase: BackgroundUtils.database(),
         objDelete: function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "1/4 - deleting it from the database",
@@ -84,7 +83,7 @@ export const Search = {
             return funcCallback({});
           };
         },
-        objCount: bgObject.count(),
+        objCount: BackgroundUtils.count(),
         objHistory: function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "2/4 - deleting it from the history in the browser",
@@ -122,8 +121,8 @@ export const Search = {
             },
           );
         },
-        objCookies: bgObject.cookies(),
-        objContauth: bgObject.contauth(),
+        objCookies: BackgroundUtils.cookies(),
+        objContauth: BackgroundUtils.contauth(),
         objYoulookup: function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "3/4 - locating it in the history on youtube",

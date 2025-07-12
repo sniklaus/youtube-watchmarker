@@ -2,9 +2,6 @@ import {
   AsyncSeries,
   createResponseCallback,
   BackgroundUtils,
-  // Legacy compatibility
-  Node,
-  bgObject
 } from "./utils.js";
 
 /**
@@ -16,6 +13,7 @@ export class DatabaseManager {
     this.DB_NAME = "Database";
     this.DB_VERSION = 401;
     this.STORE_NAME = "storeDatabase";
+    this.isInitialized = false;
   }
 
   /**
@@ -26,17 +24,27 @@ export class DatabaseManager {
   async init(request, response) {
     console.log("DatabaseManager.init called");
     
+    if (this.isInitialized) {
+      console.log("Database already initialized");
+      response({});
+      return;
+    }
+    
     try {
       await AsyncSeries.run(
         {
           openDatabase: this.openDatabase.bind(this),
           setupMessaging: BackgroundUtils.messaging('database', {
-            'databaseExport': this.export.bind(this),
-            'databaseImport': this.import.bind(this),
-            'databaseReset': this.reset.bind(this)
+            'database-export': this.export.bind(this),
+            'database-import': this.import.bind(this),
+            'database-reset': this.reset.bind(this)
           }),
         },
-        createResponseCallback(() => ({}), response)
+        createResponseCallback(() => {
+          this.isInitialized = true;
+          console.log("Database initialization completed");
+          return {};
+        }, response)
       );
     } catch (error) {
       console.error("Failed to initialize database:", error);
@@ -93,6 +101,20 @@ export class DatabaseManager {
   }
 
   /**
+   * Gets the database object store for transactions
+   * @param {string} mode - Transaction mode ('readonly' or 'readwrite')
+   * @returns {IDBObjectStore} The database object store
+   */
+  getObjectStore(mode = "readwrite") {
+    if (!this.database) {
+      throw new Error("Database not initialized");
+    }
+    return this.database
+      .transaction([this.STORE_NAME], mode)
+      .objectStore(this.STORE_NAME);
+  }
+
+  /**
    * Exports the database to a downloadable file
    * @param {Object} request - Request object
    * @param {Function} response - Response callback
@@ -101,7 +123,12 @@ export class DatabaseManager {
   export(request, response, progress) {
     AsyncSeries.run(
       {
-        database: BackgroundUtils.database(),
+        objDatabase: (args, callback) => {
+          if (!this.database) {
+            throw new Error("Database not initialized");
+          }
+          callback(this.getObjectStore("readonly"));
+        },
         getData: this.getAllData.bind(this),
         downloadFile: this.createDownloadFile.bind(this),
         updateTimestamp: BackgroundUtils.time("extensions.Youwatch.Database.intTimestamp"),
@@ -165,13 +192,18 @@ export class DatabaseManager {
   import(request, response, progress) {
     AsyncSeries.run(
       {
-        videos: (args, callback) => callback(request.objVideos),
-        database: BackgroundUtils.database(),
-        video: BackgroundUtils.video(),
-        get: BackgroundUtils.get(progress),
-        put: BackgroundUtils.put(),
-        "video-Next": BackgroundUtils.videoNext(),
-        count: BackgroundUtils.count(),
+        objVideos: (args, callback) => callback(request.objVideos),
+        objDatabase: (args, callback) => {
+          if (!this.database) {
+            throw new Error("Database not initialized");
+          }
+          callback(this.getObjectStore());
+        },
+        objVideo: BackgroundUtils.video(),
+        objGet: BackgroundUtils.get(progress),
+        objPut: BackgroundUtils.put(),
+        "objVideo-Next": BackgroundUtils.videoNext(),
+        objCount: BackgroundUtils.count(),
       },
       createResponseCallback(() => ({}), response)
     );
@@ -185,9 +217,14 @@ export class DatabaseManager {
   reset(request, response) {
     AsyncSeries.run(
       {
-        database: BackgroundUtils.database(),
+        objDatabase: (args, callback) => {
+          if (!this.database) {
+            throw new Error("Database not initialized");
+          }
+          callback(this.getObjectStore());
+        },
         clearData: this.clearAllData.bind(this),
-        count: BackgroundUtils.count(),
+        objCount: BackgroundUtils.count(),
       },
       createResponseCallback(() => ({}), response)
     );
@@ -211,47 +248,13 @@ export class DatabaseManager {
       callback(null);
     };
   }
-
-  /**
-   * Gets the database object store for transactions
-   * @returns {IDBObjectStore|null} The database object store
-   */
-  getObjectStore() {
-    if (!this.database) {
-      throw new Error("Database not initialized");
-    }
-    return this.database
-      .transaction([this.STORE_NAME], "readwrite")
-      .objectStore(this.STORE_NAME);
-  }
 }
 
 // Create singleton instance
 const databaseManager = new DatabaseManager();
 
-// Legacy compatibility - export as Database object
-export const Database = {
-  objDatabase: null,
-  
-  init: (request, response) => {
-    databaseManager.init(request, response).then(() => {
-      // Set the legacy objDatabase property for backward compatibility
-      Database.objDatabase = databaseManager.database;
-    });
-  },
-  
-  export: databaseManager.export.bind(databaseManager),
-  import: databaseManager.import.bind(databaseManager),
-  reset: databaseManager.reset.bind(databaseManager),
-};
+// Export the database manager instance
+export const Database = databaseManager;
 
-// Make Database available globally to avoid circular dependency issues
+// Make Database available globally
 globalThis.Database = Database;
-
-// Update the global reference when database is initialized
-const originalInit = Database.init;
-Database.init = (request, response) => {
-  originalInit(request, response);
-  // Update global reference
-  globalThis.Database = Database;
-};

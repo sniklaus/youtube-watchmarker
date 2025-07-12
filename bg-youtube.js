@@ -1,20 +1,20 @@
 import {
-  Node,
   createResponseCallback,
   funcHackyparse,
-  bgObject,
+  BackgroundUtils,
+  AsyncSeries
 } from "./utils.js";
 
 export const Youtube = {
   init: function (objRequest, funcResponse) {
     console.log("Youtube.init called");
-    Node.series(
+    AsyncSeries.run(
       {
-        objMessaging: bgObject.messaging('youtube', {
-          'youtubeSynchronize': Youtube.synchronize,
-          'youtubeLookup': Youtube.lookup,
-          'youtubeEnsure': Youtube.ensure,
-          'youtubeMark': Youtube.mark
+        objMessaging: BackgroundUtils.messaging('youtube', {
+          'youtube-synchronize': Youtube.synchronize,
+          'youtube-lookup': Youtube.lookup,
+          'youtube-ensure': Youtube.ensure,
+          'youtube-mark': Youtube.mark
         }),
       },
       createResponseCallback(() => { }, funcResponse),
@@ -22,10 +22,10 @@ export const Youtube = {
   },
 
   synchronize: function (objRequest, funcResponse, funcProgress) {
-    Node.series(
+    AsyncSeries.run(
       {
-        objCookies: bgObject.cookies(),
-        objContauth: bgObject.contauth(),
+        objCookies: BackgroundUtils.cookies(),
+        objContauth: BackgroundUtils.contauth(),
 
         /**
          * @typedef {Object} VideoArgs
@@ -198,13 +198,13 @@ export const Youtube = {
             objArgs.strContinuation = null;
           }
         },
-        objDatabase: bgObject.database(),
-        objVideo: bgObject.video(),
-        objGet: bgObject.get(funcProgress),
-        objPut: bgObject.put(),
-        "objVideo-Next": bgObject.videoNext(),
-        objCount: bgObject.count(),
-        objTime: bgObject.time("extensions.Youwatch.Youtube.intTimestamp"),
+        objDatabase: BackgroundUtils.database(),
+        objVideo: BackgroundUtils.video(),
+        objGet: BackgroundUtils.get(funcProgress),
+        objPut: BackgroundUtils.put(),
+        "objVideo-Next": BackgroundUtils.videoNext(),
+        objCount: BackgroundUtils.count(),
+        objTime: BackgroundUtils.time("extensions.Youwatch.Youtube.intTimestamp"),
         objContinuation: function (objArgs, funcCallback) {
           if (objArgs.intExisting < objRequest.intThreshold) {
             if (objArgs.strContinuation !== null) {
@@ -220,12 +220,12 @@ export const Youtube = {
   },
 
   lookup: function (objRequest, funcResponse) {
-    Node.series(
+    AsyncSeries.run(
       {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: bgObject.database(),
+        objDatabase: BackgroundUtils.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("strIdent")
@@ -251,12 +251,12 @@ export const Youtube = {
   },
 
   ensure: function (objRequest, funcResponse) {
-    Node.series(
+    AsyncSeries.run(
       {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: bgObject.database(),
+        objDatabase: BackgroundUtils.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("strIdent")
@@ -276,20 +276,20 @@ export const Youtube = {
             return funcCallback(null);
           };
         },
-        objPut: bgObject.put(),
-        objCount: bgObject.count(),
+        objPut: BackgroundUtils.put(),
+        objCount: BackgroundUtils.count(),
       },
       createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );
   },
 
   mark: function (objRequest, funcResponse) {
-    Node.series(
+    AsyncSeries.run(
       {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: bgObject.database(),
+        objDatabase: BackgroundUtils.database(),
         objGet: function (objArgs, funcCallback) {
           let objQuery = objArgs.objDatabase
             .index("strIdent")
@@ -321,8 +321,8 @@ export const Youtube = {
             }
           };
         },
-        objPut: bgObject.put(),
-        objCount: bgObject.count(),
+        objPut: BackgroundUtils.put(),
+        objCount: BackgroundUtils.count(),
       },
       createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );

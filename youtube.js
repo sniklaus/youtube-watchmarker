@@ -200,9 +200,9 @@ class YouTubeWatchMarker {
     
     chrome.runtime.sendMessage(
       {
-        strMessage: "youtubeLookup",
-        strIdent: videoId,
-        strTitle: title,
+        action: "youtube-lookup",
+        videoId: videoId,
+        title: title,
       },
       (response) => {
         if (response && response.strIdent) {
@@ -275,19 +275,19 @@ class YouTubeWatchMarker {
    */
   handleMessage(data, sender, sendResponse) {
     try {
-      switch (data.strMessage) {
-        case "youtubeRefresh":
+      switch (data.action) {
+        case "youtube-refresh":
           this.refresh();
           break;
           
-        case "youtubeMark":
-          this.watchDates[data.strIdent] = data.intTimestamp;
-          const videos = this.findVideos(data.strIdent);
-          videos.forEach(video => this.markVideo(video, data.strIdent));
+        case "youtube-mark":
+          this.watchDates[data.videoId] = data.timestamp;
+          const videos = this.findVideos(data.videoId);
+          videos.forEach(video => this.markVideo(video, data.videoId));
           break;
           
         default:
-          console.warn("Unknown message type:", data.strMessage);
+          console.warn("Unknown action:", data.action);
       }
     } catch (error) {
       console.error("Error handling message:", error);

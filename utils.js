@@ -182,10 +182,7 @@ export class AsyncSeries {
   }
 }
 
-// Legacy compatibility - keeping the old Node.series for backward compatibility
-export const Node = {
-  series: AsyncSeries.run
-};
+
 
 /**
  * Background script utilities for Chrome extension
@@ -202,27 +199,27 @@ export class BackgroundUtils {
       chrome.runtime.onConnect.addListener((port) => {
         if (port.name === portName) {
           port.onMessage.addListener((data) => {
-            const { strMessage: messageType, objRequest: request } = data;
+            const { action, ...request } = data;
 
             const sendResponse = (response) => {
               port.postMessage({
-                strMessage: messageType,
-                objResponse: response,
+                action: action,
+                response: response,
               });
             };
 
             const sendProgress = (response) => {
               port.postMessage({
-                strMessage: `${messageType}-progress`,
-                objResponse: response,
+                action: `${action}-progress`,
+                response: response,
               });
             };
 
-            const handler = messageHandlers[messageType];
+            const handler = messageHandlers[action];
             if (handler) {
               handler(request, sendResponse, sendProgress);
             } else {
-              console.error(`[${portName}] Received unexpected message:`, messageType);
+              console.error(`[${portName}] Received unexpected action:`, action);
             }
           });
         }
@@ -238,14 +235,10 @@ export class BackgroundUtils {
   static database() {
     return (args, callback) => {
       const Database = globalThis.Database;
-      if (!Database || !Database.objDatabase) {
+      if (!Database || !Database.database) {
         throw new Error("Database not initialized or not available");
       }
-      return callback(
-        Database.objDatabase
-          .transaction(["storeDatabase"], "readwrite")
-          .objectStore("storeDatabase")
-      );
+      return callback(Database.getObjectStore());
     };
   }
 
@@ -438,20 +431,6 @@ export class BackgroundUtils {
     };
   }
 }
-
-// Legacy compatibility - keeping the old bgObject for backward compatibility
-export const bgObject = {
-  messaging: BackgroundUtils.messaging,
-  database: BackgroundUtils.database,
-  get: BackgroundUtils.get,
-  put: BackgroundUtils.put,
-  videoNext: BackgroundUtils.videoNext,
-  count: BackgroundUtils.count,
-  time: BackgroundUtils.time,
-  cookies: BackgroundUtils.cookies,
-  contauth: BackgroundUtils.contauth,
-  video: BackgroundUtils.video,
-};
 
 // Legacy exports for backward compatibility
 export const funcBrowser = getBrowserType;
