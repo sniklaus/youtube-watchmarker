@@ -89,7 +89,8 @@ class OptionsPageManager {
         
         // Timestamp elements
         this.historyTimestamp = document.getElementById('idHistory_Timestamp');
-        this.youtubeTimestamp = document.getElementById('idYoutube_Timestamp');
+        this.youtubeWatchHistoryTimestamp = document.getElementById('idYoutube_Watch_History_Timestamp');
+        this.youtubeLikedTimestamp = document.getElementById('idYoutube_LikedTimestamp');
         
         // Search elements
         this.searchIcon = document.getElementById('search-icon');
@@ -117,6 +118,7 @@ class OptionsPageManager {
         // Synchronization
         this.getElementById('idHistory_Synchronize').addEventListener('click', () => this.synchronizeHistory());
         this.getElementById('idYoutube_Synchronize').addEventListener('click', () => this.synchronizeYoutube());
+        this.getElementById('idYoutube_LikedVideos').addEventListener('click', () => this.synchronizeLikedVideos());
 
         // Toggle switches for conditions (using new form-switch format)
         this.setupToggleSwitch('idCondition_Brownav');
@@ -480,8 +482,6 @@ class OptionsPageManager {
         }
 
         try {
-            this.showLoading('Resetting database...');
-            
             const response = await chrome.runtime.sendMessage({
                 action: 'database-reset'
             });
@@ -495,8 +495,6 @@ class OptionsPageManager {
         } catch (error) {
             console.error('Reset error:', error);
             this.showError('Reset failed: ' + error.message);
-        } finally {
-            this.hideLoading();
         }
     }
 
@@ -549,6 +547,31 @@ class OptionsPageManager {
         } catch (error) {
             console.error('YouTube sync error:', error);
             this.showError('YouTube sync failed: ' + error.message);
+        }
+    }
+
+    /**
+     * Synchronize YouTube Liked Videos
+     */
+    async synchronizeLikedVideos() {
+        try {
+            this.showLoading('Synchronizing liked videos...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'youtube-liked-videos'
+            });
+
+            if (response && response.success) {
+                this.showSuccess(`Liked videos synchronized successfully! Found ${response.videoCount || 0} videos.`);
+                await this.loadInitialData(); // Refresh displayed data
+            } else {
+                this.showError('Failed to synchronize liked videos: ' + (response?.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Liked videos sync error:', error);
+            this.showError('Liked videos sync failed: ' + error.message);
+        } finally {
+            this.hideLoading();
         }
     }
 
@@ -860,7 +883,8 @@ class OptionsPageManager {
             await Promise.all([
                 this.updateDatabaseSize(),
                 this.updateHistoryTimestamp(),
-                this.updateYoutubeTimestamp(),
+                this.updateYoutubeWatchHistoryTimestamp(),
+                this.updateYoutubeLikedTimestamp(),
                 this.performInitialSearch() // Show all videos by default without errors
             ]);
         } catch (error) {
@@ -908,9 +932,9 @@ class OptionsPageManager {
     }
 
     /**
-     * Update YouTube timestamp display
+     * Update YouTube Watch History timestamp display
      */
-    async updateYoutubeTimestamp() {
+    async updateYoutubeWatchHistoryTimestamp() {
         try {
             const response = await chrome.runtime.sendMessage({
                 action: 'youtube-timestamp'
@@ -918,13 +942,34 @@ class OptionsPageManager {
 
             if (response && response.success && response.timestamp !== null && response.timestamp !== 0) {
                 const date = new Date(response.timestamp);
-                this.youtubeTimestamp.textContent = this.formatDate(date);
+                this.youtubeWatchHistoryTimestamp.textContent = this.formatDate(date);
             } else {
-                this.youtubeTimestamp.textContent = 'Never';
+                this.youtubeWatchHistoryTimestamp.textContent = 'Never';
             }
         } catch (error) {
-            console.error('Error updating YouTube timestamp:', error);
-            this.youtubeTimestamp.textContent = 'Error';
+            console.error('Error updating YouTube watch history timestamp:', error);
+            this.youtubeWatchHistoryTimestamp.textContent = 'Error';
+        }
+    }
+
+    /**
+     * Update YouTube Liked Videos timestamp display
+     */
+    async updateYoutubeLikedTimestamp() {
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'youtube-liked-timestamp'
+            });
+
+            if (response && response.success && response.timestamp !== null && response.timestamp !== 0) {
+                const date = new Date(response.timestamp);
+                this.youtubeLikedTimestamp.textContent = this.formatDate(date);
+            } else {
+                this.youtubeLikedTimestamp.textContent = 'Never';
+            }
+        } catch (error) {
+            console.error('Error updating YouTube liked videos timestamp:', error);
+            this.youtubeLikedTimestamp.textContent = 'Error';
         }
     }
 

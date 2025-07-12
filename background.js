@@ -81,7 +81,7 @@ class ExtensionManager {
       const integerSettings = [
         { key: "databaseSize", defaultValue: 0 },
         { key: "historyTimestamp", defaultValue: 0 },
-        { key: "youtubeTimestamp", defaultValue: 0 },
+        { key: "youtubeWatchHistoryTimestamp", defaultValue: 0 },
       ];
 
       for (const { key, defaultValue } of integerSettings) {
@@ -275,7 +275,10 @@ class ExtensionManager {
             this.getHistoryTimestamp(res);
           },
           "youtube-timestamp": (req, res) => {
-            this.getYoutubeTimestamp(res);
+            this.getYoutubeWatchHistoryTimestamp(res);
+          },
+          "youtube-liked-timestamp": (req, res) => {
+            this.getYoutubeLikedTimestamp(res);
           },
           
           // Synchronization actions
@@ -284,6 +287,9 @@ class ExtensionManager {
           },
           "youtube-synchronize": (req, res) => {
             this.synchronizeYoutubeAction(res);
+          },
+          "youtube-liked-videos": (req, res) => {
+            this.synchronizeLikedVideosAction(res);
           },
           
           // Settings actions
@@ -624,6 +630,24 @@ class ExtensionManager {
   }
 
   /**
+   * Synchronize YouTube Liked Videos
+   */
+  async syncLikedVideos() {
+    return new Promise((resolve) => {
+      Youtube.synchronizeLikedVideos(
+        { intThreshold: 512 },
+        (response) => {
+          console.debug("YouTube liked videos synchronized:", response);
+          resolve(response);
+        },
+        (progress) => {
+          console.debug("YouTube liked videos sync progress:", progress);
+        }
+      );
+    });
+  }
+
+  /**
    * Get database size
    * @param {Function} callback - Response callback
    */
@@ -657,20 +681,39 @@ class ExtensionManager {
   }
 
   /**
-   * Get YouTube timestamp
+   * Get YouTube Watch History timestamp
    * @param {Function} callback - Response callback
    */
-  async getYoutubeTimestamp(callback) {
+  async getYoutubeWatchHistoryTimestamp(callback) {
     try {
       const timestamp = await new Promise((resolve) => {
-        chrome.storage.sync.get(['youtubeTimestamp'], (result) => {
-          resolve(result.youtubeTimestamp || 0);
+        chrome.storage.sync.get(['youtubeWatchHistoryTimestamp'], (result) => {
+          resolve(result.youtubeWatchHistoryTimestamp || 0);
         });
       });
       // Return null if timestamp is 0 (never synchronized) or null
       callback({ success: true, timestamp: timestamp && timestamp !== 0 ? timestamp : null });
     } catch (error) {
-      console.error("Error getting YouTube timestamp:", error);
+      console.error("Error getting YouTube watch history timestamp:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Get YouTube Liked Videos timestamp
+   * @param {Function} callback - Response callback
+   */
+  async getYoutubeLikedTimestamp(callback) {
+    try {
+      const timestamp = await new Promise((resolve) => {
+        chrome.storage.sync.get(['youtubeLikedTimestamp'], (result) => {
+          resolve(result.youtubeLikedTimestamp || 0);
+        });
+      });
+      // Return null if timestamp is 0 (never synchronized) or null
+      callback({ success: true, timestamp: timestamp && timestamp !== 0 ? timestamp : null });
+    } catch (error) {
+      console.error("Error getting YouTube liked videos timestamp:", error);
       callback({ success: false, error: error.message });
     }
   }
@@ -840,12 +883,32 @@ class ExtensionManager {
       
       // Update timestamp in sync storage
       await new Promise((resolve) => {
-        chrome.storage.sync.set({ youtubeTimestamp: Date.now() }, resolve);
+        chrome.storage.sync.set({ youtubeWatchHistoryTimestamp: Date.now() }, resolve);
       });
       
       callback({ success: true, response: response });
     } catch (error) {
       console.error("Error synchronizing YouTube:", error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Synchronize YouTube Liked Videos action for options page
+   * @param {Function} callback - Response callback
+   */
+  async synchronizeLikedVideosAction(callback) {
+    try {
+      const response = await this.syncLikedVideos();
+      
+      // Update timestamp in sync storage (separate from regular YouTube sync)
+      await new Promise((resolve) => {
+        chrome.storage.sync.set({ youtubeLikedTimestamp: Date.now() }, resolve);
+      });
+      
+      callback({ success: true, response: response, videoCount: response?.videoCount || 0 });
+    } catch (error) {
+      console.error("Error synchronizing liked videos:", error);
       callback({ success: false, error: error.message });
     }
   }

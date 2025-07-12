@@ -242,14 +242,21 @@
                   <hr class="my-3">
                   <h3 class="h6 mb-2">YouTube Account</h3>
                   <p class="text-muted small mb-3">
-                    YouTube Account - Sync with your YouTube account for cross-device compatibility. Updates automatically every hour.
+                    Sync with your YouTube account for cross-device compatibility. Updates automatically every hour.
                   </p>
-                  <button class="btn btn-success btn-sm w-100" id="idYoutube_Synchronize" type="button">
-                    <i class="fab fa-youtube me-2"></i>Synchronize YouTube
+                  <button class="btn btn-outline-success btn-sm w-100 mb-2" id="idYoutube_Synchronize" type="button">
+                    <i class="fab fa-youtube me-2"></i>Synchronize YouTube Watch History
+                  </button>
+                  <button class="btn btn-outline-success btn-sm w-100" id="idYoutube_LikedVideos" type="button">
+                    <i class="fas fa-heart me-2"></i>Sync Liked Videos
                   </button>
                   <div class="mt-2">
                     <small class="text-muted">
-                      Last sync: <span id="idYoutube_Timestamp" class="fw-medium">Never</span>
+                      Last watch history sync: <span id="idYoutube_Watch_History_Timestamp" class="fw-medium">Never</span>
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                      Last liked videos sync: <span id="idYoutube_LikedTimestamp" class="fw-medium">Never</span>
                     </small>
                   </div>
                 </div>
