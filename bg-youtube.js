@@ -36,10 +36,10 @@ export const Youtube = {
          */
         /**
          * Extract video information from YouTube history page
-         * @param {VideoArgs} objArgs - Arguments for the XMLHttpRequest request
+         * @param {VideoArgs} objArgs - Arguments for the fetch request
          * @param {Function} funcCallback - Callback to be invoked after processing
          */
-        objVideos: function (objArgs, funcCallback) {
+        objVideos: async function (objArgs, funcCallback) {
           if (objArgs.strContinuation === undefined) {
             objArgs.strContinuation = null;
             objArgs.strClicktrack = null;
@@ -47,10 +47,68 @@ export const Youtube = {
             objArgs.objYtctx = null;
           }
 
-          let objAjax = new XMLHttpRequest();
+          try {
+            let response;
+            
+            if (
+              objArgs.strContinuation === null ||
+              objArgs.strClicktrack === null ||
+              objArgs.objYtcfg === null ||
+              objArgs.objYtctx === null
+            ) {
+              // Initial request to get YouTube history page
+              response = await fetch("https://www.youtube.com/feed/history");
+            } else if (
+              objArgs.strContinuation !== null &&
+              objArgs.strClicktrack !== null &&
+              objArgs.objYtcfg !== null &&
+              objArgs.objYtctx !== null
+            ) {
+              // Subsequent request with continuation token
+              objArgs.objYtctx["client"]["screenWidthPoints"] = 1024;
+              objArgs.objYtctx["client"]["screenHeightPoints"] = 768;
+              objArgs.objYtctx["client"]["screenPixelDensity"] = 1;
+              objArgs.objYtctx["client"]["utcOffsetMinutes"] = -420;
+              objArgs.objYtctx["client"]["userInterfaceTheme"] =
+                "USER_INTERFACE_THEME_LIGHT";
 
-          objAjax.onload = function () {
-            const responseText = objAjax.responseText // html text
+              objArgs.objYtctx["request"]["internalExperimentFlags"] = [];
+              objArgs.objYtctx["request"]["consistencyTokenJars"] = [];
+
+              response = await fetch(
+                "https://www.youtube.com/youtubei/v1/browse?key=" +
+                objArgs.objYtcfg["INNERTUBE_API_KEY"],
+                {
+                  method: "POST",
+                  headers: {
+                    "Authorization": objArgs.objContauth.strAuth,
+                    "Content-Type": "application/json",
+                    "X-Origin": "https://www.youtube.com",
+                    "X-Goog-AuthUser": "0",
+                    "X-Goog-PageId": objArgs.objYtcfg["DELEGATED_SESSION_ID"],
+                    "X-Goog-Visitor-Id": objArgs.objYtctx["client"]["visitorData"],
+                  },
+                  body: JSON.stringify({
+                    context: {
+                      client: objArgs.objYtctx["client"],
+                      request: objArgs.objYtctx["request"],
+                      user: {},
+                      clickTracking: {
+                        clickTrackingParams: objArgs.strClicktrack,
+                      },
+                    },
+                    continuation: objArgs.strContinuation,
+                  }),
+                }
+              );
+            }
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const responseText = await response.text();
+            const cleanedText = responseText
               .replaceAll('\\"', '\\u0022')
               .replaceAll("\r", "")
               .replaceAll("\n", "");
@@ -58,7 +116,7 @@ export const Youtube = {
             // extract youtube config
             if (objArgs.objYtcfg === null) {
               objArgs.objYtcfg = funcHackyparse(
-                responseText
+                cleanedText
                   .split("ytcfg.set(")
                   .find(function (strData) {
                     return strData.indexOf("INNERTUBE_API_KEY") !== -1;
@@ -70,7 +128,7 @@ export const Youtube = {
             // extract youtube context
             if (objArgs.objYtctx === null) {
               objArgs.objYtctx = funcHackyparse(
-                responseText.split('"INNERTUBE_CONTEXT":')[1],
+                cleanedText.split('"INNERTUBE_CONTEXT":')[1],
               );
             }
 
@@ -80,7 +138,7 @@ export const Youtube = {
               '"continuationCommand":[^"]*"token":[^"]*"([^"]*)"',
               "g",
             );
-            if ((strRegex = objContinuation.exec(responseText)) !== null) {
+            if ((strRegex = objContinuation.exec(cleanedText)) !== null) {
               objArgs.strContinuation = strRegex[1];
             }
 
@@ -89,7 +147,7 @@ export const Youtube = {
               '"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"',
               "g",
             );
-            if ((strRegex = objClicktrack.exec(responseText)) !== null) {
+            if ((strRegex = objClicktrack.exec(cleanedText)) !== null) {
               objArgs.strClicktrack = strRegex[1];
             }
 
@@ -100,15 +158,11 @@ export const Youtube = {
               '.*?"text"[^"]*"([^"]*)"', // title
               "g",
             );
-            while ((strRegex = objVideo.exec(responseText)) !== null) {
+            while ((strRegex = objVideo.exec(cleanedText)) !== null) {
               let strIdent = strRegex[1];
               let strTitle = strRegex[2];
 
-              // TODO: this part of code might be unnecessary
-              // because 1. the old code had a bug where '\u003D' was not
-              // replaced with '=' in the title. 2. this code is not seen
-              // in Search.delete.objYoulookup. I've fixed it and I'm 
-              // keeping it here just in case it is needed.
+              // Decode HTML entities in title
               const decodeMap = {
                 "\\u0022": '"',
                 "\\u0026": '&',
@@ -119,7 +173,6 @@ export const Youtube = {
               for (const [encoded, decoded] of Object.entries(decodeMap)) {
                 strTitle = strTitle.replaceAll(encoded, decoded);
               }
-              /////////////////////////////////////////////////////////
 
               objVideos.push({
                 strIdent: strIdent,
@@ -129,73 +182,14 @@ export const Youtube = {
               });
             }
 
+            if (objArgs.strContinuation !== null) {
+              objArgs.strContinuation = null;
+            }
+
             return funcCallback(objVideos);
-          };
-
-          if (
-            objArgs.strContinuation === null ||
-            objArgs.strClicktrack === null ||
-            objArgs.objYtcfg === null ||
-            objArgs.objYtctx === null
-          ) {
-            objAjax.open("GET", "https://www.youtube.com/feed/history");
-
-            objAjax.send();
-          } else if (
-            objArgs.strContinuation !== null &&
-            objArgs.strClicktrack !== null &&
-            objArgs.objYtcfg !== null &&
-            objArgs.objYtctx !== null
-          ) {
-            objAjax.open(
-              "POST",
-              "https://www.youtube.com/youtubei/v1/browse?key=" +
-              objArgs.objYtcfg["INNERTUBE_API_KEY"],
-            );
-
-            objAjax.setRequestHeader(
-              "Authorization",
-              objArgs.objContauth.strAuth,
-            );
-            objAjax.setRequestHeader("Content-Type", "application/json");
-            objAjax.setRequestHeader("X-Origin", "https://www.youtube.com");
-            objAjax.setRequestHeader("X-Goog-AuthUser", "0");
-            objAjax.setRequestHeader(
-              "X-Goog-PageId",
-              objArgs.objYtcfg["DELEGATED_SESSION_ID"],
-            );
-            objAjax.setRequestHeader(
-              "X-Goog-Visitor-Id",
-              objArgs.objYtctx["client"]["visitorData"],
-            );
-
-            objArgs.objYtctx["client"]["screenWidthPoints"] = 1024;
-            objArgs.objYtctx["client"]["screenHeightPoints"] = 768;
-            objArgs.objYtctx["client"]["screenPixelDensity"] = 1;
-            objArgs.objYtctx["client"]["utcOffsetMinutes"] = -420;
-            objArgs.objYtctx["client"]["userInterfaceTheme"] =
-              "USER_INTERFACE_THEME_LIGHT";
-
-            objArgs.objYtctx["request"]["internalExperimentFlags"] = [];
-            objArgs.objYtctx["request"]["consistencyTokenJars"] = [];
-
-            objAjax.send(
-              JSON.stringify({
-                context: {
-                  client: objArgs.objYtctx["client"],
-                  request: objArgs.objYtctx["request"],
-                  user: {},
-                  clickTracking: {
-                    clickTrackingParams: objArgs.strClicktrack,
-                  },
-                },
-                continuation: objArgs.strContinuation,
-              }),
-            );
-          }
-
-          if (objArgs.strContinuation !== null) {
-            objArgs.strContinuation = null;
+          } catch (error) {
+            console.error("Error fetching YouTube videos:", error);
+            return funcCallback([]);
           }
         },
         objDatabase: BackgroundUtils.database(),

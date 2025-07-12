@@ -355,11 +355,6 @@ class OptionsPageManager {
         const searchResults = this.getElementById('idSearch_Results');
         const query = searchQuery.value.trim();
 
-        if (!query) {
-            searchResults.innerHTML = '<p class="text-muted">Please enter a search query</p>';
-            return;
-        }
-
         try {
             // Update button state
             const icons = searchButton.querySelectorAll('i');
@@ -471,7 +466,8 @@ class OptionsPageManager {
             await Promise.all([
                 this.updateDatabaseSize(),
                 this.updateHistoryTimestamp(),
-                this.updateYoutubeTimestamp()
+                this.updateYoutubeTimestamp(),
+                this.performSearch() // Show all videos by default
             ]);
         } catch (error) {
             console.error('Error loading initial data:', error);
@@ -505,7 +501,7 @@ class OptionsPageManager {
                 action: 'history-timestamp'
             });
 
-            if (response && response.success && response.timestamp) {
+            if (response && response.success && response.timestamp !== null && response.timestamp !== 0) {
                 const date = new Date(response.timestamp);
                 this.historyTimestamp.textContent = this.formatDate(date);
             } else {
@@ -526,7 +522,7 @@ class OptionsPageManager {
                 action: 'youtube-timestamp'
             });
 
-            if (response && response.success && response.timestamp) {
+            if (response && response.success && response.timestamp !== null && response.timestamp !== 0) {
                 const date = new Date(response.timestamp);
                 this.youtubeTimestamp.textContent = this.formatDate(date);
             } else {

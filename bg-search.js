@@ -123,7 +123,7 @@ export const Search = {
         },
         objCookies: BackgroundUtils.cookies(),
         objContauth: BackgroundUtils.contauth(),
-        objYoulookup: function (objArgs, funcCallback) {
+        objYoulookup: async function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "3/4 - locating it in the history on youtube",
           });
@@ -139,12 +139,69 @@ export const Search = {
             objArgs.objYtctx = null;
           }
 
-          let objAjax = new XMLHttpRequest();
+          try {
+            let response;
 
-          objAjax.onload = function () {
+            if (
+              objArgs.strContinuation === null ||
+              objArgs.strClicktrack === null ||
+              objArgs.objYtcfg === null ||
+              objArgs.objYtctx === null
+            ) {
+              response = await fetch("https://www.youtube.com/feed/history");
+            } else if (
+              objArgs.strContinuation !== null &&
+              objArgs.strClicktrack !== null &&
+              objArgs.objYtcfg !== null &&
+              objArgs.objYtctx !== null
+            ) {
+              objArgs.objYtctx["client"]["screenWidthPoints"] = 1024;
+              objArgs.objYtctx["client"]["screenHeightPoints"] = 768;
+              objArgs.objYtctx["client"]["screenPixelDensity"] = 1;
+              objArgs.objYtctx["client"]["utcOffsetMinutes"] = -420;
+              objArgs.objYtctx["client"]["userInterfaceTheme"] =
+                "USER_INTERFACE_THEME_LIGHT";
+
+              objArgs.objYtctx["request"]["internalExperimentFlags"] = [];
+              objArgs.objYtctx["request"]["consistencyTokenJars"] = [];
+
+              response = await fetch(
+                "https://www.youtube.com/youtubei/v1/browse?key=" +
+                objArgs.objYtcfg["INNERTUBE_API_KEY"],
+                {
+                  method: "POST",
+                  headers: {
+                    "Authorization": objArgs.objContauth.strAuth,
+                    "Content-Type": "application/json",
+                    "X-Origin": "https://www.youtube.com",
+                    "X-Goog-AuthUser": "0",
+                    "X-Goog-PageId": objArgs.objYtcfg["DELEGATED_SESSION_ID"],
+                    "X-Goog-Visitor-Id": objArgs.objYtctx["client"]["visitorData"],
+                  },
+                  body: JSON.stringify({
+                    context: {
+                      client: objArgs.objYtctx["client"],
+                      request: objArgs.objYtctx["request"],
+                      user: {},
+                      clickTracking: {
+                        clickTrackingParams: objArgs.strClicktrack,
+                      },
+                    },
+                    continuation: objArgs.strContinuation,
+                  }),
+                }
+              );
+            }
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const responseText = await response.text();
+
             if (objArgs.objYtcfg === null) {
               objArgs.objYtcfg = funcHackyparse(
-                objAjax.responseText
+                responseText
                   .split("ytcfg.set(")
                   .find(function (strData) {
                     return strData.indexOf("INNERTUBE_API_KEY") !== -1;
@@ -155,7 +212,7 @@ export const Search = {
 
             if (objArgs.objYtctx === null) {
               objArgs.objYtctx = funcHackyparse(
-                objAjax.responseText.split('"INNERTUBE_CONTEXT":')[1],
+                responseText.split('"INNERTUBE_CONTEXT":')[1],
               );
             }
 
@@ -172,7 +229,7 @@ export const Search = {
               '"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"',
               "g",
             );
-            let strUnescaped = objAjax.responseText
+            let strUnescaped = responseText
               .split('\\"')
               .join("\\u0022")
               .split("\r")
@@ -204,73 +261,14 @@ export const Search = {
               });
             }
 
+            if (objArgs.strContinuation !== null) {
+              objArgs.strContinuation = null;
+            }
+
             return funcCallback({}, "objContauth");
-          };
-
-          if (
-            objArgs.strContinuation === null ||
-            objArgs.strClicktrack === null ||
-            objArgs.objYtcfg === null ||
-            objArgs.objYtctx === null
-          ) {
-            objAjax.open("GET", "https://www.youtube.com/feed/history");
-
-            objAjax.send();
-          } else if (
-            objArgs.strContinuation !== null &&
-            objArgs.strClicktrack !== null &&
-            objArgs.objYtcfg !== null &&
-            objArgs.objYtctx !== null
-          ) {
-            objAjax.open(
-              "POST",
-              "https://www.youtube.com/youtubei/v1/browse?key=" +
-              objArgs.objYtcfg["INNERTUBE_API_KEY"],
-            );
-
-            objAjax.setRequestHeader(
-              "Authorization",
-              objArgs.objContauth.strAuth,
-            );
-            objAjax.setRequestHeader("Content-Type", "application/json");
-            objAjax.setRequestHeader("X-Origin", "https://www.youtube.com");
-            objAjax.setRequestHeader("X-Goog-AuthUser", "0");
-            objAjax.setRequestHeader(
-              "X-Goog-PageId",
-              objArgs.objYtcfg["DELEGATED_SESSION_ID"],
-            );
-            objAjax.setRequestHeader(
-              "X-Goog-Visitor-Id",
-              objArgs.objYtctx["client"]["visitorData"],
-            );
-
-            objArgs.objYtctx["client"]["screenWidthPoints"] = 1024;
-            objArgs.objYtctx["client"]["screenHeightPoints"] = 768;
-            objArgs.objYtctx["client"]["screenPixelDensity"] = 1;
-            objArgs.objYtctx["client"]["utcOffsetMinutes"] = -420;
-            objArgs.objYtctx["client"]["userInterfaceTheme"] =
-              "USER_INTERFACE_THEME_LIGHT";
-
-            objArgs.objYtctx["request"]["internalExperimentFlags"] = [];
-            objArgs.objYtctx["request"]["consistencyTokenJars"] = [];
-
-            objAjax.send(
-              JSON.stringify({
-                context: {
-                  client: objArgs.objYtctx["client"],
-                  request: objArgs.objYtctx["request"],
-                  user: {},
-                  clickTracking: {
-                    clickTrackingParams: objArgs.strClicktrack,
-                  },
-                },
-                continuation: objArgs.strContinuation,
-              }),
-            );
-          }
-
-          if (objArgs.strContinuation !== null) {
-            objArgs.strContinuation = null;
+          } catch (error) {
+            console.error("Error in objYoulookup:", error);
+            return funcCallback(null);
           }
         },
         objFeedauth: function (objArgs, funcCallback) {
@@ -303,64 +301,60 @@ export const Search = {
               });
             });
         },
-        objYoudelete: function (objArgs, funcCallback) {
+        objYoudelete: async function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "4/4 - deleting it from the history on youtube",
           });
 
-          let objAjax = new XMLHttpRequest();
+          try {
+            objArgs.objYtctx["client"]["screenWidthPoints"] = 1024;
+            objArgs.objYtctx["client"]["screenHeightPoints"] = 768;
+            objArgs.objYtctx["client"]["screenPixelDensity"] = 1;
+            objArgs.objYtctx["client"]["utcOffsetMinutes"] = -420;
+            objArgs.objYtctx["client"]["userInterfaceTheme"] =
+              "USER_INTERFACE_THEME_LIGHT";
 
-          objAjax.onload = function () {
-            funcResponse({});
-          };
+            objArgs.objYtctx["request"]["internalExperimentFlags"] = [];
+            objArgs.objYtctx["request"]["consistencyTokenJars"] = [];
 
-          objAjax.open(
-            "POST",
-            "https://www.youtube.com/youtubei/v1/feedback?key=" +
-            objArgs.objYtcfg["INNERTUBE_API_KEY"],
-          );
-
-          objAjax.setRequestHeader(
-            "Authorization",
-            objArgs.objFeedauth.strAuth,
-          );
-          objAjax.setRequestHeader("Content-Type", "application/json");
-          objAjax.setRequestHeader("X-Origin", "https://www.youtube.com");
-          objAjax.setRequestHeader("X-Goog-AuthUser", "0");
-          objAjax.setRequestHeader(
-            "X-Goog-PageId",
-            objArgs.objYtcfg["DELEGATED_SESSION_ID"],
-          );
-          objAjax.setRequestHeader(
-            "X-Goog-Visitor-Id",
-            objArgs.objYtctx["client"]["visitorData"],
-          );
-
-          objArgs.objYtctx["client"]["screenWidthPoints"] = 1024;
-          objArgs.objYtctx["client"]["screenHeightPoints"] = 768;
-          objArgs.objYtctx["client"]["screenPixelDensity"] = 1;
-          objArgs.objYtctx["client"]["utcOffsetMinutes"] = -420;
-          objArgs.objYtctx["client"]["userInterfaceTheme"] =
-            "USER_INTERFACE_THEME_LIGHT";
-
-          objArgs.objYtctx["request"]["internalExperimentFlags"] = [];
-          objArgs.objYtctx["request"]["consistencyTokenJars"] = [];
-
-          objAjax.send(
-            JSON.stringify({
-              context: {
-                client: objArgs.objYtctx["client"],
-                request: objArgs.objYtctx["request"],
-                user: {},
-                clickTracking: {
-                  clickTrackingParams: objArgs.objYoulookup.strClicktrack,
+            const response = await fetch(
+              "https://www.youtube.com/youtubei/v1/feedback?key=" +
+              objArgs.objYtcfg["INNERTUBE_API_KEY"],
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": objArgs.objFeedauth.strAuth,
+                  "Content-Type": "application/json",
+                  "X-Origin": "https://www.youtube.com",
+                  "X-Goog-AuthUser": "0",
+                  "X-Goog-PageId": objArgs.objYtcfg["DELEGATED_SESSION_ID"],
+                  "X-Goog-Visitor-Id": objArgs.objYtctx["client"]["visitorData"],
                 },
-              },
-              feedbackTokens: [objArgs.objYoulookup.strFeedback],
-              isFeedbackTokenUnencrypted: false,
-              shouldMerge: false,
-            }),
-          );
+                body: JSON.stringify({
+                  context: {
+                    client: objArgs.objYtctx["client"],
+                    request: objArgs.objYtctx["request"],
+                    user: {},
+                    clickTracking: {
+                      clickTrackingParams: objArgs.objYoulookup.strClicktrack,
+                    },
+                  },
+                  feedbackTokens: [objArgs.objYoulookup.strFeedback],
+                  isFeedbackTokenUnencrypted: false,
+                  shouldMerge: false,
+                }),
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            funcResponse({});
+          } catch (error) {
+            console.error("Error in objYoudelete:", error);
+            funcResponse({});
+          }
         },
       },
       createResponseCallback(() => { }, funcResponse),

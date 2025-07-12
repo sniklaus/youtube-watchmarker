@@ -587,7 +587,9 @@ class ExtensionManager {
   async getHistoryTimestamp(callback) {
     try {
       const timestamp = await getStorageAsync("extensions.Youwatch.History.intTimestamp");
-      callback({ success: true, timestamp: timestamp ? parseInt(timestamp) : null });
+      const parsedTimestamp = timestamp ? parseInt(timestamp) : null;
+      // Return null if timestamp is 0 (never synchronized) or null
+      callback({ success: true, timestamp: parsedTimestamp && parsedTimestamp !== 0 ? parsedTimestamp : null });
     } catch (error) {
       console.error("Error getting history timestamp:", error);
       callback({ success: false, error: error.message });
@@ -601,7 +603,9 @@ class ExtensionManager {
   async getYoutubeTimestamp(callback) {
     try {
       const timestamp = await getStorageAsync("extensions.Youwatch.Youtube.intTimestamp");
-      callback({ success: true, timestamp: timestamp ? parseInt(timestamp) : null });
+      const parsedTimestamp = timestamp ? parseInt(timestamp) : null;
+      // Return null if timestamp is 0 (never synchronized) or null
+      callback({ success: true, timestamp: parsedTimestamp && parsedTimestamp !== 0 ? parsedTimestamp : null });
     } catch (error) {
       console.error("Error getting YouTube timestamp:", error);
       callback({ success: false, error: error.message });
