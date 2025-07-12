@@ -38,41 +38,50 @@
       
       /* Dark theme support for search results */
       [data-bs-theme="dark"] .table-dark {
-        --bs-table-bg: var(--bs-gray-800);
-        --bs-table-color: var(--bs-light);
+        --bs-table-bg: var(--color-bg-secondary);
+        --bs-table-color: var(--color-text-primary);
       }
       
       [data-bs-theme="dark"] .table-secondary {
-        --bs-table-bg: var(--bs-gray-700);
-        --bs-table-color: var(--bs-light);
-        background-color: var(--bs-gray-700) !important;
-        color: var(--bs-light) !important;
+        --bs-table-bg: var(--color-bg-tertiary);
+        --bs-table-color: var(--color-text-primary);
+        background-color: var(--color-bg-tertiary) !important;
+        color: var(--color-text-primary) !important;
       }
       
       [data-bs-theme="dark"] .table thead th {
-        background-color: var(--bs-gray-700) !important;
-        color: var(--bs-light) !important;
-        border-color: var(--bs-gray-600) !important;
+        background-color: var(--color-bg-secondary) !important;
+        color: var(--color-text-primary) !important;
+        border-color: var(--color-border) !important;
       }
       
       [data-bs-theme="dark"] .search-result-item:hover {
-        background-color: var(--bs-gray-700);
+        background-color: var(--color-bg-tertiary);
+      }
+      
+      /* Enhanced dark theme body styling */
+      [data-bs-theme="dark"] .bg-body-tertiary {
+        background-color: var(--color-bg-primary) !important;
+      }
+      
+      [data-bs-theme="dark"] .container {
+        color: var(--color-text-primary);
       }
       
       /* Search card height and styling */
       .search-results {
-        min-height: 600px;
-        max-height: 85vh;
-        overflow-y: auto;
+        min-height: 800px;
+        max-height: none;
+        overflow-y: visible;
       }
       
       .search-card {
-        min-height: 700px;
+        min-height: 900px;
       }
       
       .table-responsive {
-        max-height: 75vh;
-        overflow-y: auto;
+        max-height: none;
+        overflow-y: visible;
       }
       
       /* Pagination styling */
@@ -82,26 +91,32 @@
       }
       
       .pagination .page-item button.page-link {
-        background-color: transparent;
-        border: 1px solid var(--bs-border-color);
-        color: var(--bs-link-color);
+        background-color: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        color: var(--color-primary);
+        transition: all var(--transition-fast);
       }
       
       .pagination .page-item button.page-link:hover:not(:disabled) {
-        background-color: var(--bs-primary);
-        border-color: var(--bs-primary);
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
         color: white;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
       }
       
       .pagination .page-item.active button.page-link {
-        background-color: var(--bs-primary);
-        border-color: var(--bs-primary);
+        background: var(--gradient-primary);
+        border-color: var(--color-primary);
         color: white;
+        box-shadow: var(--shadow-sm);
       }
       
       .pagination .page-item button.page-link:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        background-color: var(--color-bg-tertiary);
+        color: var(--color-text-muted);
       }
       
       /* Animation for search results */
@@ -227,7 +242,7 @@
                   <hr class="my-3">
                   <h3 class="h6 mb-2">YouTube Account</h3>
                   <p class="text-muted small mb-3">
-                    Sync with your YouTube account for cross-device compatibility. Updates automatically every hour.
+                    YouTube Account - Sync with your YouTube account for cross-device compatibility. Updates automatically every hour.
                   </p>
                   <button class="btn btn-success btn-sm w-100" id="idYoutube_Synchronize" type="button">
                     <i class="fab fa-youtube me-2"></i>Synchronize YouTube
