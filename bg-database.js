@@ -12,7 +12,7 @@ export const Database = {
     Node.series(
       {
         objOpen: function (objArgs, funcCallback) {
-          let objOpen = window.indexedDB.open("Database", 401);
+          let objOpen = indexedDB.open("Database", 401);
 
           objOpen.onupgradeneeded = function () {
             let objStore = null;
@@ -188,3 +188,6 @@ export const Database = {
     );
   },
 };
+
+// Make Database available globally to avoid circular dependency issues
+globalThis.Database = Database;

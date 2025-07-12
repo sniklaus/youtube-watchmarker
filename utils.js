@@ -1,5 +1,3 @@
-import { Database } from "./bg-database.js";
-
 console.log("utils.js: file loaded");
 export const funcBrowser = function () {
   if (typeof browser !== "undefined") {
@@ -83,18 +81,8 @@ export const setDefaultInLocalStorageIfNullAsync = async function (key, defaultV
 
 export const getStorageAsync = function (key) {
   return new Promise((resolve, reject) => {
-    // Check localStorage first (synchronous) for legacy support
-    const localValue = window.localStorage.getItem(key);
 
-    if (localValue !== null) {
-      // Migrate to chrome.storage.local and return the value
-      setStorageAsync(key, localValue)
-        .then(() => {
-          window.localStorage.removeItem(key);
-          resolve(localValue);
-        })
-        .catch(reject);
-    } else {
+    {
       // No localStorage value, check chrome.storage.local
       chrome.storage.local.get([key], (result) => {
         if (chrome.runtime.lastError) {
@@ -212,6 +200,11 @@ export const bgObject = {
     return funcCallback({});
   },
   database: () => (objArgs, funcCallback) => {
+    // Access the global Database instance that should be set by bg-database.js
+    const Database = globalThis.Database;
+    if (!Database || !Database.objDatabase) {
+      throw new Error("Database not initialized or not available");
+    }
     return funcCallback(
       Database.objDatabase
         .transaction(["storeDatabase"], "readwrite")
