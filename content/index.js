@@ -31,6 +31,16 @@ jQuery(window.document).ready(function() {
         ;
     });
 
+    jQuery('[data-bs-toggle="tab"]').on('click', function(e) {
+        e.preventDefault();
+        
+        jQuery('.nav-link').removeClass('active');
+        jQuery('.tab-pane').removeClass('show active');
+        
+        jQuery(this).addClass('active');
+        jQuery(jQuery(this).attr('data-bs-target')).addClass('show active');
+    });
+
     jQuery('#idDatabase_Export')
         .on('click', function() {
             jQuery('#idLoading_Container')
@@ -714,141 +724,160 @@ jQuery(window.document).ready(function() {
             if (jQuery('#idSearch_Lookup').data('intSkip') === 0) {
                 jQuery('#idSearch_Results')
                     .empty()
-                    .append(jQuery('<table></table>')
-                        .addClass('table')
-                        .addClass('table-sm')
+                    .css({
+                        'display': 'flex',
+                        'flex-direction': 'column',
+                        'gap': '16px'
+                    })
+                ;
+            }
+
+            for (let objVideo of objData.objResponse.objVideos) {
+                jQuery('#idSearch_Results')
+                    .append(jQuery('<div></div>')
                         .css({
-                            'margin': '0px'
+                            'display': 'flex',
+                            'background': 'var(--bs-body-bg)',
+                            'border': '1px solid var(--bs-border-color)',
+                            'border-radius': '8px',
+                            'padding': '12px',
+                            'gap': '12px',
+                            'align-items': 'flex-start'
                         })
-                        .append(jQuery('<thead></thead>')
-                            .append(jQuery('<tr></tr>')
-                                .append(jQuery('<th></th>')
+                        .append(jQuery('<div></div>')
+                            .css({
+                                'flex-shrink': '0',
+                                'width': '168px',
+                                'height': '94px',
+                                'background': '#f0f0f0',
+                                'border-radius': '8px',
+                                'position': 'relative',
+                                'overflow': 'hidden'
+                            })
+                            .append(jQuery('<img>')
+                                .attr({
+                                    'src': 'https://img.youtube.com/vi/' + objVideo.strIdent + '/mqdefault.jpg',
+                                    'alt': 'Video thumbnail'
+                                })
+                                .css({
+                                    'width': '100%',
+                                    'height': '100%',
+                                    'object-fit': 'cover'
+                                })
+                            )
+                            .append(jQuery('<a></a>')
+                                .attr({
+                                    'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent,
+                                    'target': '_blank'
+                                })
+                                .css({
+                                    'position': 'absolute',
+                                    'top': '0',
+                                    'left': '0',
+                                    'width': '100%',
+                                    'height': '100%',
+                                    'text-decoration': 'none'
+                                })
+                            )
+                        )
+                        .append(jQuery('<div></div>')
+                            .css({
+                                'flex': '1',
+                                'min-width': '0'
+                            })
+                            .append(jQuery('<div></div>')
+                                .css({
+                                    'font-weight': '500',
+                                    'font-size': '16px',
+                                    'line-height': '1.3',
+                                    'margin-bottom': '4px',
+                                    'color': 'var(--bs-body-color)'
+                                })
+                                .append(jQuery('<a></a>')
                                     .attr({
-                                        'width': '1%'
-                                    })
-                                    .text('Time')
-                                )
-                                .append(jQuery('<th></th>')
-                                    .text('Title')
-                                )
-                                .append(jQuery('<th></th>')
-                                    .attr({
-                                        'width': '1%'
+                                        'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent,
+                                        'target': '_blank'
                                     })
                                     .css({
-                                        'text-align': 'right'
+                                        'text-decoration': 'none',
+                                        'color': 'inherit'
                                     })
-                                    .text('Visits')
+                                    .text(objVideo.strTitle)
                                 )
-                                .append(jQuery('<th></th>')
-                                    .attr({
-                                        'width': '1%'
-                                    })
+                            )
+                            .append(jQuery('<div></div>')
+                                .css({
+                                    'font-size': '13px',
+                                    'color': 'var(--bs-secondary-color)',
+                                    'margin-bottom': '4px'
+                                })
+                                .text(moment(objVideo.intTimestamp).format('MMM D, YYYY, HH:mm:ss'))
+                            )
+                            .append(jQuery('<div></div>')
+                                .css({
+                                    'font-size': '13px',
+                                    'color': 'var(--bs-secondary-color)',
+                                    'display': 'flex',
+                                    'gap': '12px'
+                                })
+                                .append(jQuery('<span></span>')
+                                    .text(`${objVideo.intCount} View${objVideo.intCount==1?'':'s'}`)
                                 )
                             )
                         )
-                        .append(jQuery('<tbody></tbody>'))
+                        .append(jQuery('<div></div>')
+                            .css({
+                                'flex-shrink': '0',
+                                'padding': '4px'
+                            })
+                            .append(jQuery('<button></button>')
+                                .addClass('btn btn-sm btn-outline-danger')
+                                .css({
+                                    'border': 'none',
+                                    'background': 'transparent',
+                                    'color': 'var(--bs-secondary-color)',
+                                    'padding': '4px 8px'
+                                })
+                                .append(jQuery('<i></i>')
+                                    .addClass('fa-regular fa-trash-can')
+                                )
+                                .data({
+                                    'strIdent': objVideo.strIdent
+                                })
+                                .on('click', function() {
+                                    jQuery('#idLoading_Container')
+                                        .css({
+                                            'display': 'block'
+                                        })
+                                    ;
+
+                                    jQuery('#idLoading_Message')
+                                        .text('deleting video')
+                                    ;
+
+                                    jQuery('#idLoading_Progress')
+                                        .text('...')
+                                    ;
+
+                                    jQuery('#idLoading_Close')
+                                        .addClass('disabled')
+                                    ;
+
+                                    objSearch.postMessage({
+                                        'strMessage': 'searchDelete',
+                                        'objRequest': {
+                                            'strIdent': jQuery(this).data('strIdent')
+                                        }
+                                    });
+                                })
+                            )
+                        )
                     )
                 ;
             }
 
-            jQuery('#idSearch_Results').find('tbody')
-                .each(function() {
-                    for (let objVideo of objData.objResponse.objVideos) {
-                        jQuery(this)
-                            .append(jQuery('<tr></tr>')
-                                .append(jQuery('<td></td>')
-                                    .append(jQuery('<div></div>')
-                                        .css({
-                                            'white-space': 'nowrap'
-                                        })
-                                        .text(moment(objVideo.intTimestamp).format('YYYY.MM.DD - HH:mm'))
-                                    )
-                                )
-                                .append(jQuery('<td></td>')
-                                    .css({
-                                        'position': 'relative'
-                                    })
-                                    .append(jQuery('<div></div>')
-                                        .css({
-                                            'left': '8px',
-                                            'overflow': 'hidden',
-                                            'position': 'absolute',
-                                            'right': '-8px',
-                                            'text-overflow': 'ellipsis',
-                                            'white-space': 'nowrap'
-                                        })
-                                        .append(jQuery('<a></a>')
-                                            .attr({
-                                                'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent
-                                            })
-                                            .css({
-                                                'text-decoration': 'none'
-                                            })
-                                            .text(objVideo.strTitle)
-                                        )
-                                    )
-                                )
-                                .append(jQuery('<td></td>')
-                                    .append(jQuery('<div></div>')
-                                        .css({
-                                            'white-space': 'nowrap',
-                                            'text-align': 'right'
-                                        })
-                                        .text(objVideo.intCount)
-                                    )
-                                )
-                                .append(jQuery('<td></td>')
-                                    .append(jQuery('<div></div>')
-                                        .css({
-                                            'white-space': 'nowrap'
-                                        })
-                                        .append(jQuery('<a></a>')
-                                            .addClass('fa-regular')
-                                            .addClass('fa-trash-can')
-                                            .css({
-                                                'cursor': 'pointer'
-                                            })
-                                            .data({
-                                                'strIdent': objVideo.strIdent
-                                            })
-                                            .on('click', function() {
-                                                jQuery('#idLoading_Container')
-                                                    .css({
-                                                        'display': 'block'
-                                                    })
-                                                ;
-
-                                                jQuery('#idLoading_Message')
-                                                    .text('deleting video')
-                                                ;
-
-                                                jQuery('#idLoading_Progress')
-                                                    .text('...')
-                                                ;
-
-                                                jQuery('#idLoading_Close')
-                                                    .addClass('disabled')
-                                                ;
-
-                                                objSearch.postMessage({
-                                                    'strMessage': 'searchDelete',
-                                                    'objRequest': {
-                                                        'strIdent': jQuery(this).data('strIdent')
-                                                    }
-                                                });
-                                            })
-                                        )
-                                    )
-                                )
-                            )
-                        ;
-                    }
-                })
-            ;
-
             if (objData.objResponse.objVideos.length === 10) {
-                jQuery('#idSearch_Results').find('tr:last')
+                jQuery('#idSearch_Results').children().last()
                     .each(function() {
                         new IntersectionObserver(function(objEntries, objObserver) {
                             if (objEntries[0].isIntersecting === true) {
