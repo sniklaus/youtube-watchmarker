@@ -398,25 +398,107 @@ class OptionsPageManager {
             return;
         }
 
-        const html = results.map(result => `
-            <div class="card mb-2">
-                <div class="card-body">
-                    <h6 class="card-title">${this.escapeHtml(result.title)}</h6>
-                    <p class="card-text">
-                        <small class="text-muted">
-                            Watched: ${this.formatDate(new Date(result.timestamp))} 
-                            (${result.count} time${result.count !== 1 ? 's' : ''})
-                        </small>
-                    </p>
-                    <a href="https://www.youtube.com/watch?v=${result.id}" 
-                       class="btn btn-sm btn-primary" target="_blank">
-                        Watch Again
-                    </a>
-                </div>
-            </div>
-        `).join('');
+        // Create table structure matching the original design
+        const html = `
+            <table class="table table-hover" style="font-size: 14px;">
+                <thead>
+                    <tr>
+                        <th style="width: 200px;">Time</th>
+                        <th>Title</th>
+                        <th style="width: 80px; text-align: center;">Visits</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${results.map(result => `
+                        <tr>
+                            <td style="font-family: monospace; font-size: 12px; color: #666;">
+                                ${this.formatDateForTable(new Date(result.timestamp))}
+                            </td>
+                            <td>
+                                <a href="https://www.youtube.com/watch?v=${result.id}" 
+                                   target="_blank" 
+                                   style="color: #4285f4; text-decoration: none;">
+                                    ${this.escapeHtml(result.title)}
+                                </a>
+                            </td>
+                            <td style="text-align: center; font-weight: bold;">
+                                ${result.count}
+                            </td>
+                            <td style="text-align: center;">
+                                <button class="btn btn-sm btn-outline-danger delete-video-btn" 
+                                        data-video-id="${result.id}"
+                                        title="Delete video">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
 
         searchResults.innerHTML = html;
+        
+        // Add event listeners for delete buttons
+        const deleteButtons = searchResults.querySelectorAll('.delete-video-btn');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const videoId = e.currentTarget.getAttribute('data-video-id');
+                this.deleteVideo(videoId);
+            });
+        });
+    }
+
+    /**
+     * Delete a video from the database
+     * @param {string} videoId - Video ID to delete
+     */
+    async deleteVideo(videoId) {
+        if (!confirm('Are you sure you want to delete this video from your watch history?')) {
+            return;
+        }
+
+        try {
+            this.showLoading('Deleting video...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'search-delete',
+                videoId: videoId
+            });
+
+            if (response && response.success) {
+                this.showSuccess('Video deleted successfully');
+                // Refresh the search results
+                await this.performSearch();
+            } else {
+                this.showError('Failed to delete video');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            this.showError('Delete error: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Format date for table display (matching original format)
+     * @param {Date} date - Date to format
+     * @returns {string} Formatted date string
+     */
+    formatDateForTable(date) {
+        if (!date || isNaN(date.getTime())) {
+            return 'Invalid Date';
+        }
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}.${month}.${day} - ${hours}:${minutes}`;
     }
 
     /**

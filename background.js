@@ -244,6 +244,19 @@ class ExtensionManager {
               }
             });
           },
+          "search-delete": (req, res) => {
+            const deleteRequest = { strIdent: req.videoId };
+            Search.delete(deleteRequest, (response) => {
+              if (response) {
+                res({ success: true });
+              } else {
+                res({ success: false, error: "Delete failed" });
+              }
+            }, (progress) => {
+              // Progress callback - could be used for loading updates
+              console.log("Delete progress:", progress);
+            });
+          },
           
           // Timestamp actions
           "history-timestamp": (req, res) => {
