@@ -569,8 +569,10 @@ class OptionsPageManager {
             // Revert radio button selection
             if (provider === 'supabase') {
                 this.providerIndexedDB.checked = true;
+                this.providerSupabase.checked = false;
                 this.supabaseConfig.classList.add('d-none');
             } else {
+                this.providerIndexedDB.checked = false;
                 this.providerSupabase.checked = true;
             }
         }
@@ -764,6 +766,7 @@ class OptionsPageManager {
                 
                 // Switch back to IndexedDB UI and actually switch
                 this.providerIndexedDB.checked = true;
+                this.providerSupabase.checked = false;
                 this.supabaseConfig.classList.add('d-none');
                 await this.actuallySwitchProvider('indexeddb');
             } else {
@@ -1398,14 +1401,24 @@ class OptionsPageManager {
                 const status = response.status;
                 console.log('Current provider status:', status);
                 
-                // Update provider radio buttons
+                // Update provider radio buttons based on actual provider type
                 if (status.type === 'indexeddb') {
                     this.providerIndexedDB.checked = true;
+                    this.providerSupabase.checked = false;
                     this.supabaseConfig.classList.add('d-none');
+                    console.log('Set UI to IndexedDB provider');
                 } else if (status.type === 'supabase') {
+                    this.providerIndexedDB.checked = false;
                     this.providerSupabase.checked = true;
                     this.supabaseConfig.classList.remove('d-none');
                     await this.loadSupabaseConfig();
+                    console.log('Set UI to Supabase provider');
+                } else {
+                    // Default to IndexedDB if provider type is null or unknown
+                    console.log('Unknown provider type, defaulting to IndexedDB');
+                    this.providerIndexedDB.checked = true;
+                    this.providerSupabase.checked = false;
+                    this.supabaseConfig.classList.add('d-none');
                 }
                 
                 // Load auto-sync setting
@@ -1414,11 +1427,16 @@ class OptionsPageManager {
                 console.log('Auto-sync status loaded:', this.enableAutoSync.checked);
             } else {
                 console.warn('Failed to get provider status:', response?.error);
+                // Default to IndexedDB on error
+                this.providerIndexedDB.checked = true;
+                this.providerSupabase.checked = false;
+                this.supabaseConfig.classList.add('d-none');
             }
         } catch (error) {
             console.error('Error updating provider status:', error);
             // Default to IndexedDB on error
             this.providerIndexedDB.checked = true;
+            this.providerSupabase.checked = false;
             this.supabaseConfig.classList.add('d-none');
         }
     }

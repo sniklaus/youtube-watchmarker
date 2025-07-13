@@ -353,9 +353,10 @@ export class DatabaseProviderFactory {
 
   /**
    * Switch to IndexedDB provider
+   * @param {boolean} savePreference - Whether to save this as user preference (default: true)
    * @returns {Promise<boolean>} Success status
    */
-  async switchToIndexedDB() {
+  async switchToIndexedDB(savePreference = true) {
     try {
       console.log('Switching to IndexedDB provider...');
       
@@ -373,10 +374,12 @@ export class DatabaseProviderFactory {
       this.currentProvider = this.indexedDBProvider;
       this.providerType = 'indexeddb';
 
-      // Store provider preference
-      await chrome.storage.local.set({ 
-        database_provider: 'indexeddb' 
-      });
+      // Store provider preference only if requested
+      if (savePreference) {
+        await chrome.storage.local.set({ 
+          database_provider: 'indexeddb' 
+        });
+      }
 
       console.log('Successfully switched to IndexedDB provider');
       return true;
@@ -433,7 +436,7 @@ export class DatabaseProviderFactory {
       // If we failed to switch, make sure we fall back to IndexedDB
       if (this.providerType !== 'indexeddb') {
         console.log('Falling back to IndexedDB provider');
-        await this.switchToIndexedDB();
+        await this.switchToIndexedDB(false); // Don't save preference when falling back
       }
       
       throw error; // Re-throw to let the caller handle the error message
@@ -454,23 +457,27 @@ export class DatabaseProviderFactory {
 
       // Try to initialize the saved provider
       if (savedProvider === 'supabase') {
-        const success = await this.switchToSupabase();
-        if (success) {
-          return true;
+        try {
+          const success = await this.switchToSupabase();
+          if (success) {
+            return true;
+          }
+        } catch (error) {
+          console.log('Supabase initialization failed, falling back to IndexedDB');
         }
         
-        // Fall back to IndexedDB if Supabase fails
-        console.log('Supabase initialization failed, falling back to IndexedDB');
+        // Fall back to IndexedDB if Supabase fails, but don't save preference
+        return await this.switchToIndexedDB(false);
       }
 
-      // Default to IndexedDB
-      return await this.switchToIndexedDB();
+      // Default to IndexedDB (save preference since this is the default)
+      return await this.switchToIndexedDB(true);
     } catch (error) {
       console.error('Failed to initialize database factory:', error);
       
       // Emergency fallback to IndexedDB
       try {
-        return await this.switchToIndexedDB();
+        return await this.switchToIndexedDB(false); // Don't save preference during emergency fallback
       } catch (fallbackError) {
         console.error('Emergency fallback failed:', fallbackError);
         return false;
