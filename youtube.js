@@ -19,6 +19,7 @@ class YouTubeWatchMarker {
     this.markVideo = this.markVideo.bind(this);
     this.observeVideo = this.observeVideo.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
+    this.handleProgressHookEvent = this.handleProgressHookEvent.bind(this);
     this.setupTooltips = this.setupTooltips.bind(this);
     this.extractPublishDate = this.extractPublishDate.bind(this);
     this.createCustomTooltip = this.createCustomTooltip.bind(this);
@@ -41,6 +42,11 @@ class YouTubeWatchMarker {
     
     // Listen for messages from background script
     chrome.runtime.onMessage.addListener(this.handleMessage);
+    
+    // Listen for progress hook events
+    document.addEventListener('youwatch-progresshook', (event) => {
+      this.handleProgressHookEvent(event);
+    });
     
     // Listen for storage changes to update tooltip settings
     chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -927,6 +933,40 @@ class YouTubeWatchMarker {
           videosWithId.forEach(video => this.markVideo(video, response.strIdent));
           
           console.log("Video marked as watched from rating:", videoId);
+        }
+      }
+    );
+  }
+
+  /**
+   * Handle progress hook events from injected script
+   * @param {CustomEvent} event - Progress hook event
+   */
+  handleProgressHookEvent(event) {
+    const { strIdent, strTitle } = event.detail;
+    
+    if (!strIdent || strIdent.length !== 11) {
+      return;
+    }
+    
+    console.log("Progress hook detected watched video:", strIdent, strTitle);
+    
+    // Mark video as watched
+    chrome.runtime.sendMessage(
+      {
+        action: "youtube-ensure",
+        videoId: strIdent,
+        title: strTitle,
+      },
+      (response) => {
+        if (response && response.strIdent) {
+          this.watchDates[response.strIdent] = response.intTimestamp;
+          
+          // Mark all videos with this ID on current page
+          const videosWithId = this.findVideos(response.strIdent);
+          videosWithId.forEach(video => this.markVideo(video, response.strIdent));
+          
+          console.log("Video marked as watched from progress hook:", strIdent);
         }
       }
     );

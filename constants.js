@@ -3,7 +3,7 @@
  * Centralizes all magic numbers, storage keys, and configuration values
  * 
  * @fileoverview Centralized constants for the YouTube Watchmarker extension
- * @author YouTube Watchmarker Team
+ * @author WiDiKe
  * @version 1.0.0
  */
 
@@ -49,12 +49,12 @@ export const DATABASE = {
 // Storage Keys
 export const STORAGE_KEYS = {
   // Settings
-  SETTINGS_PREFIX: "extensions.Youwatch.",
+  SETTINGS_PREFIX: "id",
   
   // Timestamps
-  HISTORY_TIMESTAMP: "extensions.Youwatch.History.intTimestamp",
-  YOUTUBE_TIMESTAMP: "extensions.Youwatch.Youtube.intTimestamp", 
-  LIKED_TIMESTAMP: "extensions.Youwatch.Liked.intTimestamp",
+  HISTORY_TIMESTAMP: "historyTimestamp",
+  YOUTUBE_TIMESTAMP: "youtubeWatchHistoryTimestamp", 
+  LIKED_TIMESTAMP: "youtubeLikedTimestamp",
   
   // Sync Configuration
   SYNC_ENABLED: "sync_enabled",

@@ -134,6 +134,42 @@
         pointer-events: none;
         opacity: 0.6;
       }
+      
+      /* Popup-specific styling */
+      @media (max-width: 800px) {
+        body {
+          min-width: 600px;
+          min-height: 500px;
+        }
+        
+        .container {
+          max-width: 100%;
+          padding: 0.5rem;
+        }
+        
+        header {
+          padding: 1rem 0;
+          margin-bottom: 1rem;
+        }
+        
+        .card {
+          margin-bottom: 1rem;
+        }
+        
+        .card-body {
+          padding: 1rem;
+        }
+        
+        .search-results {
+          min-height: 300px;
+          max-height: 400px;
+          overflow-y: auto;
+        }
+        
+        .search-card {
+          min-height: 400px;
+        }
+      }
     </style>
     
     <!-- Main JavaScript Module -->

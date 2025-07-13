@@ -665,11 +665,13 @@ class ExtensionManager {
           return;
         }
 
-        const shouldTrackNavigation = await getStorageAsync(
-          "extensions.Youwatch.Condition.boolBrownav"
-        );
+        const shouldTrackNavigation = await new Promise((resolve) => {
+          chrome.storage.sync.get(['idCondition_Brownav'], (result) => {
+            resolve(result.idCondition_Brownav === true);
+          });
+        });
         
-        if (shouldTrackNavigation === "true") {
+        if (shouldTrackNavigation) {
           await this.handleTabNavigation(tabId, changeInfo, tab);
         }
       } catch (error) {
@@ -784,11 +786,13 @@ class ExtensionManager {
    * @param {Function} callback - Callback function
    */
   async setupRequestHook() {
-    const shouldTrackProgress = await getStorageAsync(
-      "extensions.Youwatch.Condition.boolYouprog"
-    );
+    const shouldTrackProgress = await new Promise((resolve) => {
+      chrome.storage.sync.get(['idCondition_Youprog'], (result) => {
+        resolve(result.idCondition_Youprog === true);
+      });
+    });
     
-    if (shouldTrackProgress === "true") {
+    if (shouldTrackProgress) {
       chrome.webRequest.onSendHeaders.addListener(
         (details) => this.handleProgressRequest(details),
         { urls: ["https://www.youtube.com/api/stats/watchtime*"] }

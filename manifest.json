@@ -33,7 +33,7 @@
         "*://www.youtube.com/*",
         "*://m.youtube.com/*"
       ],
-      "js": ["youtube.js"]
+      "js": ["content/progress-hook.js", "youtube.js"]
     }
   ],
   
@@ -46,7 +46,8 @@
     "default_title": "Watchmarker for Youtube",
     "default_icon": {
       "72": "content/icon.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   
   "icons": {

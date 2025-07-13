@@ -396,7 +396,7 @@ export class BackgroundUtils {
 
       query.onsuccess = async () => {
         await setStorageAsync(
-          "extensions.Youwatch.Database.intSize",
+          "databaseSize",
           String(query.result)
         );
         return callback({});
