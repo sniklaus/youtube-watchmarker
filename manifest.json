@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Watchmarker for Youtube",
-  "description": "Automatically mark videos on Youtube that you have already watched.",
-  "homepage_url": "https://sniklaus.com/",
+  "description": "A fork of the original Youtube Watchmarker, now with manifest v3 and supabase remote sync",
+  "homepage_url": "https://github.com/widike/youtube-watchmarker",
   "version": "1.0.0",
   
   "permissions": [

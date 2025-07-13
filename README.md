@@ -1,66 +1,121 @@
-# youtube-watchmarker
+# YouTube Watchmarker Reloaded
 
 YouTube keeps track of your watch history and automatically marks videos that you have already watched. However, they only mark recently seen videos, which is kind of disappointing. This extension fixes this issue and keeps track of your entire watch history, such that not only the recently seen videos are being marked.
 
 ## Installation
 
-Currently, only a manual installation of the unpacked source code is supported. This fork has only been tested on Chrome browser.
+Currently, only manual installation of the unpacked source code is supported. This extension has been tested on Chrome/Chromium browsers and has Firefox compatibility with some limitations.
 
-## Features
+## Current Features
 
 ### Core Functionality
 - **Complete Watch History Tracking**: Marks all previously watched videos, not just recent ones
 - **Multiple Data Sources**: Integrates browser history, YouTube watch history, and liked videos
-- **Visual Indicators**: Customizable visual markers for watched videos (fade-out, gray-out, badges, dates)
+- **Real-time Detection**: Automatically detects when videos are watched through multiple methods
 - **Search & Management**: Built-in search functionality to find and manage your watch history
+- **Video Management**: Delete individual videos from your watch history
 
-### Synchronization & Backup
-- **Chrome Storage Sync**: Automatic cross-device synchronization for Chrome users (up to 100KB)
+### Visual Customization
+- **Fade Out**: Reduce opacity of watched video thumbnails
+- **Grayscale**: Convert watched video thumbnails to grayscale
+- **Watch Badge**: Display "WATCHED" badge on marked videos
+- **Watch Date**: Show the date when video was watched in the badge
+- **Hide Progress Bar**: Hide YouTube's default progress bars on watched videos
+- **Publication Date Tooltips**: Show video publication dates on hover
+
+### Watch Detection Methods
+- **Browser Navigation**: Mark videos when opened in browser
+- **Browser History**: Sync from browser's history data
+- **YouTube Progress**: Detect when video progress is reported to YouTube
+- **YouTube Badge**: Recognize YouTube's native watched indicators
+- **YouTube History**: Sync from YouTube's watch history
+- **Video Rating**: Mark videos when liked or disliked
+
+### Data Storage & Backup
+- **Local Storage**: IndexedDB for primary data storage with proper indexing
+- **Supabase Integration**: Optional cloud database storage via PostgreSQL
 - **Manual Export/Import**: JSON-based backup and restore functionality
-- **Data Merging**: Intelligent conflict resolution when syncing across devices
-- **Multiple Sync Sources**: Browser history, YouTube history, and liked videos synchronization
+- **Data Migration**: Transfer data between local and cloud storage
+- **Bidirectional Sync**: Merge data between IndexedDB and Supabase
 
-### Modern UI
-- **Responsive Design**: Modern, mobile-friendly interface
+### User Interface
+- **Modern Design**: Responsive, mobile-friendly interface built with Bootstrap
 - **Dark/Light Theme**: Automatic theme switching with system preferences
+- **Options Page**: Comprehensive settings management
+- **Popup Search**: Quick search interface accessible from browser toolbar
 - **Real-time Updates**: Live status indicators and progress reporting
 - **Accessibility**: ARIA labels and keyboard navigation support
 
-## Development
+## Technical Architecture
 
-This extension has been completely modernized with contemporary JavaScript practices and patterns:
-
-### Technical Stack
-
+### Modern Stack
 - **Manifest V3**: Latest Chrome extension standard
 - **ES6+ Modules**: Modern JavaScript with imports/exports
-- **Service Worker**: Background script using the latest APIs
-- **IndexedDB**: Local database storage with proper indexing
-- **Chrome Storage API**: Cross-device synchronization capabilities
+- **Service Worker**: Background script using latest APIs
+- **IndexedDB**: Local database with proper indexing and transactions
+- **PostgREST API**: Direct PostgreSQL access via Supabase
 
-### Architecture
-
-The extension follows a modular, class-based architecture:
-
+### Code Structure
 - **`background.js`** - Main extension service worker with `ExtensionManager` class
-- **`bg-database.js`** - Database operations with `DatabaseManager` and `SyncManager` classes
+- **`bg-database.js`** - Database operations with `DatabaseManager` class
 - **`bg-history.js`** - Browser history synchronization module
 - **`bg-youtube.js`** - YouTube API integration and data fetching
 - **`bg-search.js`** - Search functionality and video management
-- **`youtube.js`** - Content script with `YouTubeWatchMarker` class for page interaction
+- **`bg-sync-manager.js`** - Automatic synchronization management
+- **`youtube.js`** - Content script with `YouTubeWatchMarker` class
 - **`content/index.js`** - Options page with `OptionsPageManager` class
-- **`utils.js`** - Shared utilities and helper functions
+- **`supabase-database-provider.js`** - Supabase cloud database integration
+- **`database-provider-factory.js`** - Database provider switching logic
 
-### Code Quality
+### Database Schema
+```javascript
+{
+  strIdent: "video_id",           // YouTube video ID (11 characters)
+  intTimestamp: 1234567890,       // Last watched timestamp (Unix time)
+  strTitle: "Video Title",        // Video title
+  intCount: 1                     // View count
+}
+```
 
-- **Modern JavaScript**: Arrow functions, destructuring, template literals, async/await
-- **Type Safety**: Comprehensive JSDoc annotations for better IDE support
-- **Error Handling**: Robust try/catch blocks and error propagation
-- **Memory Management**: Proper cleanup of observers and event listeners
-- **Performance**: Optimized DOM queries and batch processing
+## Browser Compatibility
 
-### Development Commands
+- **Chrome/Chromium**: Full support with all features
+- **Firefox**: Core functionality supported, Supabase sync requires manual setup
+- **Edge**: Full Chrome compatibility expected
+- **Safari**: Not currently supported
 
+## Storage Options
+
+### Local Storage (IndexedDB)
+- **Default option**: Works offline, no configuration required
+- **Fast performance**: Direct browser database access
+- **No size limits**: Can store extensive watch histories
+- **Privacy**: Data stays on your device
+
+### Supabase Cloud Database
+- **Optional remote storage**: PostgreSQL database in the cloud
+- **Cross-device sync**: Access your data from multiple devices
+- **Manual setup required**: Users must configure Supabase credentials
+- **Row Level Security**: Secure data isolation per user
+
+## Data Management
+
+### Backup & Restore
+- **JSON Export**: Download your complete watch history
+- **JSON Import**: Restore from exported files
+- **Data Merging**: Intelligent conflict resolution during imports
+- **Provider Migration**: Move data between local and cloud storage
+
+### Synchronization
+- **Browser History Sync**: Extract YouTube visits from browser history
+- **YouTube History Sync**: Fetch watch history directly from YouTube
+- **Liked Videos Sync**: Import liked videos as watched
+- **Bidirectional Sync**: Merge data between IndexedDB and Supabase
+- **Automatic Sync**: Configurable periodic synchronization
+
+## Development
+
+### Setup
 ```bash
 # Install dependencies
 npm install
@@ -74,104 +129,56 @@ npm run lint:fix
 # Format code
 npm run format
 
-# Check formatting
-npm run format:check
-
 # Load extension for development
 npm run dev
 ```
 
-### Development Setup
-
+### Development Workflow
 1. Clone the repository
 2. Run `npm install` to install development dependencies
-3. Load the extension as an unpacked extension in Chrome/Firefox
+3. Load the extension as unpacked in Chrome Developer Mode
 4. Make changes and reload the extension to test
-
-### Browser Compatibility
-
-- **Chrome/Chromium**: Full support including sync features
-- **Firefox**: Core functionality supported, sync features limited to manual export/import
-- **Edge**: Full Chrome compatibility
-- **Safari**: Not currently supported
-
-## Sync Implementation
-
-The extension includes a comprehensive synchronization system:
-
-### Available Sync Providers
-
-1. **Chrome Storage Sync** (Implemented)
-   - Automatic cross-device sync for Chrome users
-   - 100KB storage limit with intelligent data chunking
-   - No setup required, works with Google account sync
-
-2. **Google Drive API** (Planned)
-   - Large storage capacity for extensive watch histories
-   - Cross-browser compatibility
-   - OAuth-based authentication
-
-3. **Custom Backend** (Planned)
-   - Self-hosted sync solutions
-   - Enterprise-friendly deployments
-
-### Sync Features
-
-- **Automatic Sync**: Configurable intervals with background operations
-- **Manual Sync**: On-demand synchronization with progress reporting
-- **Conflict Resolution**: Timestamp-based merging with data integrity preservation
-- **Data Privacy**: User-controlled sync with no central data collection
-
-## Data Management
-
-### Database Schema
-```javascript
-{
-  strIdent: "video_id",           // YouTube video ID
-  intTimestamp: 1234567890,       // Last watched timestamp
-  strTitle: "Video Title",        // Video title
-  intCount: 1                     // View count
-}
-```
-
-### Storage Options
-- **Local Storage**: IndexedDB for primary data storage
-- **Chrome Sync**: Automatic cloud synchronization (Chrome only)
-- **Manual Backup**: JSON export/import for data portability
+5. Use browser DevTools to debug content scripts and popup
+6. Check service worker logs in Extensions page
 
 ## Privacy & Security
 
-- **No Data Collection**: All data remains on your devices or chosen sync provider
+- **No Data Collection**: Extension doesn't collect or transmit personal data
+- **Local-First**: Primary storage is local IndexedDB
 - **User Control**: Complete control over sync settings and data sharing
-- **Provider Choice**: Select your preferred synchronization method
-- **Data Encryption**: Provider-specific encryption (Chrome Sync uses Google's encryption)
+- **Optional Cloud**: Supabase integration is entirely optional
+- **Open Source**: Full source code available for inspection
 
 ## FAQ
 
-**How can the persistence of the database be ensured?**  
-The extension offers multiple backup options: Chrome Storage Sync for automatic cross-device synchronization, plus manual export/import features for creating portable backups. You can easily archive these backups to ensure you never lose your watch history.
+**How can I ensure my watch history is preserved?**  
+The extension stores data locally in IndexedDB by default. For additional backup, you can export your data as JSON or optionally configure Supabase for cloud storage.
 
-**How can I make sure that the database is complete?**  
-The automatic synchronization considers recent activity, but you're encouraged to manually initiate a complete synchronization in the settings. This incorporates as much of your browser and YouTube history as possible into the database.
+**How do I set up Supabase sync?**  
+Go to the extension options, configure your Supabase URL and API key, then switch to the Supabase provider. You'll need to create the database schema manually using the provided SQL.
 
 **What's the difference between browser history and YouTube history sync?**  
-Browser history sync extracts YouTube video visits from your browser's history, while YouTube history sync directly fetches your watch history from YouTube. Both sources are merged intelligently to provide the most complete picture of your viewing history.
+Browser history sync extracts YouTube video visits from your browser's history, while YouTube history sync fetches your watch history directly from YouTube's API. Both sources are merged for completeness.
+
+**Can I customize how watched videos are displayed?**  
+Yes, the extension offers multiple visual options including fade-out, grayscale, badges, watch dates, and hiding progress bars. All can be enabled/disabled independently.
 
 ## Contributing
 
 Contributions are welcome! Please ensure your code follows the established patterns:
-
 - Use modern JavaScript features (ES6+)
 - Follow the existing class-based architecture
+- Add JSDoc comments for new functions
+- Test on Chrome/Chromium browsers
 
 ## Special Thanks
 
-I would like to express my gratitude to [Simon Niklaus](https://github.com/sniklaus) who developed the initial extension of which this is a fork.
+I would like to express my gratitude to [Simon Niklaus](https://github.com/sniklaus) who developed the original extension of which this is a fork.
 
 ## Links
 
-- Original Project: https://github.com/sniklaus/youtube-watchmarker
-- Sync Implementation Details: [SYNC_IMPLEMENTATION.md](SYNC_IMPLEMENTATION.md)
+- **Original Project**: https://github.com/sniklaus/youtube-watchmarker
+- **Current Fork**: https://github.com/widike/youtube-watchmarker
 
 ## License
 

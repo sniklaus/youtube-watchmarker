@@ -1,5 +1,5 @@
 {
-  "name": "youtube-watchmarker",
+  "name": "youtube-watchmarker-reloaded",
   "version": "1.0.0",
   "description": "Chrome extension that automatically marks videos on YouTube that you have already watched",
   "type": "module",
@@ -18,12 +18,12 @@
     "watch-history",
     "video-tracking"
   ],
-  "author": "WiDiKe - Original by Simon Niklaus",
+  "author": "WiDiKe (fork of sniklaus/youtube-watchmarker)",
   "license": "SEE LICENSE IN LICENSE",
-  "homepage": "https://sniklaus.com/youwatch",
+  "homepage": "https://github.com/widike/youtube-watchmarker",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sniklaus/youtube-watchmarker"
+    "url": "https://github.com/widike/youtube-watchmarker"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
