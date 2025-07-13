@@ -3,6 +3,8 @@ import {
   BackgroundUtils,
   AsyncSeries
 } from "./utils.js";
+import { DatabaseUtils } from "./database-utils.js";
+import { STORAGE_KEYS } from "./constants.js";
 
 export const History = {
   init: function (objRequest, funcResponse) {
@@ -111,36 +113,18 @@ export const History = {
             },
           );
         },
-        objDatabase: function (objArgs, funcCallback) {
-          console.log("Getting database connection...");
-
-          try {
-            const dbConnection = BackgroundUtils.database("readwrite");
-            dbConnection(objArgs, (result) => {
-              if (!result) {
-                console.error("Failed to get database connection");
-                funcCallback(null);
-                return;
-              }
-              console.log("Database connection established");
-              funcCallback(result);
-            });
-          } catch (error) {
-            console.error("Error getting database connection:", error);
-            funcCallback(null);
-          }
-        },
+        objDatabase: DatabaseUtils.database("readwrite"),
         objVideo: BackgroundUtils.video(),
-        objGet: BackgroundUtils.get((progress) => {
+        objGet: DatabaseUtils.get((progress) => {
           // Track progress for video count
           if (progress && progress.strProgress) {
             console.log("History sync progress:", progress.strProgress);
           }
         }),
-        objPut: BackgroundUtils.put(),
-        "objVideo-Next": BackgroundUtils.videoNext(),
-        objCount: BackgroundUtils.count(),
-        objTime: BackgroundUtils.time("extensions.Youwatch.History.intTimestamp"),
+        objPut: DatabaseUtils.put(),
+        "objVideo-Next": DatabaseUtils.videoNext(),
+        objCount: DatabaseUtils.count(),
+        objTime: DatabaseUtils.time(STORAGE_KEYS.HISTORY_TIMESTAMP),
       },
       createResponseCallback((result) => {
         console.log("History synchronization completed:", result);

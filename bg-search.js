@@ -1,9 +1,10 @@
 import {
   createResponseCallback,
-  funcHackyparse,
   BackgroundUtils,
   AsyncSeries
 } from "./utils.js";
+import { DatabaseUtils } from "./database-utils.js";
+import { DATABASE } from "./constants.js";
 
 export const Search = {
   init: function (objRequest, funcResponse) {
@@ -22,7 +23,7 @@ export const Search = {
   lookup: function (objRequest, funcResponse) {
     AsyncSeries.run(
       {
-        objDatabase: BackgroundUtils.database("readonly"),
+        objDatabase: DatabaseUtils.database("readonly"),
         objGet: function (objArgs, funcCallback) {
           if (!objArgs.objDatabase) {
             console.error("Database object store not available");
@@ -30,7 +31,7 @@ export const Search = {
           }
           
           let objQuery = objArgs.objDatabase
-            .index("intTimestamp")
+            .index(DATABASE.INDEXES.TIMESTAMP)
             .openCursor(null, "prev");
 
           objQuery.skip = objRequest.intSkip;
@@ -89,7 +90,7 @@ export const Search = {
   delete: function (objRequest, funcResponse, funcProgress) {
     AsyncSeries.run(
       {
-        objDatabase: BackgroundUtils.database("readwrite"),
+        objDatabase: DatabaseUtils.database("readwrite"),
         objDelete: function (objArgs, funcCallback) {
           if (!objArgs.objDatabase) {
             console.error("Database object store not available");
@@ -111,7 +112,7 @@ export const Search = {
             return funcCallback({});
           };
         },
-        objCount: BackgroundUtils.count(),
+        objCount: DatabaseUtils.count(),
         objHistory: function (objArgs, funcCallback) {
           funcProgress({
             strProgress: "2/2 - deleting it from the history in the browser",

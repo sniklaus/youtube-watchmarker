@@ -701,7 +701,7 @@ class YouTubeWatchMarker {
 
 
   /**
-   * Position date tooltip closer to thumbnail
+   * Position date tooltip higher above the thumbnail
    * @param {Element} tooltip - Tooltip element
    * @param {Element} videoElement - Video element
    */
@@ -710,53 +710,19 @@ class YouTubeWatchMarker {
     const tooltipRect = tooltip.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
-    // Position tooltip in the bottom-left corner of the thumbnail (like YouTube's duration badge)
+
+    // Position tooltip higher above the thumbnail (instead of at the bottom)
     let left = rect.left + 8;
-    let top = rect.bottom - tooltipRect.height - 8;
-    
+    let top = rect.top - tooltipRect.height - 12; // Position above thumbnail with more spacing
+
     // Adjust horizontal position if tooltip goes off-screen
     if (left + tooltipRect.width > viewportWidth) {
       left = rect.right - tooltipRect.width - 8;
     }
-    
-    // Adjust vertical position if tooltip goes off-screen
+
+    // Adjust vertical position if tooltip goes off-screen at the top
     if (top < 0) {
-      top = rect.bottom + 5; // Position below thumbnail if no room above
-    }
-    
-    // Ensure tooltip stays within viewport
-    left = Math.max(5, Math.min(left, viewportWidth - tooltipRect.width - 5));
-    top = Math.max(5, Math.min(top, viewportHeight - tooltipRect.height - 5));
-    
-    tooltip.style.position = 'fixed';
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
-    tooltip.style.zIndex = '10000';
-  }
-
-  /**
-   * Position date tooltip closer to thumbnail
-   * @param {Element} tooltip - Tooltip element
-   * @param {Element} videoElement - Video element
-   */
-  positionDateTooltip(tooltip, videoElement) {
-    const rect = videoElement.getBoundingClientRect();
-    const tooltipRect = tooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let left = rect.left + 10; // Position to the right of the thumbnail
-    let top = rect.bottom - tooltipRect.height - 5; // Position above the thumbnail
-
-    // Adjust horizontal position if tooltip goes off-screen
-    if (left + tooltipRect.width > viewportWidth) {
-      left = rect.right - tooltipRect.width - 10; // Position to the left of the thumbnail
-    }
-
-    // Adjust vertical position if tooltip goes off-screen
-    if (top < 0) { // If it goes above the viewport
-      top = rect.bottom + 5; // Position below the thumbnail
+      top = rect.bottom + 8; // Position below thumbnail if no room above
     }
 
     // Ensure tooltip stays within viewport

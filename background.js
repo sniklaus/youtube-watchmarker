@@ -6,7 +6,6 @@ import {
   getStorageAsync,
   setStorageAsync,
   setDefaultInStorageIfNull,
-  AsyncSeries,
 } from "./utils.js";
 
 import { Database } from "./bg-database.js";
@@ -16,6 +15,8 @@ import { Youtube } from "./bg-youtube.js";
 import { Search } from "./bg-search.js";
 import { databaseProviderFactory } from "./database-provider-factory.js";
 import { credentialStorage } from "./credential-storage.js";
+import { messageHandler } from "./message-handler.js";
+import { ACTIONS } from "./constants.js";
 
 /**
  * Extension background script manager
@@ -36,31 +37,34 @@ class ExtensionManager {
     if (this.isInitialized) return;
     
     try {
-      await AsyncSeries.run(
-        {
-          settings: this.initializeSettings.bind(this),
-          database: this.moduleInitializer(Database.init.bind(Database)),
-          providerFactory: this.initializeProviderFactory.bind(this),
-          history: this.moduleInitializer(History.init.bind(History)),
-          youtube: this.moduleInitializer(Youtube.init.bind(Youtube)),
-          search: this.moduleInitializer(Search.init.bind(Search)),
-          action: this.setupActionHandler.bind(this),
-          message: this.setupMessageHandler.bind(this),
-          tabHook: this.setupTabHook.bind(this),
-          requestHook: this.setupRequestHook.bind(this),
-          synchronize: this.setupSynchronization.bind(this),
-        },
-        (result) => {
-          if (result === null) {
-            console.error("Error initializing extension");
-          } else {
-            console.log("Extension initialized successfully");
-            this.isInitialized = true;
-          }
-        }
-      );
+      // Initialize settings first
+      await this.initializeSettings();
+
+      // Initialize database first so it's available for provider factory
+      await this.initializeDatabase();
+      
+      // Then initialize provider factory after database is ready
+      await this.initializeProviderFactory();
+      
+      // Initialize other modules that depend on database
+      await Promise.all([
+        this.initializeHistory(),
+        this.initializeYoutube(),
+        this.initializeSearch()
+      ]);
+
+      // Setup handlers
+      this.setupActionHandler();
+      this.setupMessageHandler();
+      this.setupTabHook();
+      this.setupRequestHook();
+      this.setupSynchronization();
+
+      this.isInitialized = true;
+      console.log("Extension initialized successfully");
     } catch (error) {
       console.error("Failed to initialize extension:", error);
+      throw error;
     }
   }
 
@@ -76,11 +80,69 @@ class ExtensionManager {
   }
 
   /**
-   * Initialize extension settings
-   * @param {Object} args - Arguments
-   * @param {Function} callback - Callback function
+   * Initialize database
    */
-  async initializeSettings(args, callback) {
+  async initializeDatabase() {
+    return new Promise((resolve, reject) => {
+      Database.init({}, (result) => {
+        if (result === null) {
+          reject(new Error("Database initialization failed"));
+        } else {
+          resolve(result);
+        }
+      });
+    });
+  }
+
+  /**
+   * Initialize history module
+   */
+  async initializeHistory() {
+    return new Promise((resolve, reject) => {
+      History.init({}, (result) => {
+        if (result === null) {
+          reject(new Error("History module initialization failed"));
+        } else {
+          resolve(result);
+        }
+      });
+    });
+  }
+
+  /**
+   * Initialize YouTube module
+   */
+  async initializeYoutube() {
+    return new Promise((resolve, reject) => {
+      Youtube.init({}, (result) => {
+        if (result === null) {
+          reject(new Error("YouTube module initialization failed"));
+        } else {
+          resolve(result);
+        }
+      });
+    });
+  }
+
+  /**
+   * Initialize search module
+   */
+  async initializeSearch() {
+    return new Promise((resolve, reject) => {
+      Search.init({}, (result) => {
+        if (result === null) {
+          reject(new Error("Search module initialization failed"));
+        } else {
+          resolve(result);
+        }
+      });
+    });
+  }
+
+  /**
+   * Initialize extension settings
+   */
+  async initializeSettings() {
     try {
       // Initialize integer settings using sync storage
       const integerSettings = [
@@ -141,10 +203,10 @@ class ExtensionManager {
         await this.setDefaultInSyncStorageIfNull(key, defaultValue);
       }
 
-      callback({});
+      console.log("Settings initialized successfully");
     } catch (error) {
       console.error("Failed to initialize settings:", error);
-      callback(null);
+      throw error;
     }
   }
 
@@ -153,22 +215,129 @@ class ExtensionManager {
    * @param {Object} args - Arguments
    * @param {Function} callback - Callback function
    */
-  setupActionHandler(args, callback) {
+  setupActionHandler() {
     chrome.action.onClicked.addListener(() => {
       chrome.tabs.create({
         url: "content/index.html",
       });
     });
-
-    callback({});
   }
 
   /**
    * Setup message handler for content script communication
-   * @param {Object} args - Arguments
-   * @param {Function} callback - Callback function
    */
-  setupMessageHandler(args, callback) {
+  setupMessageHandler() {
+    // Initialize the unified message handler
+    messageHandler.init();
+
+    // Register all action handlers
+    this.registerMessageHandlers();
+  }
+
+  /**
+   * Register all message handlers with the unified MessageHandler
+   */
+  registerMessageHandlers() {
+    // YouTube actions
+    messageHandler.register(ACTIONS.YOUTUBE_LOOKUP, async (data) => {
+      const messageRequest = { strIdent: data.videoId, strTitle: data.title };
+      if (data.title) {
+        this.titleCache.set(data.videoId, data.title);
+      }
+      return new Promise((resolve) => {
+        Youtube.lookup(messageRequest, resolve);
+      });
+    });
+
+    messageHandler.register(ACTIONS.YOUTUBE_ENSURE, async (data) => {
+      const messageRequest = { strIdent: data.videoId, strTitle: data.title };
+      if (data.title) {
+        this.titleCache.set(data.videoId, data.title);
+      }
+      return new Promise((resolve) => {
+        Youtube.ensure(messageRequest, resolve);
+      });
+    });
+
+    // Database actions
+    messageHandler.register(ACTIONS.DATABASE_EXPORT, async () => {
+      return new Promise((resolve) => {
+        this.exportDatabaseData(resolve);
+      });
+    });
+
+    messageHandler.register(ACTIONS.DATABASE_IMPORT, async (data) => {
+      try {
+        let parsedData;
+        
+        // Parse as JSON
+        try {
+          parsedData = JSON.parse(data.data);
+        } catch (jsonError) {
+          console.error("Failed to parse database as JSON:", jsonError);
+          throw new Error("Invalid database format - must be valid JSON");
+        }
+        
+        return new Promise((resolve, reject) => {
+          Database.import({ data: { data: parsedData } }, (response) => {
+            if (response && response.success) {
+              resolve({ success: true, message: response.message });
+            } else {
+              reject(new Error(response?.error || "Import failed"));
+            }
+          });
+        });
+      } catch (error) {
+        console.error("Database import error:", error);
+        throw error;
+      }
+    });
+
+    // Add more handlers...
+    this.registerAdditionalHandlers();
+  }
+
+  /**
+   * Register additional message handlers
+   */
+  registerAdditionalHandlers() {
+    // Search actions
+    messageHandler.register(ACTIONS.SEARCH_DELETE, async (data) => {
+      const deleteRequest = { strIdent: data.videoId };
+      return new Promise((resolve, reject) => {
+        Search.delete(deleteRequest, (response) => {
+          if (response) {
+            resolve({ success: true });
+          } else {
+            reject(new Error("Delete failed"));
+          }
+        }, (progress) => {
+          console.log("Delete progress:", progress);
+        });
+      });
+    });
+
+    // Settings actions
+    messageHandler.register(ACTIONS.GET_SETTING, async (data) => {
+      return new Promise((resolve) => {
+        this.getSetting(data.key, resolve);
+      });
+    });
+
+    messageHandler.register(ACTIONS.SET_SETTING, async (data) => {
+      return new Promise((resolve) => {
+        this.setSetting(data.key, data.value, resolve);
+      });
+    });
+
+    // Setup modern message handler
+    this.setupMessageHandler();
+  }
+
+  /**
+   * Setup message handler
+   */
+  setupMessageHandler() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         const { action, videoId, title, query, data } = request;
@@ -210,25 +379,13 @@ class ExtensionManager {
             try {
               let parsedData;
               
-              // Try to parse as JSON first (new format)
+              // Parse as JSON
               try {
                 parsedData = JSON.parse(req.data);
               } catch (jsonError) {
-                // If JSON parsing fails, try the old format (base64 encoded)
-                try {
-                  console.log("Trying old database format (base64 encoded)");
-                  parsedData = JSON.parse(atob(req.data));
-                } catch (base64Error) {
-                  // Try base64 + URL encoding as a fallback
-                  try {
-                    console.log("Trying legacy database format (base64 + URL encoded)");
-                    parsedData = JSON.parse(decodeURIComponent(atob(req.data)));
-                  } catch (legacyError) {
-                    console.error("Failed to parse database in all formats:", { jsonError, base64Error, legacyError });
-                    res({ success: false, error: "Invalid database format - unable to parse as JSON, base64, or legacy format" });
-                    return;
-                  }
-                }
+                console.error("Failed to parse database as JSON:", jsonError);
+                res({ success: false, error: "Invalid database format - must be valid JSON" });
+                return;
               }
               
               Database.import({ data: { data: parsedData } }, (response) => {
@@ -494,8 +651,6 @@ class ExtensionManager {
         sendResponse({ success: false, error: error.message });
       }
     });
-
-    callback({});
   }
 
   /**
@@ -503,7 +658,7 @@ class ExtensionManager {
    * @param {Object} args - Arguments
    * @param {Function} callback - Callback function
    */
-  setupTabHook(args, callback) {
+  setupTabHook() {
     chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       try {
         if (tabId < 0 || !this.isYouTubeUrl(tab.url)) {
@@ -521,8 +676,6 @@ class ExtensionManager {
         console.error("Error in tab hook:", error);
       }
     });
-
-    callback({});
   }
 
   /**
@@ -630,7 +783,7 @@ class ExtensionManager {
    * @param {Object} args - Arguments
    * @param {Function} callback - Callback function
    */
-  async setupRequestHook(args, callback) {
+  async setupRequestHook() {
     const shouldTrackProgress = await getStorageAsync(
       "extensions.Youwatch.Condition.boolYouprog"
     );
@@ -641,8 +794,6 @@ class ExtensionManager {
         { urls: ["https://www.youtube.com/api/stats/watchtime*"] }
       );
     }
-
-    callback({});
   }
 
   /**
@@ -708,7 +859,7 @@ class ExtensionManager {
    * @param {Object} args - Arguments
    * @param {Function} callback - Callback function
    */
-  setupSynchronization(args, callback) {
+  setupSynchronization() {
     chrome.alarms.create("synchronize", {
       periodInMinutes: 60,
     });
@@ -718,8 +869,6 @@ class ExtensionManager {
         await this.performSynchronization();
       }
     });
-
-    callback({});
   }
 
   /**
@@ -1166,25 +1315,25 @@ class ExtensionManager {
 
   /**
    * Initialize provider factory
-   * @param {Object} args - Arguments
-   * @param {Function} callback - Callback function
    */
-  async initializeProviderFactory(args, callback) {
+  async initializeProviderFactory() {
     try {
       // Set the database manager reference
       this.providerFactory.setDatabaseManager(Database);
+      
+      // Set the provider factory reference in database manager for notifications
+      Database.providerFactory = this.providerFactory;
       
       // Initialize the factory
       const success = await this.providerFactory.init();
       if (success) {
         console.log('Database provider factory initialized successfully');
-        callback({});
       } else {
         throw new Error('Failed to initialize database provider factory');
       }
     } catch (error) {
       console.error('Failed to initialize provider factory:', error);
-      callback(null);
+      throw error;
     }
   }
 

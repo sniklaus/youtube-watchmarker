@@ -70,6 +70,11 @@ export const sendMessageToTab = (tabId, message, retryCount = 100) => {
  */
 export const createResponseCallback = (transformArgs, responseCallback) => {
   return (args) => {
+    if (typeof responseCallback !== 'function') {
+      console.warn('createResponseCallback: responseCallback is not a function', responseCallback);
+      return;
+    }
+    
     if (args === null) {
       responseCallback(null);
     } else {
@@ -138,6 +143,11 @@ export class AsyncSeries {
    * @param {Function} callback - Final callback function
    */
   static async run(functions, callback) {
+    if (typeof callback !== 'function') {
+      console.error('AsyncSeries.run: callback is not a function', callback);
+      return;
+    }
+    
     const functionNames = Object.keys(functions);
     const workspace = {};
 
@@ -224,7 +234,12 @@ export class BackgroundUtils {
           });
         }
       });
-      return callback({});
+      
+      if (typeof callback === 'function') {
+        return callback({});
+      } else {
+        console.warn('BackgroundUtils.messaging: callback is not a function', callback);
+      }
     };
   }
 
@@ -286,7 +301,7 @@ export class BackgroundUtils {
           });
         }
 
-        // Handle legacy timestamp field
+        // Handle timestamp field compatibility
         if (args.objVideo.intTimestamp === undefined) {
           args.objVideo.intTimestamp = args.objVideo.longTimestamp;
         }
@@ -475,9 +490,3 @@ export class BackgroundUtils {
     };
   }
 }
-
-// Legacy exports for backward compatibility
-export const funcBrowser = getBrowserType;
-export const funcHackyparse = parseIncompleteJson;
-export const funcSendmessage = sendMessageToTab;
-export const setDefaultInLocalStorageIfNullAsync = setDefaultInStorageIfNull;

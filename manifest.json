@@ -3,7 +3,7 @@
   "name": "Watchmarker for Youtube",
   "description": "Automatically mark videos on Youtube that you have already watched.",
   "homepage_url": "https://sniklaus.com/",
-  "version": "4.7.1",
+  "version": "1.0.0",
   
   "permissions": [
     "storage",

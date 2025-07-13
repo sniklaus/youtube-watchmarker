@@ -6,6 +6,8 @@ import {
 import { databaseProviderFactory } from "./database-provider-factory.js";
 import { credentialStorage } from "./credential-storage.js";
 import { supabaseDatabaseProvider } from "./supabase-database-provider.js";
+import { SyncManagerInstance } from "./bg-sync-manager.js";
+import { DATABASE, ERRORS } from "./constants.js";
 
 /**
  * Database management class for YouTube watch history
@@ -13,11 +15,11 @@ import { supabaseDatabaseProvider } from "./supabase-database-provider.js";
 export class DatabaseManager {
   constructor() {
     this.database = null;
-    this.DB_NAME = "Database";
-    this.DB_VERSION = 401;
-    this.STORE_NAME = "storeDatabase";
+    this.DB_NAME = DATABASE.NAME;
+    this.DB_VERSION = DATABASE.VERSION;
+    this.STORE_NAME = DATABASE.STORE_NAME;
     this.isInitialized = false;
-    this.syncManager = new SyncManager();
+    this.syncManager = SyncManagerInstance;
     this.providerFactory = databaseProviderFactory;
   }
 
@@ -39,10 +41,9 @@ export class DatabaseManager {
       await AsyncSeries.run(
         {
           openDatabase: this.openDatabase.bind(this),
-          initProviderFactory: async (args, callback) => {
-            // Initialize provider factory with this database manager
-            this.providerFactory.setDatabaseManager(this);
-            await this.providerFactory.init();
+          notifyProviders: async (args, callback) => {
+            // Notify providers that database is ready
+            this.notifyProvidersReady();
             callback({});
           },
           initSync: async (args, callback) => {
@@ -81,6 +82,18 @@ export class DatabaseManager {
   }
 
   /**
+   * Notify providers that database is ready
+   */
+  notifyProvidersReady() {
+    if (this.providerFactory && this.providerFactory.getCurrentProvider()) {
+      const currentProvider = this.providerFactory.getCurrentProvider();
+      if (currentProvider.updateConnectionStatus) {
+        currentProvider.updateConnectionStatus();
+      }
+    }
+  }
+
+  /**
    * Opens the IndexedDB database
    * @param {Object} args - Arguments object
    * @param {Function} callback - Callback function
@@ -96,20 +109,20 @@ export class DatabaseManager {
         store = openRequest.transaction.objectStore(this.STORE_NAME);
       } else {
         store = db.createObjectStore(this.STORE_NAME, {
-          keyPath: "strIdent",
+          keyPath: DATABASE.INDEXES.IDENT,
         });
       }
 
       // Create indexes if they don't exist
-      if (!store.indexNames.contains("strIdent")) {
-        store.createIndex("strIdent", "strIdent", { unique: true });
+      if (!store.indexNames.contains(DATABASE.INDEXES.IDENT)) {
+        store.createIndex(DATABASE.INDEXES.IDENT, DATABASE.INDEXES.IDENT, { unique: true });
       }
 
-      if (!store.indexNames.contains("intTimestamp")) {
-        store.createIndex("intTimestamp", "intTimestamp", { unique: false });
+      if (!store.indexNames.contains(DATABASE.INDEXES.TIMESTAMP)) {
+        store.createIndex(DATABASE.INDEXES.TIMESTAMP, DATABASE.INDEXES.TIMESTAMP, { unique: false });
       }
 
-      // Remove legacy index if it exists
+      // Remove old timestamp index if it exists (renamed to intTimestamp)
       if (store.indexNames.contains("longTimestamp")) {
         store.deleteIndex("longTimestamp");
       }
@@ -135,7 +148,7 @@ export class DatabaseManager {
    */
   getObjectStore(mode = 'readwrite') {
     if (!this.database) {
-      throw new Error('Database not initialized');
+      throw new Error(ERRORS.DATABASE_NOT_AVAILABLE);
     }
     
     const transaction = this.database.transaction([this.STORE_NAME], mode);
@@ -151,7 +164,7 @@ export class DatabaseManager {
     try {
       const provider = this.providerFactory.getCurrentProvider();
       if (!provider) {
-        response({ success: false, error: 'No database provider available' });
+        response({ success: false, error: ERRORS.PROVIDER_NOT_FOUND });
         return;
       }
 
@@ -179,13 +192,13 @@ export class DatabaseManager {
     try {
       const { data } = request;
       if (!data || !data.data) {
-        response({ success: false, error: 'Invalid import data' });
+        response({ success: false, error: ERRORS.INVALID_REQUEST });
         return;
       }
 
       const provider = this.providerFactory.getCurrentProvider();
       if (!provider) {
-        response({ success: false, error: 'No database provider available' });
+        response({ success: false, error: ERRORS.PROVIDER_NOT_FOUND });
         return;
       }
 
@@ -206,7 +219,7 @@ export class DatabaseManager {
     try {
       const provider = this.providerFactory.getCurrentProvider();
       if (!provider) {
-        response({ success: false, error: 'No database provider available' });
+        response({ success: false, error: ERRORS.PROVIDER_NOT_FOUND });
         return;
       }
 
@@ -259,7 +272,7 @@ export class DatabaseManager {
       await this.syncManager.syncNow();
       response({ success: true, message: 'Sync completed' });
     } catch (error) {
-      console.error("Failed to sync now:", error);
+      console.error("Failed to sync:", error);
       response({ success: false, error: error.message });
     }
   }
@@ -287,23 +300,12 @@ export class DatabaseManager {
   async switchProvider(request, response) {
     try {
       const { provider } = request;
+      const success = await this.providerFactory.switchProvider(provider);
       
-      if (!provider || !['indexeddb', 'supabase'].includes(provider)) {
-        response({ success: false, error: 'Invalid provider type' });
-        return;
-      }
-
-      let success = false;
-      if (provider === 'indexeddb') {
-        success = await this.providerFactory.switchToIndexedDB();
-      } else if (provider === 'supabase') {
-        success = await this.providerFactory.switchToSupabase();
-      }
-
       if (success) {
-        response({ success: true, message: `Successfully switched to ${provider}` });
+        response({ success: true, message: `Switched to ${provider} provider` });
       } else {
-        response({ success: false, error: `Failed to switch to ${provider}` });
+        response({ success: false, error: 'Failed to switch provider' });
       }
     } catch (error) {
       console.error("Failed to switch provider:", error);
@@ -318,7 +320,7 @@ export class DatabaseManager {
    */
   async getProviderStatus(request, response) {
     try {
-      const status = this.providerFactory.getProviderStatus();
+      const status = await this.providerFactory.getStatus();
       response({ success: true, data: status });
     } catch (error) {
       console.error("Failed to get provider status:", error);
@@ -333,7 +335,7 @@ export class DatabaseManager {
    */
   async getAvailableProviders(request, response) {
     try {
-      const providers = await this.providerFactory.getAvailableProviders();
+      const providers = this.providerFactory.getAvailableProviders();
       response({ success: true, data: providers });
     } catch (error) {
       console.error("Failed to get available providers:", error);
@@ -348,15 +350,14 @@ export class DatabaseManager {
    */
   async migrateData(request, response) {
     try {
-      const { from, to } = request;
+      const { fromProvider, toProvider } = request;
+      const success = await this.providerFactory.migrateData(fromProvider, toProvider);
       
-      if (!from || !to) {
-        response({ success: false, error: 'Missing source or target provider' });
-        return;
+      if (success) {
+        response({ success: true, message: `Migrated data from ${fromProvider} to ${toProvider}` });
+      } else {
+        response({ success: false, error: 'Migration failed' });
       }
-
-      await this.providerFactory.migrateData(from, to);
-      response({ success: true, message: `Successfully migrated data from ${from} to ${to}` });
     } catch (error) {
       console.error("Failed to migrate data:", error);
       response({ success: false, error: error.message });
@@ -364,23 +365,15 @@ export class DatabaseManager {
   }
 
   /**
-   * Configure Supabase credentials
-   * @param {Object} request - Request object with credentials
+   * Configure Supabase
+   * @param {Object} request - Request object
    * @param {Function} response - Response callback
    */
   async configureSupabase(request, response) {
     try {
-      const { credentials } = request;
-      
-      if (!credentials) {
-        response({ success: false, error: 'Missing credentials' });
-        return;
-      }
-
-      // Store credentials
-      await credentialStorage.storeCredentials(credentials);
-      
-      response({ success: true, message: 'Supabase credentials configured successfully' });
+      const { url, apiKey, jwtToken } = request;
+      await credentialStorage.setSupabaseCredentials(url, apiKey, jwtToken);
+      response({ success: true, message: 'Supabase configured successfully' });
     } catch (error) {
       console.error("Failed to configure Supabase:", error);
       response({ success: false, error: error.message });
@@ -394,47 +387,42 @@ export class DatabaseManager {
    */
   async testSupabase(request, response) {
     try {
-      const connectionTest = await credentialStorage.testConnection();
-      
-      if (connectionTest) {
-        response({ success: true, message: 'Supabase connection test successful' });
+      const result = await supabaseDatabaseProvider.testConnection();
+      if (result) {
+        response({ success: true, message: 'Supabase connection successful' });
       } else {
-        response({ success: false, error: 'Supabase connection test failed' });
+        response({ success: false, error: ERRORS.CONNECTION_FAILED });
       }
     } catch (error) {
-      console.error("Failed to test Supabase connection:", error);
+      console.error("Failed to test Supabase:", error);
       response({ success: false, error: error.message });
     }
   }
 
   /**
-   * Clear Supabase data
+   * Clear Supabase credentials
    * @param {Object} request - Request object
    * @param {Function} response - Response callback
    */
   async clearSupabase(request, response) {
     try {
-      if (supabaseDatabaseProvider.isConnected) {
-        await supabaseDatabaseProvider.clearAllVideos();
-        response({ success: true, message: 'Supabase data cleared successfully' });
-      } else {
-        response({ success: false, error: 'Supabase provider not connected' });
-      }
+      await credentialStorage.clearSupabaseCredentials();
+      response({ success: true, message: 'Supabase credentials cleared' });
     } catch (error) {
-      console.error("Failed to clear Supabase data:", error);
+      console.error("Failed to clear Supabase credentials:", error);
       response({ success: false, error: error.message });
     }
   }
 
   /**
-   * Get masked Supabase credentials for display
+   * Get Supabase credentials
    * @param {Object} request - Request object
    * @param {Function} response - Response callback
    */
   async getSupabaseCredentials(request, response) {
     try {
-      const maskedCredentials = await credentialStorage.getMaskedCredentials();
-      response({ success: true, data: maskedCredentials });
+      const credentials = await credentialStorage.getSupabaseCredentials();
+      response({ success: true, data: credentials });
     } catch (error) {
       console.error("Failed to get Supabase credentials:", error);
       response({ success: false, error: error.message });
@@ -442,22 +430,30 @@ export class DatabaseManager {
   }
 
   /**
-   * Get Supabase credential status for display
+   * Get Supabase status
    * @param {Object} request - Request object
    * @param {Function} response - Response callback
    */
   async getSupabaseStatus(request, response) {
     try {
-      const credentialStatus = await credentialStorage.getCredentialStatus();
-      const connectionStatus = this.providerFactory.currentProvider && 
-                              this.providerFactory.providerType === 'supabase' && 
-                              this.providerFactory.currentProvider.isConnected;
+      const hasCredentials = await credentialStorage.hasSupabaseCredentials();
+      const isConfigured = hasCredentials;
+      let isConnected = false;
+      
+      if (isConfigured) {
+        try {
+          isConnected = await supabaseDatabaseProvider.testConnection();
+        } catch (error) {
+          console.warn("Supabase connection test failed:", error);
+        }
+      }
       
       response({ 
         success: true, 
         data: { 
-          ...credentialStatus,
-          isConnected: connectionStatus 
+          configured: isConfigured, 
+          connected: isConnected,
+          hasCredentials: hasCredentials
         } 
       });
     } catch (error) {
@@ -465,354 +461,7 @@ export class DatabaseManager {
       response({ success: false, error: error.message });
     }
   }
-
-
-}
-
-/**
- * Sync Manager for handling data synchronization
- */
-export class SyncManager {
-  constructor() {
-    this.isEnabled = false;
-    this.syncProvider = null;
-    this.syncInterval = null;
-    this.intervalId = null;
-    this.lastSyncTimestamp = 0;
-    this.syncInProgress = false;
-  }
-
-  /**
-   * Initialize sync manager
-   */
-  async init() {
-    try {
-      // Load sync settings from storage
-      const result = await chrome.storage.local.get([
-        'sync_enabled',
-        'sync_provider',
-        'sync_interval',
-        'last_sync_timestamp'
-      ]);
-
-      this.isEnabled = result.sync_enabled || false;
-      this.syncProvider = result.sync_provider || null;
-      this.syncInterval = result.sync_interval || 300000; // 5 minutes default
-      this.lastSyncTimestamp = result.last_sync_timestamp || 0;
-
-      if (this.isEnabled && this.syncProvider) {
-        this.startSyncInterval();
-      }
-
-      console.log('Sync manager initialized');
-    } catch (error) {
-      console.error('Failed to initialize sync manager:', error);
-    }
-  }
-
-  /**
-   * Enable sync with specified provider
-   * @param {string} provider - Sync provider
-   * @param {number} interval - Sync interval in milliseconds
-   */
-  async enableSync(provider, interval = 300000) {
-    try {
-      this.isEnabled = true;
-      this.syncProvider = provider;
-      this.syncInterval = interval;
-
-      // Save settings
-      await chrome.storage.local.set({
-        sync_enabled: this.isEnabled,
-        sync_provider: this.syncProvider,
-        sync_interval: this.syncInterval
-      });
-
-      this.startSyncInterval();
-      console.log(`Sync enabled with provider: ${provider}`);
-    } catch (error) {
-      console.error('Failed to enable sync:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Disable sync
-   */
-  async disableSync() {
-    try {
-      this.isEnabled = false;
-      this.syncProvider = null;
-      this.stopSyncInterval();
-
-      // Save settings
-      await chrome.storage.local.set({
-        sync_enabled: false,
-        sync_provider: null
-      });
-
-      console.log('Sync disabled');
-    } catch (error) {
-      console.error('Failed to disable sync:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Start sync interval
-   */
-  startSyncInterval() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-    }
-
-    this.intervalId = setInterval(() => {
-      this.syncNow().catch(error => {
-        console.error('Scheduled sync failed:', error);
-      });
-    }, this.syncInterval);
-  }
-
-  /**
-   * Stop sync interval
-   */
-  stopSyncInterval() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-  }
-
-  /**
-   * Perform sync now
-   */
-  async syncNow() {
-    if (!this.isEnabled || this.syncInProgress) {
-      return;
-    }
-
-    this.syncInProgress = true;
-    
-    try {
-      // Get current data
-      const provider = databaseProviderFactory.getCurrentProvider();
-      if (!provider) {
-        throw new Error('No database provider available');
-      }
-
-      const data = await provider.getAllVideos();
-      
-      // Sync to remote storage
-      await this.syncToRemote(data);
-      
-      // Sync from remote storage
-      const remoteData = await this.syncFromRemote();
-      if (remoteData && remoteData.length > 0) {
-        await provider.importVideos(remoteData);
-      }
-
-      this.lastSyncTimestamp = Date.now();
-      await chrome.storage.local.set({
-        last_sync_timestamp: this.lastSyncTimestamp
-      });
-
-      console.log('Sync completed successfully');
-    } catch (error) {
-      console.error('Sync failed:', error);
-      throw error;
-    } finally {
-      this.syncInProgress = false;
-    }
-  }
-
-  /**
-   * Sync data to remote storage
-   * @param {Array} data - Database data to sync
-   */
-  async syncToRemote(data) {
-    if (!this.isEnabled || !this.syncProvider) return;
-
-    try {
-      switch (this.syncProvider) {
-        case 'chrome':
-          await this.syncToChrome(data);
-          break;
-        case 'supabase':
-          await this.syncToSupabase(data);
-          break;
-        case 'googledrive':
-          await this.syncToGoogleDrive(data);
-          break;
-        case 'custom':
-          await this.syncToCustomBackend(data);
-          break;
-        default:
-          console.warn('Unknown sync provider:', this.syncProvider);
-      }
-      
-      this.lastSyncTimestamp = Date.now();
-      await chrome.storage.local.set({
-        last_sync_timestamp: this.lastSyncTimestamp
-      });
-    } catch (error) {
-      console.error('Sync to remote failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Sync data from remote storage
-   * @returns {Array} Synced data
-   */
-  async syncFromRemote() {
-    if (!this.isEnabled || !this.syncProvider) return [];
-
-    try {
-      switch (this.syncProvider) {
-        case 'chrome':
-          return await this.syncFromChrome();
-        case 'supabase':
-          return await this.syncFromSupabase();
-        case 'googledrive':
-          return await this.syncFromGoogleDrive();
-        case 'custom':
-          return await this.syncFromCustomBackend();
-        default:
-          console.warn('Unknown sync provider:', this.syncProvider);
-          return [];
-      }
-    } catch (error) {
-      console.error('Sync from remote failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Chrome sync implementation
-   */
-  async syncToChrome(data) {
-    try {
-      const syncData = {
-        timestamp: Date.now(),
-        data: data
-      };
-      
-      await chrome.storage.sync.set({
-        youtube_watchmarker_data: syncData
-      });
-      
-      console.log(`Synced ${data.length} videos to Chrome storage`);
-    } catch (error) {
-      console.error('Chrome sync to remote failed:', error);
-      throw error;
-    }
-  }
-
-  async syncFromChrome() {
-    try {
-      const result = await chrome.storage.sync.get(['youtube_watchmarker_data']);
-      const syncData = result.youtube_watchmarker_data;
-      
-      if (!syncData || !syncData.data) {
-        return [];
-      }
-      
-      console.log(`Retrieved ${syncData.data.length} videos from Chrome storage`);
-      return syncData.data;
-    } catch (error) {
-      console.error('Chrome sync from remote failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Supabase sync implementation
-   */
-  async syncToSupabase(data) {
-    try {
-      if (!supabaseDatabaseProvider.isConnected) {
-        await supabaseDatabaseProvider.init();
-      }
-      
-      if (!supabaseDatabaseProvider.isConnected) {
-        throw new Error('Supabase provider not connected');
-      }
-      
-      // Import data to Supabase
-      await supabaseDatabaseProvider.importVideos(data);
-      console.log(`Synced ${data.length} videos to Supabase`);
-    } catch (error) {
-      console.error('Supabase sync to remote failed:', error);
-      throw error;
-    }
-  }
-
-  async syncFromSupabase() {
-    try {
-      if (!supabaseDatabaseProvider.isConnected) {
-        await supabaseDatabaseProvider.init();
-      }
-      
-      if (!supabaseDatabaseProvider.isConnected) {
-        throw new Error('Supabase provider not connected');
-      }
-      
-      // Get all videos from Supabase
-      const videos = await supabaseDatabaseProvider.getAllVideos();
-      console.log(`Retrieved ${videos.length} videos from Supabase`);
-      return videos;
-    } catch (error) {
-      console.error('Supabase sync from remote failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Google Drive sync implementation (placeholder)
-   */
-  async syncToGoogleDrive(data) {
-    // TODO: Implement Google Drive sync
-    console.log('Google Drive sync not implemented yet');
-  }
-
-  async syncFromGoogleDrive() {
-    // TODO: Implement Google Drive sync
-    console.log('Google Drive sync not implemented yet');
-    return [];
-  }
-
-  /**
-   * Custom backend sync implementation (placeholder)
-   */
-  async syncToCustomBackend(data) {
-    // TODO: Implement custom backend sync
-    console.log('Custom backend sync not implemented yet');
-  }
-
-  async syncFromCustomBackend() {
-    // TODO: Implement custom backend sync
-    console.log('Custom backend sync not implemented yet');
-    return [];
-  }
-
-  /**
-   * Get sync status
-   * @returns {Object} Sync status
-   */
-  async getStatus() {
-    return {
-      isEnabled: this.isEnabled,
-      provider: this.syncProvider,
-      interval: this.syncInterval,
-      lastSyncTimestamp: this.lastSyncTimestamp,
-      syncInProgress: this.syncInProgress
-    };
-  }
 }
 
 // Global instances
 export const Database = new DatabaseManager();
-export const syncManager = new SyncManager();
-
-// Make Database available globally
-globalThis.Database = Database;

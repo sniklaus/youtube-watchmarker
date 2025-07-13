@@ -18,19 +18,44 @@ class IndexedDBProvider {
   }
 
   async init() {
-    if (this.databaseManager && this.databaseManager.database) {
+    if (!this.databaseManager) {
+      throw new Error('Database manager not set');
+    }
+    
+    // If database is already open, we're good
+    if (this.databaseManager.database) {
       this.isInitialized = true;
       this.isConnected = true;
       return true;
     }
-    return false;
+    
+    // If database manager exists but database isn't open yet, 
+    // that's okay - it will be opened during database initialization
+    // We just mark as initialized and will connect when database opens
+    this.isInitialized = true;
+    this.isConnected = false;
+    return true;
   }
 
   async testConnection() {
+    // Update connection status based on current database state
+    this.isConnected = this.databaseManager && this.databaseManager.database !== null;
     return this.isConnected;
   }
 
+  /**
+   * Update connection status when database becomes available
+   */
+  updateConnectionStatus() {
+    if (this.databaseManager && this.databaseManager.database) {
+      this.isConnected = true;
+    }
+  }
+
   async getVideo(videoId) {
+    // Update connection status
+    this.updateConnectionStatus();
+    
     if (!this.isConnected) {
       throw new Error('Database not connected');
     }
@@ -51,6 +76,9 @@ class IndexedDBProvider {
   }
 
   async putVideo(video) {
+    // Update connection status
+    this.updateConnectionStatus();
+    
     if (!this.isConnected) {
       throw new Error('Database not connected');
     }
@@ -94,6 +122,9 @@ class IndexedDBProvider {
   }
 
   async getAllVideos() {
+    // Update connection status
+    this.updateConnectionStatus();
+    
     if (!this.isConnected) {
       throw new Error('Database not connected');
     }

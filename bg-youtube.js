@@ -1,9 +1,11 @@
 import {
   createResponseCallback,
-  funcHackyparse,
+  parseIncompleteJson,
   BackgroundUtils,
   AsyncSeries
 } from "./utils.js";
+import { DatabaseUtils } from "./database-utils.js";
+import { STORAGE_KEYS } from "./constants.js";
 
 export const Youtube = {
   init: function (objRequest, funcResponse) {
@@ -116,7 +118,7 @@ export const Youtube = {
 
             // extract youtube config
             if (objArgs.objYtcfg === null) {
-              objArgs.objYtcfg = funcHackyparse(
+              objArgs.objYtcfg = parseIncompleteJson(
                 cleanedText
                   .split("ytcfg.set(")
                   .find(function (strData) {
@@ -128,7 +130,7 @@ export const Youtube = {
 
             // extract youtube context
             if (objArgs.objYtctx === null) {
-              objArgs.objYtctx = funcHackyparse(
+              objArgs.objYtctx = parseIncompleteJson(
                 cleanedText.split('"INNERTUBE_CONTEXT":')[1],
               );
             }
@@ -193,13 +195,13 @@ export const Youtube = {
             return funcCallback([]);
           }
         },
-        objDatabase: BackgroundUtils.database("readwrite"),
+        objDatabase: DatabaseUtils.database("readwrite"),
         objVideo: BackgroundUtils.video(),
-        objGet: BackgroundUtils.get(funcProgress),
-        objPut: BackgroundUtils.put(),
-        "objVideo-Next": BackgroundUtils.videoNext(),
-        objCount: BackgroundUtils.count(),
-        objTime: BackgroundUtils.time("extensions.Youwatch.Youtube.intTimestamp"),
+        objGet: DatabaseUtils.get(funcProgress),
+        objPut: DatabaseUtils.put(),
+        "objVideo-Next": DatabaseUtils.videoNext(),
+        objCount: DatabaseUtils.count(),
+        objTime: DatabaseUtils.time(STORAGE_KEYS.YOUTUBE_TIMESTAMP),
         objContinuation: function (objArgs, funcCallback) {
           if (objArgs.intExisting < objRequest.intThreshold) {
             if (objArgs.strContinuation !== null) {
@@ -301,7 +303,7 @@ export const Youtube = {
 
             // extract youtube config
             if (objArgs.objYtcfg === null) {
-              objArgs.objYtcfg = funcHackyparse(
+              objArgs.objYtcfg = parseIncompleteJson(
                 cleanedText
                   .split("ytcfg.set(")
                   .find(function (strData) {
@@ -313,7 +315,7 @@ export const Youtube = {
 
             // extract youtube context
             if (objArgs.objYtctx === null) {
-              objArgs.objYtctx = funcHackyparse(
+              objArgs.objYtctx = parseIncompleteJson(
                 cleanedText.split('"INNERTUBE_CONTEXT":')[1],
               );
             }
@@ -459,13 +461,13 @@ export const Youtube = {
             return funcCallback([]);
           }
         },
-        objDatabase: BackgroundUtils.database("readwrite"),
-        objVideo: BackgroundUtils.video(),
-        objGet: BackgroundUtils.get(funcProgress),
-        objPut: BackgroundUtils.put(),
-        "objVideo-Next": BackgroundUtils.videoNext(),
-        objCount: BackgroundUtils.count(),
-        objTime: BackgroundUtils.time("extensions.Youwatch.Youtube.LikedVideos.intTimestamp"),
+              objDatabase: DatabaseUtils.database("readwrite"),
+      objVideo: BackgroundUtils.video(),
+      objGet: DatabaseUtils.get(funcProgress),
+      objPut: DatabaseUtils.put(),
+      "objVideo-Next": DatabaseUtils.videoNext(),
+      objCount: DatabaseUtils.count(),
+      objTime: DatabaseUtils.time(STORAGE_KEYS.LIKED_TIMESTAMP),
         objContinuation: function (objArgs, funcCallback) {
           if (objArgs.intExisting < objRequest.intThreshold) {
             if (objArgs.strContinuation !== null) {
@@ -492,7 +494,7 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: BackgroundUtils.database("readonly"),
+        objDatabase: DatabaseUtils.database("readonly"),
         objGet: function (objArgs, funcCallback) {
           if (!objArgs.objDatabase) {
             console.error("Database object store not available");
@@ -533,7 +535,7 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: BackgroundUtils.database("readwrite"),
+        objDatabase: DatabaseUtils.database("readwrite"),
         objGet: function (objArgs, funcCallback) {
           if (!objArgs.objDatabase) {
             console.error("Database object store not available");
@@ -563,8 +565,8 @@ export const Youtube = {
             return funcCallback(null);
           };
         },
-        objPut: BackgroundUtils.put(),
-        objCount: BackgroundUtils.count(),
+        objPut: DatabaseUtils.put(),
+        objCount: DatabaseUtils.count(),
       },
       createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );
@@ -576,7 +578,7 @@ export const Youtube = {
         objVideo: function (objArgs, funcCallback) {
           return funcCallback(objRequest);
         },
-        objDatabase: BackgroundUtils.database("readwrite"),
+        objDatabase: DatabaseUtils.database("readwrite"),
         objGet: function (objArgs, funcCallback) {
           if (!objArgs.objDatabase) {
             console.error("Database object store not available");
@@ -618,8 +620,8 @@ export const Youtube = {
             }
           };
         },
-        objPut: BackgroundUtils.put(),
-        objCount: BackgroundUtils.count(),
+        objPut: DatabaseUtils.put(),
+        objCount: DatabaseUtils.count(),
       },
       createResponseCallback(objArgs => objArgs.objGet, funcResponse),
     );

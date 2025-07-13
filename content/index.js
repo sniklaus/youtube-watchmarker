@@ -1224,19 +1224,18 @@ class OptionsPageManager {
     }
 
     /**
-     * Legacy method for compatibility - does nothing now for quick operations
-     * @param {string} message - Loading message (ignored)
+     * Show loading state
+     * @param {string} message - Loading message
      */
     showLoading(message) {
-        // No-op for quick operations
         console.log('Loading:', message);
     }
 
     /**
-     * Legacy method for compatibility - does nothing now for quick operations
+     * Hide loading state
      */
     hideLoading() {
-        // No-op for quick operations
+        // Implementation can be added if needed
     }
 
     /**
