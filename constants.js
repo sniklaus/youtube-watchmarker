@@ -206,7 +206,8 @@ export const TIMEOUTS = {
   MESSAGE_HANDLER: 30000, // 30 seconds
   DATABASE_OPERATION: 10000, // 10 seconds
   NETWORK_REQUEST: 15000, // 15 seconds
-  SYNC_OPERATION: 60000 // 1 minute
+  SYNC_OPERATION: 60000, // 1 minute
+  VIEW_COUNT_COOLDOWN: 30000 // 30 seconds - minimum time between view counts for same video
 };
 
 // Default Values

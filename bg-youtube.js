@@ -5,7 +5,7 @@ import {
   AsyncSeries
 } from "./utils.js";
 import { DatabaseUtils } from "./database-utils.js";
-import { STORAGE_KEYS } from "./constants.js";
+import { STORAGE_KEYS, TIMEOUTS } from "./constants.js";
 
 export const Youtube = {
   init: function (objRequest, funcResponse) {
@@ -595,11 +595,12 @@ export const Youtube = {
           };
 
           objQuery.onsuccess = function () {
+            const currentTime = new Date().getTime();
+            
             if (objQuery.result === undefined || objQuery.result === null) {
               return funcCallback({
                 strIdent: objArgs.objVideo.strIdent,
-                intTimestamp:
-                  objArgs.objVideo.intTimestamp || new Date().getTime(),
+                intTimestamp: objArgs.objVideo.intTimestamp || currentTime,
                 strTitle: objArgs.objVideo.strTitle || "",
                 intCount: objArgs.objVideo.intCount || 1,
               });
@@ -607,15 +608,18 @@ export const Youtube = {
               objQuery.result !== undefined &&
               objQuery.result !== null
             ) {
+              const existingTimestamp = objQuery.result.intTimestamp || 0;
+              const timeSinceLastView = currentTime - existingTimestamp;
+              
+              // Only increment count if enough time has passed since last view
+              const shouldIncrementCount = timeSinceLastView >= TIMEOUTS.VIEW_COUNT_COOLDOWN;
+              
               return funcCallback({
                 strIdent: objQuery.result.strIdent,
-                intTimestamp:
-                  objArgs.objVideo.intTimestamp ||
-                  objQuery.result.intTimestamp ||
-                  new Date().getTime(),
+                intTimestamp: objArgs.objVideo.intTimestamp || currentTime,
                 strTitle:
                   objArgs.objVideo.strTitle || objQuery.result.strTitle || "",
-                intCount: objQuery.result.intCount + 1 || 1,
+                intCount: shouldIncrementCount ? (objQuery.result.intCount + 1 || 1) : (objQuery.result.intCount || 1),
               });
             }
           };
