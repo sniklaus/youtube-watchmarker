@@ -228,7 +228,7 @@
                   <button class="btn btn-warning" id="idDatabase_Reset">
                     <i class="fas fa-trash me-2"></i>Reset
                   </button>
-                  <button class="btn btn-info" id="idDatabase_Sync">
+                  <button class="btn btn-info text-white" id="idDatabase_Sync">
                     <i class="fas fa-sync me-2"></i>Sync Databases
                   </button>
                 </div>
@@ -237,6 +237,32 @@
               <!-- Supabase Configuration (hidden by default) -->
               <div id="supabase-config" class="mb-4 d-none">
                 <h3 class="h6 mb-3">Supabase Configuration</h3>
+                
+                <!-- Current Configuration Display -->
+                <div id="current-config" class="mb-3 d-none">
+                  <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                      <i class="fas fa-info-circle me-2"></i>
+                      Current Configuration
+                    </h6>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <small class="text-muted">Supabase URL:</small>
+                        <div class="font-monospace" id="current-url">-</div>
+                      </div>
+                      <div class="col-md-6">
+                        <small class="text-muted">API Key:</small>
+                        <div class="font-monospace" id="current-api-key">-</div>
+                      </div>
+                    </div>
+                    <div class="row mt-2">
+                      <div class="col-md-6">
+                        <small class="text-muted">JWT Token:</small>
+                        <div class="font-monospace" id="current-jwt-token">-</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 
                 <div class="row g-3">
                   <div class="col-12">
@@ -268,7 +294,7 @@
                   <button type="button" class="btn btn-outline-secondary me-2" id="supabase_test">
                     <i class="fas fa-plug me-2"></i>Test Connection
                   </button>
-                  <button type="button" class="btn btn-outline-danger" id="supabase_clear">
+                  <button type="button" class="btn btn-outline-danger me-2" id="supabase_clear">
                     <i class="fas fa-trash me-2"></i>Clear Configuration
                   </button>
                 </div>
@@ -486,33 +512,7 @@
       </div>
     </main>
 
-    <!-- Loading Modal -->
-    <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="loadingModalLabel">Processing</h5>
-          </div>
-          <div class="modal-body">
-            <div class="d-flex align-items-center mb-3">
-              <div class="spinner-border spinner-border-sm me-3" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
-              <div>
-                <div id="idLoading_Message" class="fw-medium">Please wait...</div>
-                <div id="idLoading_Progress" class="text-muted small"></div>
-              </div>
-            </div>
-            <div class="progress" style="height: 6px;">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="idLoading_Close">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">

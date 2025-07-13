@@ -19,6 +19,65 @@ export class SupabaseDatabaseProvider {
     this.baseUrl = null;
     this.apiKey = null;
     this.jwtToken = null;
+    this.maxRetries = 3;
+    this.retryDelay = 1000;
+  }
+
+  /**
+   * Validate API key format and strength
+   * @param {string} apiKey - API key to validate
+   * @returns {boolean} True if valid
+   */
+  validateApiKey(apiKey) {
+    if (!apiKey || typeof apiKey !== 'string') {
+      return false;
+    }
+    
+    // Basic validation for Supabase API key format
+    if (apiKey.length < 100) {
+      console.warn('API key appears to be too short for a Supabase key');
+      return false;
+    }
+    
+    // Check if it looks like a JWT (starts with ey)
+    if (!apiKey.startsWith('ey')) {
+      console.warn('API key does not appear to be a valid JWT format');
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Validate Supabase URL format
+   * @param {string} url - URL to validate
+   * @returns {boolean} True if valid
+   */
+  validateSupabaseUrl(url) {
+    if (!url || typeof url !== 'string') {
+      return false;
+    }
+    
+    try {
+      const urlObj = new URL(url);
+      
+      // Check for HTTPS (required for production)
+      if (urlObj.protocol !== 'https:' && !url.includes('localhost')) {
+        console.warn('Supabase URL should use HTTPS in production');
+        return false;
+      }
+      
+      // Check for valid Supabase domain or localhost
+      if (!urlObj.hostname.includes('supabase.co') && !urlObj.hostname.includes('localhost')) {
+        console.warn('URL does not appear to be a valid Supabase URL');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Invalid URL format:', error);
+      return false;
+    }
   }
 
   /**
@@ -45,6 +104,17 @@ export class SupabaseDatabaseProvider {
       this.credentials = await credentialStorage.getCredentials();
       if (!this.credentials) {
         console.log('No Supabase credentials found');
+        return false;
+      }
+
+      // Validate credentials
+      if (!this.validateSupabaseUrl(this.credentials.supabaseUrl)) {
+        console.error('Invalid Supabase URL format');
+        return false;
+      }
+
+      if (!this.validateApiKey(this.credentials.apiKey)) {
+        console.error('Invalid API key format');
         return false;
       }
 
@@ -80,33 +150,286 @@ export class SupabaseDatabaseProvider {
       
       if (response.ok) {
         console.log('Supabase schema verified');
+        
+        // Check if RLS is properly configured
+        try {
+          const rlsStatus = await this.checkRLSStatus();
+          if (!rlsStatus.rlsEnabled) {
+            console.warn('⚠️  WARNING: Row Level Security is not enabled on your table!');
+            console.warn('This is a CRITICAL security issue. Your data is not protected.');
+            console.warn('Please run the following SQL in your Supabase SQL Editor:');
+            console.warn(`ALTER TABLE ${this.tableName} ENABLE ROW LEVEL SECURITY;`);
+          } else if (rlsStatus.policies.length === 0) {
+            console.warn('⚠️  WARNING: No RLS policies found!');
+            console.warn('Data access is blocked for all users. Add policies to enable access.');
+          } else {
+            console.log('✅ Row Level Security is properly configured');
+          }
+        } catch (rlsError) {
+          console.warn('Could not verify RLS status:', rlsError.message);
+        }
+        
         return;
       }
 
       // If table doesn't exist, we need to create it
-      // This would typically be done via SQL in the Supabase dashboard
-      console.warn('Table may not exist. Please ensure the table is created in Supabase:');
+      // For browser extensions, we cannot directly execute DDL via PostgREST
+      // Users must create the schema manually or via Supabase CLI/Dashboard
+      console.warn('❌ Table does not exist in your Supabase database.');
+      console.warn('');
+      console.warn('🔧 SETUP REQUIRED: Create the database schema');
+      console.warn('');
+      console.warn('Option 1 (Recommended): Use Supabase CLI');
+      console.warn('1. Install Supabase CLI: https://supabase.com/docs/guides/cli');
+      console.warn('2. Run: supabase migration new create_youtube_watchmarker_schema');
+      console.warn('3. Copy the SQL below into the migration file');
+      console.warn('4. Run: supabase db push');
+      console.warn('');
+      console.warn('Option 2: Use Supabase Dashboard SQL Editor');
+      console.warn('1. Go to your Supabase project dashboard');
+      console.warn('2. Open SQL Editor');
+      console.warn('3. Copy and run the SQL below');
+      console.warn('');
+      console.warn('📋 COPY THIS SQL:');
+      console.warn('================================================================================');
       console.warn(`
-        CREATE TABLE IF NOT EXISTS ${this.tableName} (
-          str_ident VARCHAR(255) PRIMARY KEY,
-          int_timestamp BIGINT NOT NULL,
-          str_title TEXT,
-          int_count INTEGER DEFAULT 1,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-        
-        CREATE INDEX IF NOT EXISTS idx_${this.tableName}_timestamp 
-        ON ${this.tableName} (int_timestamp);
-        
-        CREATE INDEX IF NOT EXISTS idx_${this.tableName}_created_at 
-        ON ${this.tableName} (created_at);
+-- YouTube Watchmarker Schema with Row Level Security
+-- Run this SQL in your Supabase SQL Editor or via CLI migration
+
+-- Create main table with proper structure
+CREATE TABLE IF NOT EXISTS ${this.tableName} (
+  str_ident VARCHAR(255) PRIMARY KEY,
+  int_timestamp BIGINT NOT NULL,
+  str_title TEXT,
+  int_count INTEGER DEFAULT 1,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add performance indexes
+CREATE INDEX IF NOT EXISTS idx_${this.tableName}_timestamp 
+ON ${this.tableName} (int_timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_${this.tableName}_created_at 
+ON ${this.tableName} (created_at);
+
+CREATE INDEX IF NOT EXISTS idx_${this.tableName}_title 
+ON ${this.tableName} USING gin(to_tsvector('english', str_title));
+
+-- Add data validation constraints
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'check_positive_count' 
+        AND conrelid = '${this.tableName}'::regclass
+    ) THEN
+        ALTER TABLE ${this.tableName} 
+        ADD CONSTRAINT check_positive_count CHECK (int_count > 0);
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'check_valid_timestamp' 
+        AND conrelid = '${this.tableName}'::regclass
+    ) THEN
+        ALTER TABLE ${this.tableName} 
+        ADD CONSTRAINT check_valid_timestamp CHECK (int_timestamp > 0);
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'check_title_length' 
+        AND conrelid = '${this.tableName}'::regclass
+    ) THEN
+        ALTER TABLE ${this.tableName} 
+        ADD CONSTRAINT check_title_length CHECK (char_length(str_title) <= 1000);
+    END IF;
+END $$;
+
+-- 🔒 ENABLE ROW LEVEL SECURITY (CRITICAL FOR SECURITY)
+ALTER TABLE ${this.tableName} ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for authenticated access
+-- These policies ensure only authenticated users can access the data
+CREATE POLICY "Allow authenticated users to view watch history" 
+ON ${this.tableName} FOR SELECT 
+TO authenticated 
+USING (true);
+
+CREATE POLICY "Allow authenticated users to insert watch history" 
+ON ${this.tableName} FOR INSERT 
+TO authenticated 
+WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated users to update watch history" 
+ON ${this.tableName} FOR UPDATE 
+TO authenticated 
+USING (true) 
+WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated users to delete watch history" 
+ON ${this.tableName} FOR DELETE 
+TO authenticated 
+USING (true);
+
+-- Create audit table for tracking changes (recommended for security)
+CREATE TABLE IF NOT EXISTS ${this.tableName}_audit (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  table_name TEXT NOT NULL DEFAULT '${this.tableName}',
+  operation TEXT NOT NULL,
+  old_data JSONB,
+  new_data JSONB,
+  user_id UUID,
+  user_email TEXT,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  ip_address INET,
+  user_agent TEXT
+);
+
+-- Enable RLS on audit table
+ALTER TABLE ${this.tableName}_audit ENABLE ROW LEVEL SECURITY;
+
+-- Audit table policies
+CREATE POLICY "Users can view audit logs" 
+ON ${this.tableName}_audit FOR SELECT 
+TO authenticated 
+USING (true);
+
+CREATE POLICY "System can insert audit logs" 
+ON ${this.tableName}_audit FOR INSERT 
+TO authenticated 
+WITH CHECK (true);
+
+-- Create audit trigger function
+CREATE OR REPLACE FUNCTION audit_${this.tableName}()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    INSERT INTO ${this.tableName}_audit (
+      operation, old_data, user_id, user_email
+    ) VALUES (
+      TG_OP,
+      row_to_json(OLD),
+      auth.uid(),
+      auth.email()
+    );
+    RETURN OLD;
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO ${this.tableName}_audit (
+      operation, old_data, new_data, user_id, user_email
+    ) VALUES (
+      TG_OP,
+      row_to_json(OLD),
+      row_to_json(NEW),
+      auth.uid(),
+      auth.email()
+    );
+    RETURN NEW;
+  ELSIF TG_OP = 'INSERT' THEN
+    INSERT INTO ${this.tableName}_audit (
+      operation, new_data, user_id, user_email
+    ) VALUES (
+      TG_OP,
+      row_to_json(NEW),
+      auth.uid(),
+      auth.email()
+    );
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Create audit trigger
+DROP TRIGGER IF EXISTS ${this.tableName}_audit_trigger ON ${this.tableName};
+CREATE TRIGGER ${this.tableName}_audit_trigger
+  AFTER INSERT OR UPDATE OR DELETE ON ${this.tableName}
+  FOR EACH ROW EXECUTE FUNCTION audit_${this.tableName}();
+
+-- Create utility functions
+CREATE OR REPLACE FUNCTION get_user_watch_count()
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (SELECT COUNT(*) FROM ${this.tableName});
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION cleanup_old_watch_history(days_old INTEGER DEFAULT 365)
+RETURNS INTEGER AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  DELETE FROM ${this.tableName} 
+  WHERE created_at < NOW() - INTERVAL '1 day' * days_old;
+  
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Verify setup
+SELECT 
+  t.tablename as table_name,
+  t.rowsecurity as rls_enabled,
+  COUNT(p.policyname) as policy_count
+FROM pg_tables t
+LEFT JOIN pg_policies p ON t.tablename = p.tablename 
+WHERE t.schemaname = 'public' 
+AND t.tablename = '${this.tableName}'
+GROUP BY t.tablename, t.rowsecurity;
       `);
+      console.warn('================================================================================');
+      console.warn('');
+      console.warn('🛡️  SECURITY FEATURES INCLUDED:');
+      console.warn('✅ Row Level Security (RLS) enabled');
+      console.warn('✅ Authenticated user policies');
+      console.warn('✅ Data validation constraints');
+      console.warn('✅ Performance indexes');
+      console.warn('✅ Audit logging system');
+      console.warn('✅ Utility functions');
+      console.warn('');
+      console.warn('📚 For advanced security options, see:');
+      console.warn('- supabase-rls-setup.sql (complete setup with all options)');
+      console.warn('- SUPABASE_SECURITY_GUIDE.md (comprehensive security guide)');
+      console.warn('');
+      console.warn('⚠️  IMPORTANT: After running the SQL, refresh this page to verify the setup.');
       
     } catch (error) {
       console.error('Failed to ensure schema:', error);
       throw error;
     }
+  }
+
+  /**
+   * Retry mechanism for failed requests
+   * @param {Function} requestFn - Function to retry
+   * @param {number} retries - Number of retries remaining
+   * @returns {Promise<Response>} Response from successful request
+   */
+  async retryRequest(requestFn, retries = this.maxRetries) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      if (retries > 0 && this.isRetryableError(error)) {
+        console.log(`Request failed, retrying... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+        return this.retryRequest(requestFn, retries - 1);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Check if an error is retryable
+   * @param {Error} error - Error to check
+   * @returns {boolean} True if retryable
+   */
+  isRetryableError(error) {
+    // Retry on network errors or temporary server errors
+    return error.message.includes('NetworkError') || 
+           error.message.includes('HTTP 5') || 
+           error.message.includes('timeout');
   }
 
   /**
@@ -120,36 +443,57 @@ export class SupabaseDatabaseProvider {
   async makeRequest(method, path, body = null, headers = {}) {
     const url = `${this.baseUrl}/rest/v1${path}`;
     
+    // Security headers
     const requestHeaders = {
       'Content-Type': 'application/json',
       'apikey': this.apiKey,
       'Authorization': `Bearer ${this.jwtToken || this.apiKey}`,
       'Prefer': 'return=representation',
+      'X-Client-Info': 'youtube-watchmarker-extension',
+      // Add security headers
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
       ...headers
     };
 
     const config = {
       method,
-      headers: requestHeaders
+      headers: requestHeaders,
+      // Add timeout for security
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     };
 
     if (body && (method === 'POST' || method === 'PATCH')) {
       config.body = JSON.stringify(body);
     }
 
-    try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+    const requestFn = async () => {
+      try {
+        const response = await fetch(url, config);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          
+          // Log security-relevant errors
+          if (response.status === 401) {
+            console.error('Authentication failed - check API key');
+          } else if (response.status === 403) {
+            console.error('Access forbidden - check permissions and RLS policies');
+          } else if (response.status === 429) {
+            console.error('Rate limit exceeded - too many requests');
+          }
+          
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        return response;
+      } catch (error) {
+        console.error('Request failed:', error);
+        throw error;
       }
-      
-      return response;
-    } catch (error) {
-      console.error('Request failed:', error);
-      throw error;
-    }
+    };
+
+    return this.retryRequest(requestFn);
   }
 
   /**
@@ -547,6 +891,128 @@ export class SupabaseDatabaseProvider {
     } catch (error) {
       console.error('Failed to get statistics:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Check if RLS policies are properly configured
+   * @returns {Promise<Object>} RLS status and recommendations
+   */
+  async checkRLSStatus() {
+    try {
+      if (!this.isConnected) {
+        throw new Error('Database not connected');
+      }
+
+      const checks = {
+        rlsEnabled: false,
+        policies: [],
+        recommendations: [],
+        securityScore: 0
+      };
+
+      // Check if RLS is enabled on the table
+      try {
+        const rlsResponse = await this.makeRequest('GET', 
+          `/pg_tables?select=schemaname,tablename,rowsecurity&tablename=eq.${this.tableName}`);
+        
+        if (rlsResponse.ok) {
+          const rlsData = await rlsResponse.json();
+          if (rlsData.length > 0) {
+            checks.rlsEnabled = rlsData[0].rowsecurity;
+          }
+        }
+      } catch (error) {
+        console.warn('Could not check RLS status:', error.message);
+      }
+
+      // Check existing policies
+      try {
+        const policiesResponse = await this.makeRequest('GET', 
+          `/pg_policies?select=schemaname,tablename,policyname,permissive,roles,cmd&tablename=eq.${this.tableName}`);
+        
+        if (policiesResponse.ok) {
+          const policiesData = await policiesResponse.json();
+          checks.policies = policiesData;
+        }
+      } catch (error) {
+        console.warn('Could not check policies:', error.message);
+      }
+
+      // Generate security recommendations
+      if (!checks.rlsEnabled) {
+        checks.recommendations.push({
+          severity: 'HIGH',
+          message: 'Row Level Security is not enabled. Your data is not protected!',
+          action: 'Run: ALTER TABLE youtube_watch_history ENABLE ROW LEVEL SECURITY;'
+        });
+      } else {
+        checks.securityScore += 40;
+      }
+
+      if (checks.policies.length === 0) {
+        checks.recommendations.push({
+          severity: 'HIGH',
+          message: 'No RLS policies found. Data access is blocked for all users.',
+          action: 'Create policies using the supabase-rls-setup.sql script'
+        });
+      } else {
+        checks.securityScore += 30;
+      }
+
+      // Check for authenticated policies
+      const hasAuthenticatedPolicies = checks.policies.some(p => 
+        p.roles && p.roles.includes('authenticated'));
+      
+      if (hasAuthenticatedPolicies) {
+        checks.securityScore += 20;
+      } else {
+        checks.recommendations.push({
+          severity: 'MEDIUM',
+          message: 'No authenticated user policies found.',
+          action: 'Add policies for authenticated users to control access'
+        });
+      }
+
+      // Check for anonymous policies (potential security risk)
+      const hasAnonPolicies = checks.policies.some(p => 
+        p.roles && p.roles.includes('anon'));
+      
+      if (hasAnonPolicies) {
+        checks.recommendations.push({
+          severity: 'MEDIUM',
+          message: 'Anonymous access policies detected.',
+          action: 'Review anonymous policies to ensure they are intentional'
+        });
+      } else {
+        checks.securityScore += 10;
+      }
+
+      // Calculate final security score
+      if (checks.securityScore >= 90) {
+        checks.securityLevel = 'EXCELLENT';
+      } else if (checks.securityScore >= 70) {
+        checks.securityLevel = 'GOOD';
+      } else if (checks.securityScore >= 50) {
+        checks.securityLevel = 'FAIR';
+      } else {
+        checks.securityLevel = 'POOR';
+      }
+
+      return checks;
+    } catch (error) {
+      console.error('Failed to check RLS status:', error);
+      return {
+        rlsEnabled: false,
+        policies: [],
+        recommendations: [{
+          severity: 'HIGH',
+          message: 'Unable to check RLS status: ' + error.message,
+          action: 'Check your database connection and permissions'
+        }],
+        securityScore: 0,
+        securityLevel: 'UNKNOWN'
+      };
     }
   }
 

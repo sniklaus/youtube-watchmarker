@@ -248,6 +248,89 @@ export class CredentialStorage {
       errors
     };
   }
+
+  /**
+   * Get masked credentials for display purposes
+   * @returns {Object|null} Masked credentials or null if not found
+   */
+  async getMaskedCredentials() {
+    try {
+      const credentials = await this.getCredentials();
+      if (!credentials) {
+        return null;
+      }
+
+      // Return masked versions of sensitive data
+      return {
+        supabaseUrl: credentials.supabaseUrl,
+        apiKey: this.maskSensitiveValue(credentials.apiKey),
+        jwtToken: credentials.jwtToken ? this.maskSensitiveValue(credentials.jwtToken) : null,
+        projectRef: credentials.projectRef ? this.maskSensitiveValue(credentials.projectRef) : null,
+        stored_at: credentials.stored_at
+      };
+    } catch (error) {
+      console.error('Failed to retrieve masked credentials:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Mask sensitive values for display
+   * @param {string} value - Value to mask
+   * @returns {string} Masked value
+   */
+  maskSensitiveValue(value) {
+    if (!value || typeof value !== 'string') {
+      return '';
+    }
+    
+    if (value.length <= 8) {
+      return '***';
+    }
+    
+    // Show first 4 and last 4 characters, mask the middle
+    const start = value.substring(0, 4);
+    const end = value.substring(value.length - 4);
+    const middle = '*'.repeat(Math.min(value.length - 8, 20)); // Limit mask length
+    
+    return `${start}${middle}${end}`;
+  }
+
+  /**
+   * Get credential status for display
+   * @returns {Object} Status information
+   */
+  async getCredentialStatus() {
+    try {
+      const credentials = await this.getCredentials();
+      if (!credentials) {
+        return {
+          configured: false,
+          hasUrl: false,
+          hasApiKey: false,
+          hasJwtToken: false,
+          storedAt: null
+        };
+      }
+
+      return {
+        configured: true,
+        hasUrl: !!credentials.supabaseUrl,
+        hasApiKey: !!credentials.apiKey,
+        hasJwtToken: !!credentials.jwtToken,
+        storedAt: credentials.stored_at ? new Date(credentials.stored_at) : null
+      };
+    } catch (error) {
+      console.error('Failed to get credential status:', error);
+      return {
+        configured: false,
+        hasUrl: false,
+        hasApiKey: false,
+        hasJwtToken: false,
+        storedAt: null
+      };
+    }
+  }
 }
 
 // Create singleton instance

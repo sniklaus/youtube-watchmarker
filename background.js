@@ -357,6 +357,24 @@ class ExtensionManager {
               res({ success: false, error: error.message });
             }
           },
+          "supabase-get-credentials": async (req, res) => {
+            try {
+              const credentials = await credentialStorage.getMaskedCredentials();
+              res({ success: true, credentials });
+            } catch (error) {
+              console.error("Error getting Supabase credentials:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "supabase-get-status": async (req, res) => {
+            try {
+              const status = await credentialStorage.getCredentialStatus();
+              res({ success: true, status });
+            } catch (error) {
+              console.error("Error getting Supabase status:", error);
+              res({ success: false, error: error.message });
+            }
+          },
           
           // Search actions
           "search-videos": (req, res) => {
@@ -1334,6 +1352,36 @@ class ExtensionManager {
       callback({ success: true, message: 'Supabase configuration cleared successfully' });
     } catch (error) {
       console.error('Failed to clear Supabase configuration:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Get masked Supabase credentials
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async getSupabaseCredentials(request, callback) {
+    try {
+      const credentials = await credentialStorage.getMaskedCredentials();
+      callback({ success: true, credentials });
+    } catch (error) {
+      console.error('Failed to get Supabase credentials:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Get Supabase credential status
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async getSupabaseStatus(request, callback) {
+    try {
+      const status = await credentialStorage.getCredentialStatus();
+      callback({ success: true, status });
+    } catch (error) {
+      console.error('Failed to get Supabase status:', error);
       callback({ success: false, error: error.message });
     }
   }

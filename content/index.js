@@ -5,10 +5,6 @@
 class OptionsPageManager {
     constructor() {
         this.isInitialized = false;
-        this.loadingModal = null;
-        this.loadingMessage = null;
-        this.loadingProgress = null;
-        this.loadingClose = null;
         this.themeToggle = null;
         this.bootstrap = null;
         
@@ -80,7 +76,6 @@ class OptionsPageManager {
     cacheElements() {
         console.log('Starting cacheElements...');
         const elementIds = [
-            'loadingModal', 'idLoading_Message', 'idLoading_Progress', 'idLoading_Close',
             'theme-toggle', 'theme-icon', 'idDatabase_Size', 'provider_indexeddb',
             'provider_supabase', 'enable_auto_sync', 'supabase-config',
             'supabase_url', 'supabase_api_key', 'supabase_jwt_token',
@@ -102,12 +97,6 @@ class OptionsPageManager {
         });
 
 
-        // Loading modal elements
-        this.loadingModal = new this.bootstrap.Modal(this.getElementById('loadingModal'));
-        this.loadingMessage = this.getElementById('idLoading_Message');
-        this.loadingProgress = this.getElementById('idLoading_Progress');
-        this.loadingClose = this.getElementById('idLoading_Close');
-        
         // Theme toggle
         this.themeToggle = this.getElementById('theme-toggle');
         this.themeIcon = this.getElementById('theme-icon');
@@ -125,6 +114,12 @@ class OptionsPageManager {
         this.supabaseUrl = this.getElementById('supabase_url');
         this.supabaseApiKey = this.getElementById('supabase_api_key');
         this.supabaseJwtToken = this.getElementById('supabase_jwt_token');
+        
+        // Current configuration display elements
+        this.currentConfig = this.getElementById('current-config');
+        this.currentUrl = this.getElementById('current-url');
+        this.currentApiKey = this.getElementById('current-api-key');
+        this.currentJwtToken = this.getElementById('current-jwt-token');
         
         // Search elements
         this.searchIcon = this.getElementById('search-icon');
@@ -162,6 +157,7 @@ class OptionsPageManager {
             this.getElementById('supabase_save').addEventListener('click', () => this.saveSupabaseConfig());
             this.getElementById('supabase_test').addEventListener('click', () => this.testSupabaseConnection());
             this.getElementById('supabase_clear').addEventListener('click', () => this.clearSupabaseConfig());
+
             // Toggle switches for conditions (using new form-switch format)
             this.setupToggleSwitch('idCondition_Brownav');
             this.setupToggleSwitch('idCondition_Browhist');
@@ -184,9 +180,6 @@ class OptionsPageManager {
             // Theme toggle
             this.themeToggle.addEventListener('click', () => this.toggleTheme());
 
-            // Loading modal close
-            this.loadingClose.addEventListener('click', () => this.hideLoading());
-            
             // Keyboard shortcuts
             this.setupKeyboardShortcuts();
             console.log('Event listeners set up successfully.');
@@ -479,8 +472,11 @@ class OptionsPageManager {
         const file = event.target.files[0];
         if (!file) return;
 
+        // Find the import button (it's a label wrapping the file input)
+        const importButton = event.target.closest('label');
+        
         try {
-            this.showLoading('Importing database...');
+            this.showButtonLoading(importButton, 'Importing...');
             
             const fileContent = await this.readFileAsText(file);
             
@@ -499,7 +495,7 @@ class OptionsPageManager {
             console.error('Import error:', error);
             this.showError('Import failed: ' + error.message);
         } finally {
-            this.hideLoading();
+            this.hideButtonLoading(importButton);
             event.target.value = ''; // Clear file input
         }
     }
@@ -623,8 +619,10 @@ class OptionsPageManager {
      * Sync databases between providers
      */
     async syncDatabases() {
+        const syncButton = this.getElementById('idDatabase_Sync');
+        
         try {
-            this.showLoading('Syncing databases...');
+            this.showButtonLoading(syncButton, 'Syncing...');
             
             // Get current provider status
             const statusResponse = await chrome.runtime.sendMessage({
@@ -658,8 +656,6 @@ class OptionsPageManager {
                 providers: ['indexeddb', 'supabase']
             });
             
-            this.hideLoading();
-            
             if (response && response.success) {
                 this.showSuccess(response.message || 'Databases synced successfully');
                 await this.updateDatabaseSize();
@@ -667,9 +663,10 @@ class OptionsPageManager {
                 throw new Error(response?.error || 'Sync failed');
             }
         } catch (error) {
-            this.hideLoading();
             console.error('Error syncing databases:', error);
             this.showError('Sync failed: ' + error.message);
+        } finally {
+            this.hideButtonLoading(syncButton);
         }
     }
 
@@ -722,14 +719,14 @@ class OptionsPageManager {
      * Test Supabase connection
      */
     async testSupabaseConnection() {
+        const testButton = this.getElementById('supabase_test');
+        
         try {
-            this.showLoading('Testing connection...');
+            this.showButtonLoading(testButton, 'Testing...');
             
             const response = await chrome.runtime.sendMessage({
                 action: 'supabase-test'
             });
-            
-            this.hideLoading();
             
             if (response && response.success) {
                 this.showSuccess(response.message || 'Connection successful');
@@ -737,9 +734,10 @@ class OptionsPageManager {
                 throw new Error(response?.error || 'Connection failed');
             }
         } catch (error) {
-            this.hideLoading();
             console.error('Error testing connection:', error);
             this.showError('Connection test failed: ' + error.message);
+        } finally {
+            this.hideButtonLoading(testButton);
         }
     }
 
@@ -782,22 +780,38 @@ class OptionsPageManager {
      */
     async loadSupabaseConfig() {
         try {
-            // Check if credentials exist (without loading sensitive data)
-            const response = await chrome.runtime.sendMessage({
-                action: 'database-provider-list'
+            // Get masked credentials for display
+            const credentialsResponse = await chrome.runtime.sendMessage({
+                action: 'supabase-get-credentials'
             });
 
-            if (response && response.success) {
-                const supabaseProvider = response.providers.find(p => p.id === 'supabase');
-                if (supabaseProvider && supabaseProvider.isAvailable) {
-                    // Show that configuration exists without loading sensitive data
-                    this.showSuccess('Existing Supabase configuration detected');
-                }
+            // Get credential status
+            const statusResponse = await chrome.runtime.sendMessage({
+                action: 'supabase-get-status'
+            });
+
+            if (credentialsResponse && credentialsResponse.success && credentialsResponse.credentials) {
+                const credentials = credentialsResponse.credentials;
+                
+                // Display current configuration
+                this.currentUrl.textContent = credentials.supabaseUrl || '-';
+                this.currentApiKey.textContent = credentials.apiKey || '-';
+                this.currentJwtToken.textContent = credentials.jwtToken || 'Not configured';
+                
+                this.currentConfig.classList.remove('d-none');
+            } else {
+                this.currentConfig.classList.add('d-none');
             }
+
+
+
         } catch (error) {
             console.error('Error loading Supabase config:', error);
+            this.currentConfig.classList.add('d-none');
         }
     }
+
+
 
 
 
@@ -998,7 +1012,7 @@ class OptionsPageManager {
         deleteButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 const videoId = e.currentTarget.getAttribute('data-video-id');
-                this.deleteVideo(videoId);
+                this.deleteVideo(videoId, e.currentTarget);
             });
         });
     }
@@ -1006,14 +1020,15 @@ class OptionsPageManager {
     /**
      * Delete a video from the database
      * @param {string} videoId - Video ID to delete
+     * @param {HTMLElement} deleteButton - The delete button element
      */
-    async deleteVideo(videoId) {
+    async deleteVideo(videoId, deleteButton) {
         if (!confirm('Are you sure you want to delete this video from your watch history?')) {
             return;
         }
-
+        
         try {
-            this.showLoading('Deleting video...');
+            this.showButtonLoading(deleteButton, 'Deleting...');
             
             const response = await chrome.runtime.sendMessage({
                 action: 'search-delete',
@@ -1022,6 +1037,9 @@ class OptionsPageManager {
 
             if (response && response.success) {
                 this.showSuccess('Video deleted successfully');
+                
+                // Update database size to reflect the deletion
+                await this.updateDatabaseSize();
                 
                 // Refresh the search results, but check if we need to go back a page
                 const totalPagesAfterDelete = Math.ceil((this.searchState.totalResults - 1) / this.searchState.pageSize);
@@ -1038,7 +1056,7 @@ class OptionsPageManager {
             console.error('Delete error:', error);
             this.showError('Delete error: ' + error.message);
         } finally {
-            this.hideLoading();
+            this.hideButtonLoading(deleteButton);
         }
     }
 
@@ -1159,45 +1177,66 @@ class OptionsPageManager {
     }
 
     /**
-     * Show loading modal
-     * @param {string} message - Loading message
+     * Show loading state on a button
+     * @param {string|HTMLElement} buttonIdOrElement - Button ID or element
+     * @param {string} loadingText - Optional loading text
+     */
+    showButtonLoading(buttonIdOrElement, loadingText = null) {
+        const button = typeof buttonIdOrElement === 'string' 
+            ? this.getElementById(buttonIdOrElement) 
+            : buttonIdOrElement;
+            
+        if (!button) return;
+        
+        // Store original state
+        button.dataset.originalText = button.innerHTML;
+        button.dataset.originalDisabled = button.disabled;
+        
+        // Create loading content
+        const spinner = '<i class="fas fa-spinner fa-spin me-2"></i>';
+        const text = loadingText || 'Loading...';
+        
+        button.innerHTML = spinner + text;
+        button.disabled = true;
+    }
+
+    /**
+     * Hide loading state on a button
+     * @param {string|HTMLElement} buttonIdOrElement - Button ID or element
+     */
+    hideButtonLoading(buttonIdOrElement) {
+        const button = typeof buttonIdOrElement === 'string' 
+            ? this.getElementById(buttonIdOrElement) 
+            : buttonIdOrElement;
+            
+        if (!button) return;
+        
+        // Restore original state
+        if (button.dataset.originalText) {
+            button.innerHTML = button.dataset.originalText;
+            delete button.dataset.originalText;
+        }
+        
+        if (button.dataset.originalDisabled !== undefined) {
+            button.disabled = button.dataset.originalDisabled === 'true';
+            delete button.dataset.originalDisabled;
+        }
+    }
+
+    /**
+     * Legacy method for compatibility - does nothing now for quick operations
+     * @param {string} message - Loading message (ignored)
      */
     showLoading(message) {
-        if (this.loadingModal && this.loadingMessage && this.loadingProgress) {
-            this.loadingMessage.textContent = message;
-            this.loadingProgress.textContent = '';
-            this.updateLoadingProgress(0);
-            this.loadingModal.show();
-        }
+        // No-op for quick operations
+        console.log('Loading:', message);
     }
 
     /**
-     * Hide loading modal
+     * Legacy method for compatibility - does nothing now for quick operations
      */
     hideLoading() {
-        if (this.loadingModal) {
-            this.loadingModal.hide();
-        }
-    }
-
-    /**
-     * Update loading progress
-     * @param {string|number} progress - Progress message or percentage
-     */
-    updateLoadingProgress(progress) {
-        if (typeof progress === 'number') {
-            // Update progress bar
-            const progressBar = document.querySelector('.progress-bar');
-            if (progressBar) {
-                progressBar.style.width = `${progress}%`;
-                progressBar.setAttribute('aria-valuenow', progress);
-            }
-            if (this.loadingProgress) {
-                this.loadingProgress.textContent = `${progress}%`;
-            }
-        } else if (this.loadingProgress) {
-            this.loadingProgress.textContent = progress;
-        }
+        // No-op for quick operations
     }
 
     /**

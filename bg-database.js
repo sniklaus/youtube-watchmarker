@@ -63,7 +63,9 @@ export class DatabaseManager {
             'database-provider-migrate': this.migrateData.bind(this),
             'supabase-configure': this.configureSupabase.bind(this),
             'supabase-test': this.testSupabase.bind(this),
-            'supabase-clear': this.clearSupabase.bind(this)
+            'supabase-clear': this.clearSupabase.bind(this),
+            'supabase-get-credentials': this.getSupabaseCredentials.bind(this),
+            'supabase-get-status': this.getSupabaseStatus.bind(this)
           }),
         },
         createResponseCallback(() => {
@@ -423,6 +425,48 @@ export class DatabaseManager {
       response({ success: false, error: error.message });
     }
   }
+
+  /**
+   * Get masked Supabase credentials for display
+   * @param {Object} request - Request object
+   * @param {Function} response - Response callback
+   */
+  async getSupabaseCredentials(request, response) {
+    try {
+      const maskedCredentials = await credentialStorage.getMaskedCredentials();
+      response({ success: true, data: maskedCredentials });
+    } catch (error) {
+      console.error("Failed to get Supabase credentials:", error);
+      response({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Get Supabase credential status for display
+   * @param {Object} request - Request object
+   * @param {Function} response - Response callback
+   */
+  async getSupabaseStatus(request, response) {
+    try {
+      const credentialStatus = await credentialStorage.getCredentialStatus();
+      const connectionStatus = this.providerFactory.currentProvider && 
+                              this.providerFactory.providerType === 'supabase' && 
+                              this.providerFactory.currentProvider.isConnected;
+      
+      response({ 
+        success: true, 
+        data: { 
+          ...credentialStatus,
+          isConnected: connectionStatus 
+        } 
+      });
+    } catch (error) {
+      console.error("Failed to get Supabase status:", error);
+      response({ success: false, error: error.message });
+    }
+  }
+
+
 }
 
 /**
