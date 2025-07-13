@@ -33,7 +33,7 @@ class YouTubeWatchMarker {
    * Initialize the extension
    */
   async init() {
-    this.injectCSS();
+    await this.injectCSS();
     this.setupPeriodicRefresh();
     this.setupRatingObserver();
     await this.setupTooltips();
@@ -44,66 +44,133 @@ class YouTubeWatchMarker {
     
     // Listen for storage changes to update tooltip settings
     chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'sync' && changes.idVisualization_Showpublishdate) {
-        this.handleTooltipSettingChange(changes.idVisualization_Showpublishdate.newValue);
+      if (namespace === 'sync') {
+        // Handle CSS changes
+        const cssKeys = ['stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge', 'stylesheet_Showdate', 'stylesheet_Hideprogress'];
+        const visualKeys = ['idVisualization_Fadeout', 'idVisualization_Grayout', 'idVisualization_Showbadge', 'idVisualization_Showdate', 'idVisualization_Hideprogress'];
+        
+        if (cssKeys.some(key => changes[key]) || visualKeys.some(key => changes[key])) {
+          // Reset CSS injection flag and re-inject
+          this.cssInjected = false;
+          this.injectCSS();
+        }
+        
+        // Handle tooltip changes
+        if (changes.idVisualization_Showpublishdate) {
+          this.handleTooltipSettingChange(changes.idVisualization_Showpublishdate.newValue);
+        }
       }
     });
   }
 
   /**
-   * Inject CSS styles for custom tooltips
+   * Inject CSS styles for custom tooltips and stored stylesheet settings
    */
-  injectCSS() {
+  async injectCSS() {
     if (this.cssInjected) return;
     
-    const css = `
-      /* Simple Publication Date Tooltip */
-      .youwatch-date-tooltip {
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-family: 'Roboto', 'Arial', sans-serif;
-        font-size: 11px;
-        font-weight: 500;
-        line-height: 1.2;
-        white-space: nowrap;
-        z-index: 10000;
-        pointer-events: none;
-        opacity: 0;
-        animation: dateTooltipFadeIn 0.15s ease-out forwards;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        backdrop-filter: blur(4px);
+    try {
+      // Get all settings from storage
+      const settings = await chrome.storage.sync.get([
+        'stylesheet_Fadeout',
+        'stylesheet_Grayout', 
+        'stylesheet_Showbadge',
+        'stylesheet_Showdate',
+        'stylesheet_Hideprogress',
+        'idVisualization_Fadeout',
+        'idVisualization_Grayout',
+        'idVisualization_Showbadge',
+        'idVisualization_Showdate',
+        'idVisualization_Hideprogress'
+      ]);
+
+      // Remove any existing injected styles to prevent duplicates
+      const existingStyle = document.getElementById('youwatch-injected-styles');
+      if (existingStyle) {
+        existingStyle.remove();
       }
 
-      @keyframes dateTooltipFadeIn {
-        from {
+      // Build CSS string based on enabled settings
+      let cssContent = '';
+      
+      // Add youwatch-mark styles based on enabled visualizations
+      if (settings.idVisualization_Fadeout && settings.stylesheet_Fadeout) {
+        cssContent += settings.stylesheet_Fadeout + '\n';
+      }
+      
+      if (settings.idVisualization_Grayout && settings.stylesheet_Grayout) {
+        cssContent += settings.stylesheet_Grayout + '\n';
+      }
+      
+      if (settings.idVisualization_Showbadge && settings.stylesheet_Showbadge) {
+        cssContent += settings.stylesheet_Showbadge + '\n';
+      }
+      
+      if (settings.idVisualization_Showdate && settings.stylesheet_Showdate) {
+        cssContent += settings.stylesheet_Showdate + '\n';
+      }
+      
+      if (settings.idVisualization_Hideprogress && settings.stylesheet_Hideprogress) {
+        cssContent += settings.stylesheet_Hideprogress + '\n';
+      }
+
+      // Add tooltip CSS
+      cssContent += `
+        /* Simple Publication Date Tooltip */
+        .youwatch-date-tooltip {
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-family: 'Roboto', 'Arial', sans-serif;
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.2;
+          white-space: nowrap;
+          z-index: 10000;
+          pointer-events: none;
           opacity: 0;
-          transform: translateY(-3px);
+          animation: dateTooltipFadeIn 0.15s ease-out forwards;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          backdrop-filter: blur(4px);
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+
+        @keyframes dateTooltipFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-3px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
+
+        /* Dark theme adjustments */
+        [data-bs-theme="dark"] .youwatch-date-tooltip {
+          background: rgba(40, 40, 40, 0.9);
+          color: #ffffff;
+        }
+
+        /* Light theme adjustments */
+        [data-bs-theme="light"] .youwatch-date-tooltip {
+          background: rgba(0, 0, 0, 0.85);
+          color: #ffffff;
+        }
+      `;
+
+      // Inject CSS if there's content
+      if (cssContent.trim()) {
+        const style = document.createElement('style');
+        style.id = 'youwatch-injected-styles';
+        style.textContent = cssContent;
+        document.head.appendChild(style);
       }
 
-      /* Dark theme adjustments */
-      [data-bs-theme="dark"] .youwatch-date-tooltip {
-        background: rgba(40, 40, 40, 0.9);
-        color: #ffffff;
-      }
-
-      /* Light theme adjustments */
-      [data-bs-theme="light"] .youwatch-date-tooltip {
-        background: rgba(0, 0, 0, 0.85);
-        color: #ffffff;
-      }
-    `;
-    
-    const style = document.createElement('style');
-    style.textContent = css;
-    document.head.appendChild(style);
-    this.cssInjected = true;
+      this.cssInjected = true;
+    } catch (error) {
+      console.error('Error injecting CSS:', error);
+    }
   }
 
   /**
@@ -601,6 +668,20 @@ class YouTubeWatchMarker {
     
     // Remove "Published" prefix if present
     formatted = formatted.replace(/^(Published|Uploaded|Streamed)\s*:?\s*/i, '');
+    
+    // Remove view count information that often appears before the date
+    // Pattern: "62K views 11h ago" -> "11h ago"
+    // Pattern: "1.2M views 2 days ago" -> "2 days ago"
+    // Pattern: "123 views 1 week ago" -> "1 week ago"
+    formatted = formatted.replace(/^[\d,.]+(K|M|B)?\s+views?\s+/i, '');
+    formatted = formatted.replace(/^[\d,]+\s+views?\s+/i, '');
+    
+    // Extract just the time ago part if there are multiple pieces of information
+    // Look for patterns like "X time ago" and extract only that part
+    const timeAgoMatch = formatted.match(/(\d+\s+(second|minute|hour|day|week|month|year)s?\s+ago)/i);
+    if (timeAgoMatch) {
+      formatted = timeAgoMatch[1];
+    }
     
     // Simplify "X time ago" format
     formatted = formatted.replace(/(\d+)\s+(year|month|week|day|hour|minute|second)s?\s+ago/i, '$1$2 ago');
