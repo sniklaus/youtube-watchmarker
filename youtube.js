@@ -304,7 +304,29 @@ class YouTubeWatchMarker {
         '.style-scope.ytd-video-meta-block:last-child',
         '.style-scope.ytd-video-meta-block:nth-child(2)',
         
-        // Aria label selectors
+        // Additional specific selectors for different layouts
+        '.ytd-video-meta-block span[aria-label*="ago"]',
+        '.ytd-video-meta-block span[aria-label*="years ago"]',
+        '.ytd-video-meta-block span[aria-label*="months ago"]',
+        '.ytd-video-meta-block span[aria-label*="days ago"]',
+        '.ytd-video-meta-block span[aria-label*="hours ago"]',
+        '.ytd-video-meta-block span[aria-label*="minutes ago"]',
+        
+        // Grid and list view selectors
+        '.details .metadata span:last-child',
+        '.details .metadata span:nth-child(2)',
+        '.metadata-line span',
+        '.video-meta span',
+        
+        // Shorts and mobile layouts
+        '.ytd-shorts-video-meta-block span',
+        '.shorts-video-meta span',
+        
+        // Search result layouts
+        '.ytd-video-meta-block .style-scope:last-child',
+        '.ytd-channel-video-player-renderer .metadata span:last-child',
+        
+        // Aria label selectors (more comprehensive)
         '[aria-label*="ago"]',
         '[aria-label*="Streamed"]',
         '[aria-label*="Published"]',
@@ -325,11 +347,11 @@ class YouTubeWatchMarker {
         'span:contains("hours ago")',
         'span:contains("minutes ago")',
         
-        // Alternative layouts
+        // Alternative layouts and fallbacks
         '.ytd-video-meta-block span',
-        '.metadata-line span',
         '[id*="metadata"] span',
-        '.video-meta span'
+        '.video-meta-block span',
+        '.metadata span'
       ];
       
       for (const selector of dateSelectors) {
@@ -365,6 +387,22 @@ class YouTubeWatchMarker {
       
       if (publishDate) break;
       currentElement = currentElement.parentNode;
+    }
+    
+    // If no date found in parent elements, try searching within the video element itself
+    if (!publishDate) {
+      try {
+        const allSpans = videoElement.querySelectorAll('span');
+        for (const span of allSpans) {
+          const text = span.textContent?.trim() || span.getAttribute('aria-label');
+          if (text && this.isValidDateText(text)) {
+            publishDate = text;
+            break;
+          }
+        }
+      } catch (e) {
+        // Ignore errors
+      }
     }
     
     return publishDate;
@@ -452,7 +490,13 @@ class YouTubeWatchMarker {
         
         // Set up tooltip if enabled and not already set up
         if (tooltipsEnabled && !this.tooltipElements.has(video)) {
-          this.createCustomTooltip(video, videoId);
+          // Add a small delay for newly loaded videos to allow DOM to stabilize
+          setTimeout(() => {
+            // Double-check that tooltip isn't already set up (race condition prevention)
+            if (!this.tooltipElements.has(video)) {
+              this.createCustomTooltip(video, videoId);
+            }
+          }, 50);
         }
         
         // Check if we already have watch date for this video
@@ -622,26 +666,33 @@ class YouTubeWatchMarker {
     const showTooltip = (event) => {
       clearTimeout(hideTimeout);
       
-      // Get publication date
-      const publishDate = this.publishDates[videoId] || this.extractPublishDate(videoElement);
-      
-      // Skip if no publication date found
+      // Get publication date with retry logic
+      let publishDate = this.publishDates[videoId];
       if (!publishDate) {
+        publishDate = this.extractPublishDate(videoElement);
+        // Cache the extracted date for future use
+        if (publishDate) {
+          this.publishDates[videoId] = publishDate;
+        }
+      }
+      
+      // If still no publication date, try a delayed extraction
+      if (!publishDate) {
+        // Retry after a short delay to allow DOM to stabilize
+        setTimeout(() => {
+          const retryDate = this.extractPublishDate(videoElement);
+          if (retryDate) {
+            this.publishDates[videoId] = retryDate;
+            // Show tooltip now if user is still hovering
+            if (videoElement.matches(':hover')) {
+              this.showTooltipWithDate(videoElement, retryDate);
+            }
+          }
+        }, 100);
         return;
       }
       
-      // Format the date text for cleaner display
-      const cleanDate = this.formatPublishDate(publishDate);
-      
-      // Create simple tooltip element
-      tooltip = document.createElement('div');
-      tooltip.className = 'youwatch-date-tooltip';
-      tooltip.textContent = cleanDate;
-      
-      // Position tooltip closer to thumbnail
-      this.positionDateTooltip(tooltip, videoElement);
-      
-      document.body.appendChild(tooltip);
+      this.showTooltipWithDate(videoElement, publishDate);
     };
     
     const hideTooltip = () => {
@@ -659,6 +710,32 @@ class YouTubeWatchMarker {
     
     // Track tooltip for cleanup
     this.tooltipElements.set(videoElement, { showTooltip, hideTooltip });
+  }
+
+  /**
+   * Show tooltip with the given publication date
+   * @param {Element} videoElement - Video element
+   * @param {string} publishDate - Publication date
+   */
+  showTooltipWithDate(videoElement, publishDate) {
+    // Remove any existing tooltip
+    const existingTooltip = document.querySelector('.youwatch-date-tooltip');
+    if (existingTooltip) {
+      existingTooltip.remove();
+    }
+    
+    // Format the date text for cleaner display
+    const cleanDate = this.formatPublishDate(publishDate);
+    
+    // Create simple tooltip element
+    const tooltip = document.createElement('div');
+    tooltip.className = 'youwatch-date-tooltip';
+    tooltip.textContent = cleanDate;
+    
+    // Position tooltip closer to thumbnail
+    this.positionDateTooltip(tooltip, videoElement);
+    
+    document.body.appendChild(tooltip);
   }
 
   /**

@@ -219,16 +219,48 @@ class PopupSearchManager {
             this.searchState.currentQuery = '';
             this.searchState.currentPage = 1;
             
-            const response = await chrome.runtime.sendMessage({
-                action: 'search-videos',
-                query: '', // Empty query to show all videos
-                page: 1,
-                pageSize: this.searchState.pageSize
-            });
+            // Add retry logic for database initialization timing
+            const maxRetries = 3;
+            let retryCount = 0;
+            let response = null;
+            
+            while (retryCount < maxRetries) {
+                try {
+                    response = await chrome.runtime.sendMessage({
+                        action: 'search-videos',
+                        query: '', // Empty query to show all videos
+                        page: 1,
+                        pageSize: this.searchState.pageSize
+                    });
+                    
+                    // If successful, break out of retry loop
+                    if (response && response.success) {
+                        break;
+                    }
+                    
+                    // If failed but not due to database issues, don't retry
+                    if (response && response.error && !response.error.includes('Database')) {
+                        break;
+                    }
+                } catch (error) {
+                    console.warn(`Initial search attempt ${retryCount + 1} failed:`, error);
+                }
+                
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    // Wait before retrying (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+                }
+            }
 
             if (response && response.success) {
                 this.searchState.totalResults = response.totalResults || 0;
                 this.displaySearchResults(response.results);
+                
+                // Show a subtle message if it took multiple retries
+                if (retryCount > 0) {
+                    console.log(`Search successful after ${retryCount + 1} attempts`);
+                }
             } else {
                 // Don't show error on initial load, just show empty state
                 this.searchResults.innerHTML = '<div class="alert alert-info m-3"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history.</div>';

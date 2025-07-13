@@ -44,11 +44,24 @@ class IndexedDBProvider {
   }
 
   /**
-   * Update connection status when database becomes available
+   * Update connection status based on database state
    */
   updateConnectionStatus() {
-    if (this.databaseManager && this.databaseManager.database) {
-      this.isConnected = true;
+    // More thorough connection checking
+    const isDbOpen = this.databaseManager?.database !== null;
+    const isDbInitialized = this.databaseManager?.isInitialized === true;
+    
+    // We're connected if database is open AND initialized
+    this.isConnected = isDbOpen && isDbInitialized;
+    
+    // Log status for debugging
+    if (!this.isConnected) {
+      console.debug('IndexedDB connection status:', {
+        isDbOpen,
+        isDbInitialized,
+        databaseExists: !!this.databaseManager?.database,
+        managerInitialized: !!this.databaseManager?.isInitialized
+      });
     }
   }
 

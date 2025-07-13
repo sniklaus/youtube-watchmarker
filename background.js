@@ -539,6 +539,18 @@ class ExtensionManager {
             const pageSize = req.pageSize || 50;
             const query = req.query || '';
             
+            // Check if database is ready
+            if (!Database || !Database.isInitialized) {
+              console.warn('Database not ready for search request');
+              res({ 
+                success: false, 
+                error: 'Database not initialized yet. Please try again in a moment.',
+                results: [], 
+                totalResults: 0 
+              });
+              return;
+            }
+            
             // First, get all matching results for counting
             const countRequest = { 
               strQuery: query, 
@@ -547,30 +559,50 @@ class ExtensionManager {
             };
             
             Search.lookup(countRequest, (countResponse) => {
-              if (countResponse && countResponse.objVideos) {
-                const allResults = countResponse.objVideos;
-                const totalResults = allResults.length;
-                
-                // Calculate pagination
-                const skip = (page - 1) * pageSize;
-                const paginatedResults = allResults.slice(skip, skip + pageSize);
-                
-                const results = paginatedResults.map(video => ({
-                  id: video.strIdent,
-                  title: video.strTitle,
-                  timestamp: video.intTimestamp,
-                  count: video.intCount
-                }));
-                
+              try {
+                if (countResponse && countResponse.objVideos) {
+                  const allResults = countResponse.objVideos;
+                  const totalResults = allResults.length;
+                  
+                  // Calculate pagination
+                  const skip = (page - 1) * pageSize;
+                  const paginatedResults = allResults.slice(skip, skip + pageSize);
+                  
+                  const results = paginatedResults.map(video => ({
+                    id: video.strIdent,
+                    title: video.strTitle,
+                    timestamp: video.intTimestamp,
+                    count: video.intCount
+                  }));
+                  
+                  res({ 
+                    success: true, 
+                    results, 
+                    totalResults,
+                    currentPage: page,
+                    pageSize: pageSize
+                  });
+                } else {
+                  // Check if this might be a database issue
+                  const errorMessage = countResponse === null ? 
+                    'Database connection error. Please try again.' : 
+                    'No videos found in your watch history.';
+                    
+                  res({ 
+                    success: false, 
+                    error: errorMessage,
+                    results: [], 
+                    totalResults: 0 
+                  });
+                }
+              } catch (searchError) {
+                console.error('Search processing error:', searchError);
                 res({ 
-                  success: true, 
-                  results, 
-                  totalResults,
-                  currentPage: page,
-                  pageSize: pageSize
+                  success: false, 
+                  error: 'Search failed due to an internal error.',
+                  results: [], 
+                  totalResults: 0 
                 });
-              } else {
-                res({ success: false, results: [], totalResults: 0 });
               }
             });
           },
