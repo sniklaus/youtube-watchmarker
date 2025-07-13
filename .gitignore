@@ -143,3 +143,4 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/node
 _metadata/generated_indexed_rulesets/_ruleset1
+.DS_Store

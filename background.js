@@ -15,6 +15,8 @@ import { SyncManagerInstance } from "./bg-sync-manager.js";
 import { History } from "./bg-history.js";
 import { Youtube } from "./bg-youtube.js";
 import { Search } from "./bg-search.js";
+import { databaseProviderFactory } from "./database-provider-factory.js";
+import { credentialStorage } from "./credential-storage.js";
 
 /**
  * Extension background script manager
@@ -23,6 +25,7 @@ class ExtensionManager {
   constructor() {
     this.titleCache = new Map();
     this.isInitialized = false;
+    this.providerFactory = databaseProviderFactory;
     
     this.init();
   }
@@ -38,8 +41,7 @@ class ExtensionManager {
         {
           settings: this.initializeSettings.bind(this),
           database: this.moduleInitializer(Database.init.bind(Database)),
-          databaseProvider: this.moduleInitializer(DatabaseProviderInstance.init.bind(DatabaseProviderInstance)),
-          syncManager: this.moduleInitializer(SyncManagerInstance.init.bind(SyncManagerInstance)),
+          providerFactory: this.initializeProviderFactory.bind(this),
           history: this.moduleInitializer(History.init.bind(History)),
           youtube: this.moduleInitializer(Youtube.init.bind(Youtube)),
           search: this.moduleInitializer(Search.init.bind(Search)),
@@ -177,6 +179,13 @@ class ExtensionManager {
           sendResponse(response);
         };
 
+        // Debug: Check if Database is available
+        if (!Database) {
+          console.error("Database object is not available!");
+          sendResponse({ success: false, error: "Database not available" });
+          return;
+        }
+
         const actionHandlers = {
           // YouTube actions
           "youtube-lookup": (req, res) => {
@@ -243,6 +252,108 @@ class ExtensionManager {
           },
           "database-size": (req, res) => {
             this.getDatabaseSize(res);
+          },
+          
+          // Sync actions
+          "database-sync-enable": (req, res) => {
+            try {
+              Database.enableSync({ provider: req.provider }, res);
+            } catch (error) {
+              console.error("Error enabling sync:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "database-sync-disable": (req, res) => {
+            try {
+              Database.disableSync({}, res);
+            } catch (error) {
+              console.error("Error disabling sync:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "database-sync-now": (req, res) => {
+            try {
+              Database.syncNow({}, res);
+            } catch (error) {
+              console.error("Error syncing now:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "database-sync-status": (req, res) => {
+            try {
+              Database.getSyncStatus({}, res);
+            } catch (error) {
+              console.error("Error getting sync status:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          
+          // Database provider actions
+          "database-provider-status": (req, res) => {
+            try {
+              this.getDatabaseProviderStatus(res);
+            } catch (error) {
+              console.error("Error getting provider status:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "database-provider-switch": (req, res) => {
+            try {
+              this.switchDatabaseProvider(req, res);
+            } catch (error) {
+              console.error("Error switching provider:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "database-provider-list": (req, res) => {
+            try {
+              this.getAvailableProviders(res);
+            } catch (error) {
+              console.error("Error getting provider list:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "database-provider-migrate": (req, res) => {
+            try {
+              this.migrateDatabaseProviders(req, res);
+            } catch (error) {
+              console.error("Error migrating providers:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "database-provider-sync": (req, res) => {
+            try {
+              this.syncDatabaseProviders(req, res);
+            } catch (error) {
+              console.error("Error syncing providers:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          
+          // Supabase configuration actions
+          "supabase-configure": (req, res) => {
+            try {
+              this.configureSupabase(req, res);
+            } catch (error) {
+              console.error("Error configuring Supabase:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "supabase-test": (req, res) => {
+            try {
+              this.testSupabaseConnection(req, res);
+            } catch (error) {
+              console.error("Error testing Supabase:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "supabase-clear": (req, res) => {
+            try {
+              this.clearSupabaseConfiguration(req, res);
+            } catch (error) {
+              console.error("Error clearing Supabase:", error);
+              res({ success: false, error: error.message });
+            }
           },
           
           // Search actions
@@ -1109,8 +1220,202 @@ class ExtensionManager {
     }
   }
 
+  /**
+   * Initialize provider factory
+   * @param {Object} args - Arguments
+   * @param {Function} callback - Callback function
+   */
+  async initializeProviderFactory(args, callback) {
+    try {
+      // Set the database manager reference
+      this.providerFactory.setDatabaseManager(Database);
+      
+      // Initialize the factory
+      const success = await this.providerFactory.init();
+      if (success) {
+        console.log('Database provider factory initialized successfully');
+        callback({});
+      } else {
+        throw new Error('Failed to initialize database provider factory');
+      }
+    } catch (error) {
+      console.error('Failed to initialize provider factory:', error);
+      callback(null);
+    }
+  }
 
+  /**
+   * Get database provider status
+   * @param {Function} callback - Response callback
+   */
+  async getDatabaseProviderStatus(callback) {
+    try {
+      const status = this.providerFactory.getProviderStatus();
+      callback({ success: true, status });
+    } catch (error) {
+      console.error('Failed to get provider status:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Switch database provider
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async switchDatabaseProvider(request, callback) {
+    try {
+      const { provider } = request;
+      
+      if (!provider || !['indexeddb', 'supabase'].includes(provider)) {
+        callback({ success: false, error: 'Invalid provider type' });
+        return;
+      }
+
+      if (provider === 'indexeddb') {
+        const success = await this.providerFactory.switchToIndexedDB();
+        if (success) {
+          callback({ success: true, message: `Successfully switched to ${provider}` });
+        } else {
+          callback({ success: false, error: `Failed to switch to ${provider}` });
+        }
+      } else if (provider === 'supabase') {
+        // Supabase switching can throw detailed error messages
+        await this.providerFactory.switchToSupabase();
+        callback({ success: true, message: `Successfully switched to ${provider}` });
+      }
+    } catch (error) {
+      console.error('Failed to switch provider:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Get available providers
+   * @param {Function} callback - Response callback
+   */
+  async getAvailableProviders(callback) {
+    try {
+      const providers = await this.providerFactory.getAvailableProviders();
+      callback({ success: true, providers });
+    } catch (error) {
+      console.error('Failed to get available providers:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Migrate data between providers
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async migrateDatabaseProviders(request, callback) {
+    try {
+      const { fromProvider, toProvider } = request;
+      
+      if (!fromProvider || !toProvider) {
+        callback({ success: false, error: 'Missing source or target provider' });
+        return;
+      }
+
+      const success = await this.providerFactory.migrateData(fromProvider, toProvider);
+      if (success) {
+        callback({ success: true, message: `Successfully migrated data from ${fromProvider} to ${toProvider}` });
+      } else {
+        callback({ success: false, error: 'Migration failed' });
+      }
+    } catch (error) {
+      console.error('Failed to migrate data:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Sync data between providers (bidirectional)
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async syncDatabaseProviders(request, callback) {
+    try {
+      const { providers } = request;
+      
+      if (!providers || !Array.isArray(providers) || providers.length !== 2) {
+        callback({ success: false, error: 'Invalid providers array' });
+        return;
+      }
+
+      const success = await this.providerFactory.syncProviders(providers[0], providers[1]);
+      if (success) {
+        callback({ success: true, message: `Successfully synced data between ${providers[0]} and ${providers[1]}` });
+      } else {
+        callback({ success: false, error: 'Sync failed' });
+      }
+    } catch (error) {
+      console.error('Failed to sync providers:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Configure Supabase
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async configureSupabase(request, callback) {
+    try {
+      const { credentials } = request;
+      
+      if (!credentials) {
+        callback({ success: false, error: 'No credentials provided' });
+        return;
+      }
+
+      await credentialStorage.storeCredentials(credentials);
+      callback({ success: true, message: 'Supabase configuration saved successfully' });
+    } catch (error) {
+      console.error('Failed to configure Supabase:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Test Supabase connection
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async testSupabaseConnection(request, callback) {
+    try {
+      const success = await credentialStorage.testConnection();
+      if (success) {
+        callback({ success: true, message: 'Supabase connection test successful' });
+      } else {
+        callback({ success: false, error: 'Supabase connection test failed' });
+      }
+    } catch (error) {
+      console.error('Supabase connection test failed:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Clear Supabase configuration
+   * @param {Object} request - Request object
+   * @param {Function} callback - Response callback
+   */
+  async clearSupabaseConfiguration(request, callback) {
+    try {
+      await credentialStorage.clearCredentials();
+      callback({ success: true, message: 'Supabase configuration cleared successfully' });
+    } catch (error) {
+      console.error('Failed to clear Supabase configuration:', error);
+      callback({ success: false, error: error.message });
+    }
+  }
 }
+
+// Debug: Check if Database is available at startup
+console.log("Database object at startup:", Database);
+console.log("Database methods:", Database ? Object.getOwnPropertyNames(Database) : "Database not available");
 
 // Initialize the extension manager
 const extensionManager = new ExtensionManager();

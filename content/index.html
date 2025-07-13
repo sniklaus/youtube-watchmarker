@@ -165,8 +165,8 @@
     <main id="main-content" class="container pb-5" tabindex="-1">
       <div class="row g-4">
         <!-- Database Management -->
-        <div class="col-12 col-lg-6">
-          <section class="card shadow-sm h-100">
+        <div class="col-12">
+          <section class="card shadow-sm">
             <div class="card-header bg-primary text-white">
               <h2 class="card-title h5 mb-0">
                 <i class="fas fa-database me-2"></i>
@@ -174,101 +174,107 @@
               </h2>
             </div>
             <div class="card-body">
-              <p class="text-muted mb-4">
-                Your watch history can be stored locally in your browser or in the cloud using Firestore. Regular backups are recommended to prevent data loss.
-              </p>
-              
               <!-- Database Provider Selection -->
               <div class="mb-4">
-                <label class="form-label fw-medium">Database Provider</label>
-                <div class="d-flex gap-2 mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="database_provider" id="database_provider_indexeddb" value="indexeddb" checked>
-                    <label class="form-check-label" for="database_provider_indexeddb">
-                      <i class="fas fa-hdd me-1"></i>Local Storage (IndexedDB)
-                    </label>
+                <h3 class="h6 mb-3">Database Provider</h3>
+                <div class="row g-3 mb-3">
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="databaseProvider" id="provider_indexeddb" value="indexeddb" checked>
+                      <label class="form-check-label d-flex align-items-center" for="provider_indexeddb">
+                        <i class="fas fa-hdd me-2"></i>
+                        <div>
+                          <strong>Local Storage (IndexedDB)</strong>
+                          <br><small class="text-muted">Store data locally in your browser</small>
+                        </div>
+                      </label>
+                    </div>
                   </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="database_provider" id="database_provider_firestore" value="firestore">
-                    <label class="form-check-label" for="database_provider_firestore">
-                      <i class="fas fa-cloud me-1"></i>Cloud Storage (Firestore)
-                    </label>
+                  
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="databaseProvider" id="provider_supabase" value="supabase">
+                      <label class="form-check-label d-flex align-items-center" for="provider_supabase">
+                        <i class="fas fa-cloud me-2"></i>
+                        <div>
+                          <strong>Supabase (PostgreSQL)</strong>
+                          <br><small class="text-muted">Store data in Supabase cloud database</small>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 </div>
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="database_sync_enabled">
-                  <label class="form-check-label" for="database_sync_enabled">
-                    Enable automatic synchronization between local and cloud storage
+                
+                <!-- Data Migration Option -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="enable_auto_sync">
+                  <label class="form-check-label" for="enable_auto_sync">
+                    Enable automatic synchronization between local and remote storage
                   </label>
                 </div>
               </div>
               
-              <!-- Firestore Configuration (hidden by default) -->
-              <div id="firestore-config" class="mb-4" style="display: none;">
-                <h6 class="fw-medium mb-3">Firestore Configuration</h6>
+              <!-- Database Operations -->
+              <div class="mb-4">
+                <h3 class="h6 mb-3">Database Operations</h3>
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-primary" id="idDatabase_Export">
+                    <i class="fas fa-download me-2"></i>Export
+                  </button>
+                  <label class="btn btn-primary">
+                    <i class="fas fa-upload me-2"></i>Import
+                    <input type="file" id="idDatabase_Import" class="d-none" accept=".json,.database">
+                  </label>
+                  <button class="btn btn-warning" id="idDatabase_Reset">
+                    <i class="fas fa-trash me-2"></i>Reset
+                  </button>
+                  <button class="btn btn-info" id="idDatabase_Sync">
+                    <i class="fas fa-sync me-2"></i>Sync Databases
+                  </button>
+                </div>
+              </div>
+
+              <!-- Supabase Configuration (hidden by default) -->
+              <div id="supabase-config" class="mb-4 d-none">
+                <h3 class="h6 mb-3">Supabase Configuration</h3>
+                
                 <div class="row g-3">
                   <div class="col-12">
-                    <label for="firestore_project_id" class="form-label">Project ID</label>
-                    <input type="text" class="form-control" id="firestore_project_id" placeholder="your-project-id">
+                    <label for="supabase_url" class="form-label">Supabase URL</label>
+                    <input type="url" class="form-control" id="supabase_url" 
+                           placeholder="https://your-project.supabase.co">
+                    <div class="form-text">Your Supabase project URL</div>
                   </div>
+                  
                   <div class="col-12">
-                    <label for="firestore_api_key" class="form-label">API Key</label>
-                    <input type="password" class="form-control" id="firestore_api_key" placeholder="Your Firebase API key">
+                    <label for="supabase_api_key" class="form-label">API Key</label>
+                    <input type="password" class="form-control" id="supabase_api_key" 
+                           placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                    <div class="form-text">Your Supabase anon key or service role key</div>
                   </div>
+                  
                   <div class="col-12">
-                    <label for="firestore_auth_domain" class="form-label">Auth Domain (optional)</label>
-                    <input type="text" class="form-control" id="firestore_auth_domain" placeholder="your-project.firebaseapp.com">
-                  </div>
-                  <div class="col-12">
-                    <label for="firestore_collection_name" class="form-label">Collection Name</label>
-                    <input type="text" class="form-control" id="firestore_collection_name" value="watchmarker_videos" placeholder="watchmarker_videos">
-                  </div>
-                  <div class="col-12">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="firestore_use_emulator">
-                      <label class="form-check-label" for="firestore_use_emulator">
-                        Use local emulator (development only)
-                      </label>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <button class="btn btn-outline-primary btn-sm" id="firestore_save_config" type="button">
-                      <i class="fas fa-save me-2"></i>Save Configuration
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm ms-2" id="firestore_test_connection" type="button">
-                      <i class="fas fa-plug me-2"></i>Test Connection
-                    </button>
+                    <label for="supabase_jwt_token" class="form-label">JWT Token (Optional)</label>
+                    <input type="password" class="form-control" id="supabase_jwt_token" 
+                           placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                    <div class="form-text">Optional JWT token for additional authentication</div>
                   </div>
                 </div>
-              </div>
-              
-              <div class="d-flex flex-wrap gap-2 mb-4">
-                <button class="btn btn-primary" id="idDatabase_Export" type="button">
-                  <i class="fas fa-download me-2"></i>Export
-                </button>
                 
-                <div class="position-relative">
-                  <button class="btn btn-success" id="idDatabase_Import" type="button">
-                    <i class="fas fa-upload me-2"></i>Import
+                <div class="mt-3">
+                  <button type="button" class="btn btn-outline-primary me-2" id="supabase_save">
+                    <i class="fas fa-save me-2"></i>Save Configuration
                   </button>
-                  <input 
-                    type="file" 
-                    accept=".database" 
-                    class="position-absolute top-0 start-0 w-100 h-100 opacity-0" 
-                    style="cursor: pointer;"
-                    aria-label="Import database file"
-                  />
+                  <button type="button" class="btn btn-outline-secondary me-2" id="supabase_test">
+                    <i class="fas fa-plug me-2"></i>Test Connection
+                  </button>
+                  <button type="button" class="btn btn-outline-danger" id="supabase_clear">
+                    <i class="fas fa-trash me-2"></i>Clear Configuration
+                  </button>
                 </div>
-                
-                <button class="btn btn-outline-danger" id="idDatabase_Reset" type="button">
-                  <i class="fas fa-trash me-2"></i>Reset
-                </button>
-                
-                <button class="btn btn-outline-info" id="idDatabase_Sync" type="button">
-                  <i class="fas fa-sync me-2"></i>Sync Databases
-                </button>
               </div>
-              
+
+              <!-- Database Status -->
               <div class="alert alert-info d-flex align-items-center">
                 <i class="fas fa-info-circle me-2"></i>
                 <div>
@@ -280,58 +286,9 @@
           </section>
         </div>
 
-        <!-- Synchronization -->
-        <div class="col-12 col-lg-6">
-          <section class="card shadow-sm h-100">
-            <div class="card-header bg-success text-white">
-              <h2 class="card-title h5 mb-0">
-                <i class="fas fa-sync me-2"></i>
-                Synchronization
-              </h2>
-            </div>
-            <div class="card-body">
-              <div class="row g-3">
-                <div class="col-12">
-                  <h3 class="h6 mb-2">Browser History</h3>
-                  <p class="text-muted small mb-3">
-                    Initialize your timeline from browser history. Usually needed only once.
-                  </p>
-                  <button class="btn btn-outline-success btn-sm w-100" id="idHistory_Synchronize" type="button">
-                    <i class="fas fa-history me-2"></i>Synchronize History
-                  </button>
-                  <div class="mt-2">
-                    <small class="text-muted">
-                      Last sync: <span id="idHistory_Timestamp" class="fw-medium">Never</span>
-                    </small>
-                  </div>
-                </div>
-                
-                <div class="col-12">
-                  <hr class="my-3">
-                  <h3 class="h6 mb-2">YouTube Account</h3>
-                  <p class="text-muted small mb-3">
-                    Sync with your YouTube account for cross-device compatibility. Updates automatically every hour.
-                  </p>
-                  <button class="btn btn-outline-success btn-sm w-100 mb-2" id="idYoutube_Synchronize" type="button">
-                    <i class="fab fa-youtube me-2"></i>Synchronize YouTube Watch History
-                  </button>
-                  <button class="btn btn-outline-success btn-sm w-100" id="idYoutube_LikedVideos" type="button">
-                    <i class="fas fa-heart me-2"></i>Sync Liked Videos
-                  </button>
-                  <div class="mt-2">
-                    <small class="text-muted">
-                      Last watch history sync: <span id="idYoutube_Watch_History_Timestamp" class="fw-medium">Never</span>
-                    </small>
-                    <br>
-                    <small class="text-muted">
-                      Last liked videos sync: <span id="idYoutube_LikedTimestamp" class="fw-medium">Never</span>
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+        
+
+        
 
         <!-- Watch Conditions -->
         <div class="col-12">
