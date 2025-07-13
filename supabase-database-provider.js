@@ -257,20 +257,42 @@ export class SupabaseDatabaseProvider {
         throw new Error('Database not connected');
       }
 
-      const response = await this.makeRequest('GET', `/${this.tableName}?select=str_ident,int_timestamp,str_title,int_count&order=int_timestamp.desc`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get all videos: ${response.status}`);
+      const allVideos = [];
+      let offset = 0;
+      const limit = 1000; // Use reasonable batch size
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await this.makeRequest('GET', `/${this.tableName}?select=str_ident,int_timestamp,str_title,int_count&order=int_timestamp.desc&limit=${limit}&offset=${offset}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to get all videos: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.length === 0) {
+          hasMore = false;
+        } else {
+          const videos = data.map(row => ({
+            strIdent: row.str_ident,
+            intTimestamp: parseInt(row.int_timestamp),
+            strTitle: row.str_title,
+            intCount: parseInt(row.int_count)
+          }));
+          
+          allVideos.push(...videos);
+          offset += limit;
+          
+          // If we got fewer records than the limit, we've reached the end
+          if (data.length < limit) {
+            hasMore = false;
+          }
+        }
       }
 
-      const data = await response.json();
-      
-      return data.map(row => ({
-        strIdent: row.str_ident,
-        intTimestamp: parseInt(row.int_timestamp),
-        strTitle: row.str_title,
-        intCount: parseInt(row.int_count)
-      }));
+      console.log(`Retrieved ${allVideos.length} videos from Supabase (paginated)`);
+      return allVideos;
     } catch (error) {
       console.error('Failed to get all videos:', error);
       throw error;
@@ -413,20 +435,42 @@ export class SupabaseDatabaseProvider {
         throw new Error('Database not connected');
       }
 
-      const response = await this.makeRequest('GET', `/${this.tableName}?int_timestamp=gte.${this.normalizeTimestamp(startTimestamp)}&int_timestamp=lte.${this.normalizeTimestamp(endTimestamp)}&select=str_ident,int_timestamp,str_title,int_count&order=int_timestamp.desc`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get videos by date range: ${response.status}`);
+      const allVideos = [];
+      let offset = 0;
+      const limit = 1000; // Use reasonable batch size
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await this.makeRequest('GET', `/${this.tableName}?int_timestamp=gte.${this.normalizeTimestamp(startTimestamp)}&int_timestamp=lte.${this.normalizeTimestamp(endTimestamp)}&select=str_ident,int_timestamp,str_title,int_count&order=int_timestamp.desc&limit=${limit}&offset=${offset}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to get videos by date range: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.length === 0) {
+          hasMore = false;
+        } else {
+          const videos = data.map(row => ({
+            strIdent: row.str_ident,
+            intTimestamp: parseInt(row.int_timestamp),
+            strTitle: row.str_title,
+            intCount: parseInt(row.int_count)
+          }));
+          
+          allVideos.push(...videos);
+          offset += limit;
+          
+          // If we got fewer records than the limit, we've reached the end
+          if (data.length < limit) {
+            hasMore = false;
+          }
+        }
       }
 
-      const data = await response.json();
-      
-      return data.map(row => ({
-        strIdent: row.str_ident,
-        intTimestamp: parseInt(row.int_timestamp),
-        strTitle: row.str_title,
-        intCount: parseInt(row.int_count)
-      }));
+      console.log(`Retrieved ${allVideos.length} videos from Supabase for date range (paginated)`);
+      return allVideos;
     } catch (error) {
       console.error('Failed to get videos by date range:', error);
       throw error;
@@ -464,11 +508,34 @@ export class SupabaseDatabaseProvider {
       const oldestData = await statsResponse.json();
       const newestData = await maxStatsResponse.json();
 
-      // For total views, we'd need to sum all int_count values
-      // PostgREST doesn't have built-in aggregation, so we'll approximate
-      const allVideosResponse = await this.makeRequest('GET', `/${this.tableName}?select=int_count`);
-      const allVideos = await allVideosResponse.json();
-      const totalViews = allVideos.reduce((sum, video) => sum + (video.int_count || 1), 0);
+      // For total views, we need to sum all int_count values with pagination
+      // PostgREST doesn't have built-in aggregation, so we'll paginate through all records
+      let totalViews = 0;
+      let offset = 0;
+      const limit = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const allVideosResponse = await this.makeRequest('GET', `/${this.tableName}?select=int_count&limit=${limit}&offset=${offset}`);
+        
+        if (!allVideosResponse.ok) {
+          throw new Error(`Failed to get video counts for statistics: ${allVideosResponse.status}`);
+        }
+        
+        const allVideos = await allVideosResponse.json();
+        
+        if (allVideos.length === 0) {
+          hasMore = false;
+        } else {
+          totalViews += allVideos.reduce((sum, video) => sum + (video.int_count || 1), 0);
+          offset += limit;
+          
+          // If we got fewer records than the limit, we've reached the end
+          if (allVideos.length < limit) {
+            hasMore = false;
+          }
+        }
+      }
 
       return {
         totalVideos,

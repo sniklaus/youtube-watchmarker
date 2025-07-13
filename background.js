@@ -10,7 +10,6 @@ import {
 } from "./utils.js";
 
 import { Database } from "./bg-database.js";
-import { DatabaseProviderInstance } from "./bg-database-provider.js";
 import { SyncManagerInstance } from "./bg-sync-manager.js";
 import { History } from "./bg-history.js";
 import { Youtube } from "./bg-youtube.js";
@@ -215,26 +214,29 @@ class ExtensionManager {
               try {
                 parsedData = JSON.parse(req.data);
               } catch (jsonError) {
-                // If JSON parsing fails, try the old format (base64 + URL encoding)
+                // If JSON parsing fails, try the old format (base64 encoded)
                 try {
-                  console.log("Trying old database format (base64 + URL encoded)");
-                  parsedData = JSON.parse(decodeURIComponent(escape(atob(req.data))));
-                } catch (legacyError) {
-                  console.error("Failed to parse database in both formats:", { jsonError, legacyError });
-                  res({ success: false, error: "Invalid database format" });
-                  return;
+                  console.log("Trying old database format (base64 encoded)");
+                  parsedData = JSON.parse(atob(req.data));
+                } catch (base64Error) {
+                  // Try base64 + URL encoding as a fallback
+                  try {
+                    console.log("Trying legacy database format (base64 + URL encoded)");
+                    parsedData = JSON.parse(decodeURIComponent(atob(req.data)));
+                  } catch (legacyError) {
+                    console.error("Failed to parse database in all formats:", { jsonError, base64Error, legacyError });
+                    res({ success: false, error: "Invalid database format - unable to parse as JSON, base64, or legacy format" });
+                    return;
+                  }
                 }
               }
               
-              Database.import({ objVideos: parsedData }, (response) => {
-                if (response) {
-                  res({ success: true });
+              Database.import({ data: { data: parsedData } }, (response) => {
+                if (response && response.success) {
+                  res({ success: true, message: response.message });
                 } else {
-                  res({ success: false, error: "Import failed" });
+                  res({ success: false, error: response?.error || "Import failed" });
                 }
-              }, (progress) => {
-                // Progress callback for database import
-                console.log("Database import progress:", progress);
               });
             } catch (error) {
               console.error("Database import error:", error);
@@ -243,10 +245,10 @@ class ExtensionManager {
           },
           "database-reset": (req, res) => {
             Database.reset({}, (response) => {
-              if (response) {
-                res({ success: true });
+              if (response && response.success) {
+                res({ success: true, message: response.message });
               } else {
-                res({ success: false, error: "Reset failed" });
+                res({ success: false, error: response?.error || "Reset failed" });
               }
             });
           },
@@ -446,13 +448,10 @@ class ExtensionManager {
             this.getDatabaseProviderStatus(res);
           },
           "database-provider-switch": (req, res) => {
-            this.switchDatabaseProvider(req.provider, res);
+            this.switchDatabaseProvider(req, res);
           },
           "database-provider-sync": (req, res) => {
-            this.syncDatabases(res);
-          },
-          "database-provider-config": (req, res) => {
-            this.updateDatabaseProviderConfig(req, res);
+            this.syncDatabaseProviders(req, res);
           },
           
           // Firestore configuration actions
@@ -816,8 +815,14 @@ class ExtensionManager {
    */
   async getDatabaseSize(callback) {
     try {
-      const size = await getStorageAsync("extensions.Youwatch.Database.intSize");
-      callback({ success: true, size: size || "0" });
+      const currentProvider = this.providerFactory.getCurrentProvider();
+      if (!currentProvider) {
+        callback({ success: false, error: "No database provider available" });
+        return;
+      }
+
+      const count = await currentProvider.getVideoCount();
+      callback({ success: true, size: count.toString() });
     } catch (error) {
       console.error("Error getting database size:", error);
       callback({ success: false, error: error.message });
@@ -957,92 +962,13 @@ class ExtensionManager {
     }
   }
 
-  /**
-   * Get database provider status
-   * @param {Function} callback - Response callback
-   */
-  async getDatabaseProviderStatus(callback) {
-    try {
-      const status = await DatabaseProviderInstance.getStatus();
-      callback({ success: true, status });
-    } catch (error) {
-      console.error("Error getting database provider status:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
 
-  /**
-   * Switch database provider
-   * @param {string} provider - Database provider ('indexeddb' or 'firestore')
-   * @param {Function} callback - Response callback
-   */
-  async switchDatabaseProvider(provider, callback) {
-    try {
-      await new Promise((resolve, reject) => {
-        DatabaseProviderInstance.switchDatabase({ provider }, (response) => {
-          if (response && response.success) {
-            resolve(response);
-          } else {
-            reject(new Error('Failed to switch database provider'));
-          }
-        });
-      });
-      
-      callback({ success: true, provider });
-    } catch (error) {
-      console.error("Error switching database provider:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
 
-  /**
-   * Sync databases
-   * @param {Function} callback - Response callback
-   */
-  async syncDatabases(callback) {
-    try {
-      await new Promise((resolve, reject) => {
-        DatabaseProviderInstance.syncDatabases({}, (response) => {
-          if (response && !response.error) {
-            resolve(response);
-          } else {
-            reject(new Error(response?.error || 'Failed to sync databases'));
-          }
-        }, (progress) => {
-          console.log("Sync progress:", progress);
-        });
-      });
-      
-      callback({ success: true });
-    } catch (error) {
-      console.error("Error syncing databases:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
 
-  /**
-   * Update database provider configuration
-   * @param {Object} request - Configuration request
-   * @param {Function} callback - Response callback
-   */
-  async updateDatabaseProviderConfig(request, callback) {
-    try {
-      await new Promise((resolve, reject) => {
-        DatabaseProviderInstance.updateConfiguration(request, (response) => {
-          if (response && response.success) {
-            resolve(response);
-          } else {
-            reject(new Error('Failed to update database provider configuration'));
-          }
-        });
-      });
-      
-      callback({ success: true });
-    } catch (error) {
-      console.error("Error updating database provider config:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
+
+
+
+
 
   /**
    * Save Firestore configuration
