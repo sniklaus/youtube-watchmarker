@@ -1007,8 +1007,6 @@ class YouTubeWatchMarker {
    * @param {string} title - Video title
    */
   markVideoAsWatchedFromRating(videoId, title) {
-    console.log("Video rated, marking as watched:", videoId, title);
-    
     chrome.runtime.sendMessage(
       {
         action: "youtube-ensure",
@@ -1022,8 +1020,6 @@ class YouTubeWatchMarker {
           // Mark all videos with this ID on current page
           const videosWithId = this.findVideos(response.strIdent);
           videosWithId.forEach(video => this.markVideo(video, response.strIdent));
-          
-          console.log("Video marked as watched from rating:", videoId);
         }
       }
     );
@@ -1040,8 +1036,6 @@ class YouTubeWatchMarker {
       return;
     }
     
-    console.log("Progress hook detected watched video:", strIdent, strTitle);
-    
     // Mark video as watched
     chrome.runtime.sendMessage(
       {
@@ -1056,8 +1050,6 @@ class YouTubeWatchMarker {
           // Mark all videos with this ID on current page
           const videosWithId = this.findVideos(response.strIdent);
           videosWithId.forEach(video => this.markVideo(video, response.strIdent));
-          
-          console.log("Video marked as watched from progress hook:", strIdent);
         }
       }
     );

@@ -8,7 +8,6 @@ import { STORAGE_KEYS } from "./constants.js";
 
 export const History = {
   init: function (objRequest, funcResponse) {
-    console.log("History.init called");
     AsyncSeries.run(
       {
         objMessaging: BackgroundUtils.messaging('history', { 'history-synchronize': History.synchronize }),
@@ -18,8 +17,6 @@ export const History = {
   },
 
   synchronize: function (objRequest, funcResponse, funcProgress) {
-    console.log("History.synchronize called with request:", objRequest);
-    
     // Validate request
     if (!objRequest || typeof objRequest.intTimestamp !== 'number') {
       console.error("Invalid request - missing or invalid timestamp:", objRequest);
@@ -27,13 +24,9 @@ export const History = {
       return;
     }
 
-    console.log("Starting browser history synchronization...");
-
     AsyncSeries.run(
       {
         objVideos: function (objArgs, funcCallback) {
-          console.log("Searching browser history from timestamp:", objRequest.intTimestamp);
-
           chrome.history.search(
             {
               text: "youtube.com",
@@ -53,7 +46,6 @@ export const History = {
                 return;
               }
 
-              console.log(`Found ${objResults.length} history entries`);
               let objVideos = [];
               let processedCount = 0;
               let skippedCount = 0;
@@ -86,10 +78,21 @@ export const History = {
                 }
 
                 // Extract video ID from URL
-                const videoId = objResult.url.split("&")[0].slice(-11);
+                let videoId;
+                
+                if (objResult.url.indexOf("https://www.youtube.com/watch?v=") === 0 ||
+                    objResult.url.indexOf("https://m.youtube.com/watch?v=") === 0) {
+                  // For regular YouTube URLs: https://www.youtube.com/watch?v=VIDEO_ID&other=params
+                  const urlParams = new URL(objResult.url).searchParams;
+                  videoId = urlParams.get('v');
+                } else if (objResult.url.indexOf("https://www.youtube.com/shorts/") === 0) {
+                  // For YouTube Shorts: https://www.youtube.com/shorts/VIDEO_ID?t=33
+                  const shortsPath = objResult.url.replace("https://www.youtube.com/shorts/", "");
+                  videoId = shortsPath.split('?')[0]; // Remove any query parameters
+                }
                 
                 // Validate video ID format (11 characters, alphanumeric and dashes/underscores)
-                if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+                if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
                   console.warn("Invalid video ID format:", videoId, "from URL:", objResult.url);
                   skippedCount++;
                   continue;
@@ -104,30 +107,43 @@ export const History = {
                 processedCount++;
               }
 
-              console.log(`Processed ${processedCount} videos, skipped ${skippedCount} entries`);
-
               // Store the video count for later use
               objArgs.videoCount = processedCount;
+
+              // If no videos found, return empty array but don't fail
+              if (objVideos.length === 0) {
+                console.log("No new videos found in browser history since last sync");
+                return funcCallback([]);
+              }
 
               return funcCallback(objVideos);
             },
           );
         },
+        objProcessVideos: function (objArgs, funcCallback) {
+          // If no videos to process, skip to completion
+          if (!objArgs.objVideos || objArgs.objVideos.length === 0) {
+            console.log("No videos to process, skipping database operations");
+            return funcCallback({
+              videoCount: objArgs.videoCount || 0,
+              processedVideos: 0
+            }, []);
+          }
+          
+          // Continue with normal processing
+          return funcCallback({}, "objDatabase");
+        },
         objDatabase: DatabaseUtils.database("readwrite"),
         objVideo: BackgroundUtils.video(),
         objGet: DatabaseUtils.get((progress) => {
           // Track progress for video count
-          if (progress && progress.strProgress) {
-            console.log("History sync progress:", progress.strProgress);
-          }
         }),
         objPut: DatabaseUtils.put(),
         "objVideo-Next": DatabaseUtils.videoNext(),
         objCount: DatabaseUtils.count(),
-        objTime: DatabaseUtils.time(STORAGE_KEYS.HISTORY_TIMESTAMP),
+
       },
       createResponseCallback((result) => {
-        console.log("History synchronization completed:", result);
         // Add video count information to the response
         if (result && result.videoCount !== undefined) {
           result.videoCount = result.videoCount;

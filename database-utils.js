@@ -210,38 +210,7 @@ export class DatabaseUtils {
     };
   }
 
-  /**
-   * Get or set timestamp in storage
-   * @param {string} key - Storage key for timestamp
-   * @returns {Function} Function for AsyncSeries
-   */
-  static time(key) {
-    return (args, callback) => {
-      chrome.storage.local.get([key], (result) => {
-        if (chrome.runtime.lastError) {
-          console.error("Storage get error:", chrome.runtime.lastError);
-          return callback({ intTimestamp: 0 });
-        }
 
-        const timestamp = result[key] || 0;
-        
-        // If we have videos processed, update the timestamp
-        if (args.objVideos && args.objVideos.length > 0) {
-          const maxTimestamp = Math.max(...args.objVideos.map(v => v.intTimestamp || 0));
-          if (maxTimestamp > timestamp) {
-            chrome.storage.local.set({ [key]: maxTimestamp }, () => {
-              if (chrome.runtime.lastError) {
-                console.error("Storage set error:", chrome.runtime.lastError);
-              }
-            });
-            return callback({ intTimestamp: maxTimestamp });
-          }
-        }
-
-        callback({ intTimestamp: timestamp });
-      });
-    };
-  }
 
   /**
    * Search videos in database

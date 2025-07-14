@@ -29,10 +29,7 @@ export class DatabaseManager {
    * @param {Function} response - Response callback
    */
   async init(request, response) {
-    console.log("DatabaseManager.init called");
-    
     if (this.isInitialized) {
-      console.log("Database already initialized");
       response({});
       return;
     }
@@ -71,7 +68,6 @@ export class DatabaseManager {
         },
         createResponseCallback(() => {
           this.isInitialized = true;
-          console.log("Database initialization completed");
           return {};
         }, response)
       );
@@ -136,7 +132,6 @@ export class DatabaseManager {
 
     openRequest.onsuccess = () => {
       this.database = openRequest.result;
-      console.log("Database opened successfully");
       callback({});
     };
   }

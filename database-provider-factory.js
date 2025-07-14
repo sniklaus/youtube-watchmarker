@@ -371,8 +371,6 @@ export class DatabaseProviderFactory {
    */
   async switchToIndexedDB(savePreference = true) {
     try {
-      console.log('Switching to IndexedDB provider...');
-      
       // Close current provider if different
       if (this.currentProvider && this.providerType !== 'indexeddb') {
         await this.currentProvider.close();
@@ -394,7 +392,6 @@ export class DatabaseProviderFactory {
         });
       }
 
-      console.log('Successfully switched to IndexedDB provider');
       return true;
     } catch (error) {
       console.error('Failed to switch to IndexedDB:', error);
@@ -408,8 +405,6 @@ export class DatabaseProviderFactory {
    */
   async switchToSupabase() {
     try {
-      console.log('Switching to Supabase provider...');
-      
       // Check if credentials are available
       const hasCredentials = await credentialStorage.hasCredentials();
       if (!hasCredentials) {
@@ -441,14 +436,12 @@ export class DatabaseProviderFactory {
         database_provider: 'supabase' 
       });
 
-      console.log('Successfully switched to Supabase provider');
       return true;
     } catch (error) {
       console.error('Failed to switch to Supabase:', error);
       
       // If we failed to switch, make sure we fall back to IndexedDB
       if (this.providerType !== 'indexeddb') {
-        console.log('Falling back to IndexedDB provider');
         await this.switchToIndexedDB(false); // Don't save preference when falling back
       }
       
@@ -466,8 +459,6 @@ export class DatabaseProviderFactory {
       const result = await chrome.storage.local.get(['database_provider']);
       const savedProvider = result.database_provider || 'indexeddb';
 
-      console.log(`Initializing database factory with provider: ${savedProvider}`);
-
       // Try to initialize the saved provider
       if (savedProvider === 'supabase') {
         try {
@@ -476,7 +467,7 @@ export class DatabaseProviderFactory {
             return true;
           }
         } catch (error) {
-          console.log('Supabase initialization failed, falling back to IndexedDB');
+          // Supabase initialization failed, falling back to IndexedDB
         }
         
         // Fall back to IndexedDB if Supabase fails, but don't save preference
@@ -620,9 +611,7 @@ export class DatabaseProviderFactory {
         return true;
       }
 
-      console.log(`Syncing data between ${provider1} and ${provider2}...`);
-
-      // Get both providers
+          // Get both providers
       const providers = {};
       
       for (const providerType of [provider1, provider2]) {
@@ -641,17 +630,13 @@ export class DatabaseProviderFactory {
       const data1 = await providers[provider1].getAllVideos();
       const data2 = await providers[provider2].getAllVideos();
 
-      console.log(`${provider1} has ${data1.length} videos, ${provider2} has ${data2.length} videos`);
-
       // Merge data (keep the most recent timestamp for each video)
       const mergedData = this.mergeVideoData(data1, data2);
-      console.log(`Merged data contains ${mergedData.length} unique videos`);
 
       // Update both providers with merged data
       await providers[provider1].importVideos(mergedData);
       await providers[provider2].importVideos(mergedData);
 
-      console.log(`Successfully synced data between ${provider1} and ${provider2}`);
       return true;
     } catch (error) {
       console.error('Data sync failed:', error);

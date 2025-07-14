@@ -8,7 +8,6 @@ import { DATABASE } from "./constants.js";
 
 export const Search = {
   init: function (objRequest, funcResponse) {
-    console.log("Search.init called");
     AsyncSeries.run(
       {
         objMessaging: BackgroundUtils.messaging('search', {

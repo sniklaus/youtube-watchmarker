@@ -22,10 +22,7 @@ export class SyncManager {
    * Initialize the sync manager
    */
   async init(request, response) {
-    console.log("SyncManager.init called");
-    
     if (this.isInitialized) {
-      console.log("Sync manager already initialized");
       response({});
       return;
     }
@@ -45,7 +42,6 @@ export class SyncManager {
         },
         createResponseCallback(() => {
           this.isInitialized = true;
-          console.log("Sync manager initialization completed");
           return {};
         }, response)
       );
@@ -69,12 +65,6 @@ export class SyncManager {
       this.autoSyncEnabled = result.sync_auto_enabled || false;
       this.syncIntervalMinutes = result.sync_interval_minutes || 60;
       this.lastSyncTimestamp = result.sync_last_timestamp || 0;
-
-      console.log('Sync manager configuration loaded:', {
-        autoSyncEnabled: this.autoSyncEnabled,
-        syncIntervalMinutes: this.syncIntervalMinutes,
-        lastSyncTimestamp: new Date(this.lastSyncTimestamp).toISOString()
-      });
 
       callback({});
     } catch (error) {
@@ -105,7 +95,6 @@ export class SyncManager {
       
       await this.startAutoSyncInternal();
       
-      console.log("Auto sync started");
       response({ success: true });
     } catch (error) {
       console.error("Failed to start auto sync:", error);
@@ -127,8 +116,6 @@ export class SyncManager {
     this.syncInterval = setInterval(() => {
       this.performAutoSync();
     }, intervalMs);
-
-    console.log(`Auto sync scheduled every ${this.syncIntervalMinutes} minutes`);
   }
 
   /**
@@ -147,7 +134,6 @@ export class SyncManager {
         this.syncInterval = null;
       }
       
-      console.log("Auto sync stopped");
       response({ success: true });
     } catch (error) {
       console.error("Failed to stop auto sync:", error);
@@ -169,7 +155,6 @@ export class SyncManager {
       
       const result = await this.performSync();
       
-      console.log("Manual sync completed:", result);
       response({ success: true, result });
     } catch (error) {
       console.error("Failed to perform manual sync:", error);
@@ -210,7 +195,6 @@ export class SyncManager {
         }
       }
 
-      console.log("Sync configuration updated");
       response({ success: true });
     } catch (error) {
       console.error("Failed to update sync configuration:", error);
@@ -250,9 +234,7 @@ export class SyncManager {
         return;
       }
 
-      console.log("Starting automatic sync...");
       await this.performSync();
-      console.log("Automatic sync completed");
     } catch (error) {
       console.error("Auto sync failed:", error);
     }

@@ -51,10 +51,7 @@ export const STORAGE_KEYS = {
   // Settings
   SETTINGS_PREFIX: "id",
   
-  // Timestamps
-  HISTORY_TIMESTAMP: "historyTimestamp",
-  YOUTUBE_TIMESTAMP: "youtubeWatchHistoryTimestamp", 
-  LIKED_TIMESTAMP: "youtubeLikedTimestamp",
+
   
   // Sync Configuration
   SYNC_ENABLED: "sync_enabled",

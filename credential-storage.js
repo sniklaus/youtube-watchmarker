@@ -98,7 +98,6 @@ export class CredentialStorage {
         [this.storageKey]: encryptedCredentials
       });
 
-      console.log('Supabase credentials stored successfully');
       return true;
     } catch (error) {
       console.error('Failed to store credentials:', error);
@@ -161,8 +160,7 @@ export class CredentialStorage {
 
       if (response.ok || response.status === 404) {
         // 404 is expected for root path, but means API is reachable
-        console.log('Supabase connection test successful');
-        return true;
+              return true;
       }
 
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -178,7 +176,6 @@ export class CredentialStorage {
   async clearCredentials() {
     try {
       await chrome.storage.local.remove([this.storageKey]);
-      console.log('Supabase credentials cleared');
       return true;
     } catch (error) {
       console.error('Failed to clear credentials:', error);

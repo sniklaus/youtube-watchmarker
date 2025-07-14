@@ -1,5 +1,3 @@
-console.log("utils.js: file loaded");
-
 import { DATABASE } from "./constants.js";
 
 /**
@@ -73,7 +71,6 @@ export const sendMessageToTab = (tabId, message, retryCount = 100) => {
 export const createResponseCallback = (transformArgs, responseCallback) => {
   return (args) => {
     if (typeof responseCallback !== 'function') {
-      console.warn('createResponseCallback: responseCallback is not a function', responseCallback);
       return;
     }
     
@@ -396,8 +393,6 @@ export class BackgroundUtils {
       
       if (typeof callback === 'function') {
         return callback({});
-      } else {
-        console.warn('BackgroundUtils.messaging: callback is not a function', callback);
       }
     };
   }

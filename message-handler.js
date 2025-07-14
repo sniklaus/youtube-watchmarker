@@ -90,7 +90,6 @@ export class MessageHandler {
     });
 
     this.isInitialized = true;
-    console.log('MessageHandler initialized');
   }
 
   /**

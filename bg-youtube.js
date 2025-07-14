@@ -9,7 +9,6 @@ import { STORAGE_KEYS, TIMEOUTS, DATABASE } from "./constants.js";
 
 export const Youtube = {
   init: function (objRequest, funcResponse) {
-    console.log("Youtube.init called");
     AsyncSeries.run(
       {
         objMessaging: BackgroundUtils.messaging('youtube', {
@@ -154,36 +153,201 @@ export const Youtube = {
               objArgs.strClicktrack = strRegex[1];
             }
 
-            // captures videoIds and titles
+            // Use a completely different approach - extract and parse JSON data structures
             let objVideos = [];
-            const objVideo = new RegExp(
-              '"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})"' + // videoId
-              '.*?"text"[^"]*"([^"]*)"', // title
-              "g",
-            );
-            while ((strRegex = objVideo.exec(cleanedText)) !== null) {
-              let strIdent = strRegex[1];
-              let strTitle = strRegex[2];
-
-              // Decode HTML entities in title
+            
+            try {
+              // Helper function to decode HTML entities
+              const decodeHtmlEntities = (text) => {
               const decodeMap = {
                 "\\u0022": '"',
                 "\\u0026": '&',
                 "\\u003C": '<',
                 "\\u003D": '=',
-                "\\u003E": '>'
+                  "\\u003E": '>',
+                  "\\u0027": "'",
+                  "\\u003A": ':',
+                  "\\u002F": '/',
+                  "\\u003B": ';',
+                  "\\u003F": '?',
+                  "\\u0040": '@',
+                  "\\u005B": '[',
+                  "\\u005D": ']',
+                  "\\u007B": '{',
+                  "\\u007D": '}',
+                  "\\u005C": '\\',
+                  "\\u007C": '|',
+                  "\\u0060": '`',
+                  "\\u007E": '~',
+                  "\\u0021": '!',
+                  "\\u0023": '#',
+                  "\\u0024": '$',
+                  "\\u0025": '%',
+                  "\\u005E": '^',
+                  "\\u002A": '*',
+                  "\\u0028": '(',
+                  "\\u0029": ')',
+                  "\\u002B": '+',
+                  "\\u002D": '-',
+                  "\\u002E": '.',
+                  "\\u002C": ',',
+                  "\\u0020": ' '
+                };
+                
+                let decoded = text;
+                for (const [encoded, decodedChar] of Object.entries(decodeMap)) {
+                  decoded = decoded.replaceAll(encoded, decodedChar);
+                }
+                return decoded;
               };
-              for (const [encoded, decoded] of Object.entries(decodeMap)) {
-                strTitle = strTitle.replaceAll(encoded, decoded);
+              
+              // Helper function to safely extract nested property
+              const getNestedProperty = (obj, path) => {
+                return path.split('.').reduce((current, key) => {
+                  return current && current[key] !== undefined ? current[key] : null;
+                }, obj);
+              };
+              
+              // Helper function to find video title from various locations
+              const extractVideoTitle = (videoRenderer) => {
+                // Try multiple possible title locations
+                const titlePaths = [
+                  'title.runs.0.text',
+                  'title.simpleText',
+                  'title.text',
+                  'headline.runs.0.text',
+                  'headline.simpleText',
+                  'longBylineText.runs.0.text',
+                  'shortBylineText.runs.0.text',
+                  'accessibility.accessibilityData.label'
+                ];
+                
+                for (const path of titlePaths) {
+                  const title = getNestedProperty(videoRenderer, path);
+                  if (title && typeof title === 'string' && title.trim()) {
+                    let cleanTitle = title.trim();
+                    // Clean up accessibility labels
+                    cleanTitle = cleanTitle.replace(/\s+by\s+[^,]*$/i, '').trim();
+                    cleanTitle = cleanTitle.replace(/\s*-\s*YouTube\s*$/i, '').trim();
+                    return cleanTitle;
+                  }
+                }
+                
+                return null;
+              };
+              
+                             // Try to find and parse the main data structure
+               const dataRegex = /var\s+ytInitialData\s*=\s*({.+?});/s;
+               const dataMatch = responseText.match(dataRegex);
+               
+                              if (dataMatch) {
+                 try {
+                   const ytInitialData = JSON.parse(dataMatch[1]);
+                   
+                   // Navigate through the YouTube data structure
+                   const contents = getNestedProperty(ytInitialData, 'contents.twoColumnBrowseResultsRenderer.tabs.0.tabRenderer.content.sectionListRenderer.contents');
+                   
+                   if (contents && Array.isArray(contents)) {
+                     for (const section of contents) {
+                       const items = getNestedProperty(section, 'itemSectionRenderer.contents');
+                                                if (items && Array.isArray(items)) {
+                           for (const item of items) {
+                                                      const videoRenderer = item.videoRenderer;
+                           if (videoRenderer && videoRenderer.videoId) {
+                             const videoId = videoRenderer.videoId;
+                             const title = extractVideoTitle(videoRenderer);
+                             
+                             if (videoId && videoId.length === 11 && title) {
+                               objVideos.push({
+                                 strIdent: videoId,
+                                 intTimestamp: null,
+                                 strTitle: decodeHtmlEntities(title),
+                                 intCount: null,
+                               });
+                             }
+                           }
+                        }
+                      }
+                    }
+                  }
+                                 } catch (jsonError) {
+                   console.warn("Failed to parse ytInitialData, falling back to regex:", jsonError);
+                 }
+               }
+               
+               // Fallback: Use more comprehensive regex if JSON parsing failed
+               if (objVideos.length === 0) {
+                
+                // Find all videoRenderer objects and extract data
+                const videoRendererRegex = /"videoRenderer":\s*({[^}]*"videoId"[^}]*})/g;
+                let rendererMatch;
+                
+                while ((rendererMatch = videoRendererRegex.exec(cleanedText)) !== null) {
+                  try {
+                    const rendererStr = rendererMatch[1];
+                    
+                    // Extract video ID
+                    const videoIdMatch = rendererStr.match(/"videoId":\s*"([^"]{11})"/);
+                    if (!videoIdMatch) continue;
+                    
+                    const videoId = videoIdMatch[1];
+                    
+                    // Extract title using multiple patterns
+                    const titlePatterns = [
+                      /"title":\s*{\s*"runs":\s*\[{\s*"text":\s*"([^"]+)"/,
+                      /"title":\s*{\s*"simpleText":\s*"([^"]+)"/,
+                      /"text":\s*"([^"]+)"/
+                    ];
+                    
+                    let title = null;
+                    for (const pattern of titlePatterns) {
+                      const titleMatch = rendererStr.match(pattern);
+                      if (titleMatch && titleMatch[1]) {
+                        title = titleMatch[1];
+                        break;
+                      }
+                    }
+                    
+                                         if (title && !objVideos.some(video => video.strIdent === videoId)) {
+                       objVideos.push({
+                         strIdent: videoId,
+                         intTimestamp: null,
+                         strTitle: decodeHtmlEntities(title),
+                         intCount: null,
+                       });
+                     }
+                  } catch (error) {
+                    console.warn("Error parsing video renderer:", error);
+                  }
+                }
               }
-
-              objVideos.push({
-                strIdent: strIdent,
-                intTimestamp: null,
-                strTitle: strTitle,
-                intCount: null,
-              });
+              
+                             // Additional fallback: Simple video ID extraction
+               if (objVideos.length === 0) {
+                 const videoIdRegex = /"videoId":\s*"([a-zA-Z0-9_-]{11})"/g;
+                 let videoIdMatch;
+                 const foundIds = new Set();
+                 
+                 while ((videoIdMatch = videoIdRegex.exec(cleanedText)) !== null) {
+                   const videoId = videoIdMatch[1];
+                   
+                   if (!foundIds.has(videoId)) {
+                     foundIds.add(videoId);
+                     objVideos.push({
+                       strIdent: videoId,
+                       intTimestamp: null,
+                       strTitle: `Video ${videoId}`, // Fallback title
+                       intCount: null,
+                     });
+                   }
+                 }
+               }
+              
+            } catch (error) {
+              console.error("Error in YouTube history parsing:", error);
             }
+            
+                         
 
             if (objArgs.strContinuation !== null) {
               objArgs.strContinuation = null;
@@ -199,9 +363,9 @@ export const Youtube = {
         objVideo: BackgroundUtils.video(),
         objGet: DatabaseUtils.get(funcProgress),
         objPut: DatabaseUtils.put(),
-        "objVideo-Next": DatabaseUtils.videoNext(),
+        "objVideo-Next": BackgroundUtils.videoNext(),
         objCount: DatabaseUtils.count(),
-        objTime: DatabaseUtils.time(STORAGE_KEYS.YOUTUBE_TIMESTAMP),
+
         objContinuation: function (objArgs, funcCallback) {
           if (objArgs.intExisting < objRequest.intThreshold) {
             if (objArgs.strContinuation !== null) {
@@ -212,7 +376,13 @@ export const Youtube = {
           return funcCallback({});
         },
       },
-      createResponseCallback(() => { }, funcResponse),
+      createResponseCallback((result) => {
+        // Add video count to response
+        if (result && result.objVideos) {
+          result.videoCount = result.objVideos.length;
+        }
+        return result;
+      }, funcResponse),
     );
   },
 
@@ -467,7 +637,7 @@ export const Youtube = {
       objPut: DatabaseUtils.put(),
       "objVideo-Next": DatabaseUtils.videoNext(),
       objCount: DatabaseUtils.count(),
-      objTime: DatabaseUtils.time(STORAGE_KEYS.LIKED_TIMESTAMP),
+
         objContinuation: function (objArgs, funcCallback) {
           if (objArgs.intExisting < objRequest.intThreshold) {
             if (objArgs.strContinuation !== null) {

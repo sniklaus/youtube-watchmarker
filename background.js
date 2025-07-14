@@ -69,7 +69,6 @@ class ExtensionManager {
       await this.setupSynchronization();
 
       this.isInitialized = true;
-      console.log("Extension initialized successfully");
     } catch (error) {
       console.error("Failed to initialize extension:", error);
       throw error;
@@ -96,6 +95,8 @@ class ExtensionManager {
         if (result === null) {
           reject(new Error("Database initialization failed"));
         } else {
+          // Set Database in globalThis so it's available to utils and other modules
+          globalThis.Database = Database;
           resolve(result);
         }
       });
@@ -155,8 +156,7 @@ class ExtensionManager {
       // Initialize integer settings using sync storage
       const integerSettings = [
         { key: "databaseSize", defaultValue: 0 },
-        { key: "historyTimestamp", defaultValue: 0 },
-        { key: "youtubeWatchHistoryTimestamp", defaultValue: 0 },
+        
       ];
 
       for (const { key, defaultValue } of integerSettings) {
@@ -211,7 +211,6 @@ class ExtensionManager {
         await this.setDefaultInSyncStorageIfNull(key, defaultValue);
       }
 
-      console.log("Settings initialized successfully");
     } catch (error) {
       console.error("Failed to initialize settings:", error);
       throw error;
@@ -351,7 +350,6 @@ class ExtensionManager {
         const { action, videoId, title, query, data } = request;
         
         const responseHandler = (response) => {
-          console.debug(action, request, response);
           sendResponse(response);
         };
 
@@ -548,7 +546,7 @@ class ExtensionManager {
             const query = req.query || '';
             
             // Check if database is ready
-            if (!Database || !Database.isInitialized) {
+            if (!globalThis.Database || !globalThis.Database.isInitialized) {
               console.warn('Database not ready for search request');
               res({ 
                 success: false, 
@@ -628,16 +626,7 @@ class ExtensionManager {
             });
           },
           
-          // Timestamp actions
-          "history-timestamp": (req, res) => {
-            this.getHistoryTimestamp(res);
-          },
-          "youtube-timestamp": (req, res) => {
-            this.getYoutubeWatchHistoryTimestamp(res);
-          },
-          "youtube-liked-timestamp": (req, res) => {
-            this.getYoutubeLikedTimestamp(res);
-          },
+
           
           // Synchronization actions
           "history-synchronize": (req, res) => {
@@ -657,6 +646,8 @@ class ExtensionManager {
           "set-setting": (req, res) => {
             this.setSetting(req.key, req.value, res);
           },
+          
+
           
           // Database provider actions
           "database-provider-status": (req, res) => {
@@ -910,11 +901,13 @@ class ExtensionManager {
       // Clear any existing alarms to prevent duplicates
       await chrome.alarms.clear("synchronize");
       
-      // Get sync interval from settings
+      // Get sync interval from settings - default to 60 minutes (1 hour)
       const syncInterval = await getSyncStorageAsync('sync_interval_minutes') || 60;
       
       // Create alarm with minimum 30 seconds (Chrome 120+)
       const periodInMinutes = Math.max(syncInterval, 0.5);
+      
+      console.log(`Setting up synchronization alarm with ${periodInMinutes} minute interval`);
       
       await chrome.alarms.create("synchronize", {
         periodInMinutes: periodInMinutes,
@@ -922,15 +915,14 @@ class ExtensionManager {
         // No additional configuration needed - this is automatic
       });
 
-      console.log(`Synchronization alarm created with ${periodInMinutes} minute interval`);
-      
       // Verify alarm was created
       const alarm = await chrome.alarms.get("synchronize");
       if (!alarm) {
         throw new Error('Failed to create synchronization alarm');
       }
       
-      console.log('Synchronization alarm verified:', alarm);
+      console.log('Synchronization alarm created successfully:', alarm);
+      
     } catch (error) {
       console.error('Error setting up synchronization alarm:', error);
       // Fallback: try again in 5 minutes
@@ -944,8 +936,6 @@ class ExtensionManager {
   initializeAlarmListener() {
     chrome.alarms.onAlarm.addListener(async (alarm) => {
       try {
-        console.log(`Alarm triggered: ${alarm.name} at ${new Date().toISOString()}`);
-        
         if (alarm.name === "synchronize") {
           await this.performSynchronization();
         }
@@ -1017,6 +1007,8 @@ class ExtensionManager {
    * Perform periodic synchronization with enhanced reliability
    */
   async performSynchronization() {
+    console.log("Starting periodic synchronization...");
+    
     try {
       const shouldSyncHistory = await new Promise((resolve) => {
         chrome.storage.sync.get(['idCondition_Browhist'], (result) => {
@@ -1025,8 +1017,10 @@ class ExtensionManager {
       });
       
       if (shouldSyncHistory) {
-        console.log("Performing automatic history synchronization");
+        console.log("Syncing browser history...");
         await this.syncHistory();
+      } else {
+        console.log("Browser history sync disabled");
       }
 
       const shouldSyncYoutube = await new Promise((resolve) => {
@@ -1036,9 +1030,13 @@ class ExtensionManager {
       });
       
       if (shouldSyncYoutube) {
-        console.log("Performing automatic YouTube synchronization");
+        console.log("Syncing YouTube history...");
         await this.syncYoutube();
+      } else {
+        console.log("YouTube history sync disabled");
       }
+      
+      console.log("Periodic synchronization completed successfully");
     } catch (error) {
       console.error("Error during synchronization:", error);
     }
@@ -1050,24 +1048,16 @@ class ExtensionManager {
   async syncHistory() {
     return new Promise(async (resolve, reject) => {
       try {
-        // Get the last sync timestamp, or use 0 for full history if never synced
-        const lastSyncTimestamp = await new Promise((resolve) => {
-          chrome.storage.sync.get(['historyTimestamp'], (result) => {
-            resolve(result.historyTimestamp || 0);
-          });
-        });
-        
-        console.log("Starting history synchronization from timestamp:", lastSyncTimestamp, 
-                   lastSyncTimestamp === 0 ? "(full history)" : `(${new Date(lastSyncTimestamp).toLocaleString()})`);
+        console.log("Starting history sync (processing all history)");
         
         History.synchronize(
-          { intTimestamp: lastSyncTimestamp },
+          { intTimestamp: 0 },
           (response) => {
             if (response === null) {
               console.error("History synchronization failed - null response");
               reject(new Error("History synchronization failed"));
             } else {
-              console.log("History synchronized successfully:", response);
+              console.log("History sync completed successfully:", response);
               resolve(response);
             }
           },
@@ -1076,7 +1066,7 @@ class ExtensionManager {
           }
         );
       } catch (error) {
-        console.error("Error getting sync timestamp:", error);
+        console.error("Error during history sync:", error);
         reject(error);
       }
     });
@@ -1087,14 +1077,16 @@ class ExtensionManager {
    */
   async syncYoutube() {
     return new Promise((resolve) => {
+      console.log("Starting YouTube history sync...");
+      
       Youtube.synchronize(
         { intThreshold: 512 },
         (response) => {
-          console.debug("YouTube synchronized:", response);
+          console.log("YouTube sync completed:", response);
           resolve(response);
         },
         (progress) => {
-          console.debug("YouTube sync progress:", progress);
+          console.log("YouTube sync progress:", progress);
         }
       );
     });
@@ -1138,62 +1130,7 @@ class ExtensionManager {
     }
   }
 
-  /**
-   * Get history timestamp
-   * @param {Function} callback - Response callback
-   */
-  async getHistoryTimestamp(callback) {
-    try {
-      const timestamp = await new Promise((resolve) => {
-        chrome.storage.sync.get(['historyTimestamp'], (result) => {
-          resolve(result.historyTimestamp || 0);
-        });
-      });
-      // Return null if timestamp is 0 (never synchronized) or null
-      callback({ success: true, timestamp: timestamp && timestamp !== 0 ? timestamp : null });
-    } catch (error) {
-      console.error("Error getting history timestamp:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
 
-  /**
-   * Get YouTube Watch History timestamp
-   * @param {Function} callback - Response callback
-   */
-  async getYoutubeWatchHistoryTimestamp(callback) {
-    try {
-      const timestamp = await new Promise((resolve) => {
-        chrome.storage.sync.get(['youtubeWatchHistoryTimestamp'], (result) => {
-          resolve(result.youtubeWatchHistoryTimestamp || 0);
-        });
-      });
-      // Return null if timestamp is 0 (never synchronized) or null
-      callback({ success: true, timestamp: timestamp && timestamp !== 0 ? timestamp : null });
-    } catch (error) {
-      console.error("Error getting YouTube watch history timestamp:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
-
-  /**
-   * Get YouTube Liked Videos timestamp
-   * @param {Function} callback - Response callback
-   */
-  async getYoutubeLikedTimestamp(callback) {
-    try {
-      const timestamp = await new Promise((resolve) => {
-        chrome.storage.sync.get(['youtubeLikedTimestamp'], (result) => {
-          resolve(result.youtubeLikedTimestamp || 0);
-        });
-      });
-      // Return null if timestamp is 0 (never synchronized) or null
-      callback({ success: true, timestamp: timestamp && timestamp !== 0 ? timestamp : null });
-    } catch (error) {
-      console.error("Error getting YouTube liked videos timestamp:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
 
   /**
    * Sets a default value in sync storage if the key doesn't exist
@@ -1307,12 +1244,17 @@ class ExtensionManager {
    */
   async exportDatabaseData(callback) {
     try {
-      // Get database connection
-      const Database = globalThis.Database;
-      if (!Database || !Database.database) {
-        callback({ success: false, error: "Database not initialized" });
+      // Check if extension is fully initialized
+      if (!this.isInitialized) {
+        callback({ success: false, error: "Extension not fully initialized. Please wait a moment and try again." });
         return;
       }
+      
+      // Wait for database initialization
+      await this.waitForDatabaseInitialization(5000);
+      
+      // Get database connection
+      const Database = globalThis.Database;
 
       const store = Database.getObjectStore("readonly");
       const request = store.getAll();
@@ -1333,37 +1275,44 @@ class ExtensionManager {
   }
 
   /**
+   * Wait for database initialization with timeout
+   * @param {number} timeoutMs - Timeout in milliseconds
+   * @returns {Promise<void>} Resolves when database is ready or rejects on timeout
+   */
+  async waitForDatabaseInitialization(timeoutMs = 5000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeoutMs) {
+      if (globalThis.Database && globalThis.Database.isInitialized) {
+        return;
+      }
+      
+      // Wait 100ms before checking again
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    throw new Error("Database initialization timeout. Please refresh the page and try again.");
+  }
+
+
+
+  /**
    * Synchronize history action for options page
    * @param {Function} callback - Response callback
    */
   async synchronizeHistoryAction(callback) {
     try {
-      console.log("Manual history synchronization requested");
-      
-      // Debug: Check extension initialization status
-      console.log("Extension initialization status:", {
-        isInitialized: this.isInitialized,
-        databaseAvailable: !!globalThis.Database,
-        databaseInitialized: globalThis.Database?.isInitialized
-      });
-      
       // Check if extension is fully initialized
       if (!this.isInitialized) {
-        throw new Error("Extension not fully initialized");
+        throw new Error("Extension not fully initialized. Please wait a moment and try again.");
       }
       
-      // Check if database is available
-      if (!globalThis.Database || !globalThis.Database.isInitialized) {
-        throw new Error("Database not initialized");
-      }
+      // Check if database is available - wait up to 5 seconds for initialization
+      await this.waitForDatabaseInitialization(5000);
       
       const response = await this.syncHistory();
-      console.log("Manual history synchronization completed successfully");
       
-      // Update timestamp in sync storage
-      await new Promise((resolve) => {
-        chrome.storage.sync.set({ historyTimestamp: Date.now() }, resolve);
-      });
+
       
       // Extract video count from response if available
       let videoCount = 0;
@@ -1386,14 +1335,27 @@ class ExtensionManager {
    */
   async synchronizeYoutubeAction(callback) {
     try {
+      // Check if extension is fully initialized
+      if (!this.isInitialized) {
+        throw new Error("Extension not fully initialized. Please wait a moment and try again.");
+      }
+      
+      // Check if database is available - wait up to 5 seconds for initialization
+      await this.waitForDatabaseInitialization(5000);
+      
       const response = await this.syncYoutube();
       
-      // Update timestamp in sync storage
-      await new Promise((resolve) => {
-        chrome.storage.sync.set({ youtubeWatchHistoryTimestamp: Date.now() }, resolve);
-      });
+
       
-      callback({ success: true, response: response });
+      // Extract video count from response if available
+      let videoCount = 0;
+      if (response && response.videoCount !== undefined) {
+        videoCount = response.videoCount;
+      } else if (response && response.objVideos && response.objVideos.length) {
+        videoCount = response.objVideos.length;
+      }
+      
+      callback({ success: true, response: response, videoCount: videoCount });
     } catch (error) {
       console.error("Error synchronizing YouTube:", error);
       callback({ success: false, error: error.message });
@@ -1406,12 +1368,17 @@ class ExtensionManager {
    */
   async synchronizeLikedVideosAction(callback) {
     try {
+      // Check if extension is fully initialized
+      if (!this.isInitialized) {
+        throw new Error("Extension not fully initialized. Please wait a moment and try again.");
+      }
+      
+      // Check if database is available - wait up to 5 seconds for initialization
+      await this.waitForDatabaseInitialization(5000);
+      
       const response = await this.syncLikedVideos();
       
-      // Update timestamp in sync storage (separate from regular YouTube sync)
-      await new Promise((resolve) => {
-        chrome.storage.sync.set({ youtubeLikedTimestamp: Date.now() }, resolve);
-      });
+
       
       callback({ success: true, response: response, videoCount: response?.videoCount || 0 });
     } catch (error) {
@@ -1433,9 +1400,7 @@ class ExtensionManager {
       
       // Initialize the factory
       const success = await this.providerFactory.init();
-      if (success) {
-        console.log('Database provider factory initialized successfully');
-      } else {
+      if (!success) {
         throw new Error('Failed to initialize database provider factory');
       }
     } catch (error) {
@@ -1703,10 +1668,6 @@ class ExtensionManager {
     }
   }
 }
-
-// Debug: Check if Database is available at startup
-console.log("Database object at startup:", Database);
-console.log("Database methods:", Database ? Object.getOwnPropertyNames(Database) : "Database not available");
 
 // Initialize the extension manager
 const extensionManager = new ExtensionManager();

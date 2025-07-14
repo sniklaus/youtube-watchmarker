@@ -98,8 +98,6 @@ export class SupabaseDatabaseProvider {
    */
   async init() {
     try {
-      console.log('Initializing Supabase provider...');
-      
       // Get stored credentials
       this.credentials = await credentialStorage.getCredentials();
       if (!this.credentials) {
@@ -129,7 +127,6 @@ export class SupabaseDatabaseProvider {
       this.isInitialized = true;
       this.isConnected = true;
       
-      console.log('Supabase provider initialized successfully');
       return true;
     } catch (error) {
       console.error('Failed to initialize Supabase provider:', error);
@@ -149,14 +146,10 @@ export class SupabaseDatabaseProvider {
       const response = await this.makeRequest('GET', `/${this.tableName}?select=count&limit=1`);
       
       if (response.ok) {
-        console.log('Supabase schema verified');
-        
         // Check if RLS is properly configured
         try {
           const rlsStatus = await this.checkRLSStatus();
-          if (rlsStatus.rlsEnabled && rlsStatus.policies.length > 0) {
-            console.log('✅ Database security verified');
-          } else {
+          if (!(rlsStatus.rlsEnabled && rlsStatus.policies.length > 0)) {
             console.warn('⚠️  Database security could not be fully verified');
             console.warn('Please ensure RLS is enabled and policies are configured');
           }
@@ -630,7 +623,6 @@ GROUP BY t.tablename, t.rowsecurity;
         }
       }
 
-      console.log(`Retrieved ${allVideos.length} videos from Supabase (paginated)`);
       return allVideos;
     } catch (error) {
       console.error('Failed to get all videos:', error);
@@ -722,7 +714,6 @@ GROUP BY t.tablename, t.rowsecurity;
         'Prefer': 'resolution=merge-duplicates'
       });
 
-      console.log(`Imported ${videos.length} videos to Supabase`);
       return response.ok;
     } catch (error) {
       console.error('Failed to import videos:', error);
@@ -808,7 +799,6 @@ GROUP BY t.tablename, t.rowsecurity;
         }
       }
 
-      console.log(`Retrieved ${allVideos.length} videos from Supabase for date range (paginated)`);
       return allVideos;
     } catch (error) {
       console.error('Failed to get videos by date range:', error);

@@ -21,35 +21,28 @@ class OptionsPageManager {
      */
     async initialize() {
         if (this.isInitialized) return;
-        console.log('OptionsPageManager: Initialization started.');
-        
         try {
             // Wait for Bootstrap to be available
             await this.waitForBootstrap();
             
             // Cache DOM elements
-            console.log('Caching DOM elements...');
             this.cacheElements();
             
             // Set up event listeners
-            console.log('Setting up event listeners...');
             this.setupEventListeners();
             
             // Initialize theme
             await this.initializeTheme();
             
             // Load initial data
-            console.log('Loading initial data...');
             await this.loadInitialData();
             
             // Add page animations
             this.addPageAnimations();
             
-            // Add debugging section for Chrome DevTools storage viewing
-            this.addDebuggingSection();
+            
             
             this.isInitialized = true;
-            console.log('Options page initialized successfully');
         } catch (error) {
             console.error('Failed to initialize options page:', error);
             this.showError('Failed to initialize the options page. Please refresh and try again.');
@@ -77,7 +70,6 @@ class OptionsPageManager {
      * Cache frequently used DOM elements
      */
     cacheElements() {
-        console.log('Starting cacheElements...');
         const elementIds = [
             'theme-toggle', 'theme-icon', 'idDatabase_Size', 'provider_indexeddb',
             'provider_supabase', 'enable_auto_sync', 'supabase-config',
@@ -136,14 +128,12 @@ class OptionsPageManager {
         
         // Screen reader announcements
         this.srAnnouncements = this.getElementById('sr-announcements');
-        console.log('Finished cacheElements.');
     }
 
     /**
      * Set up all event listeners
      */
     setupEventListeners() {
-        console.log('Starting setupEventListeners...');
         try {
             // Database operations
             this.getElementById('idDatabase_Export').addEventListener('click', () => this.exportDatabase());
@@ -180,13 +170,15 @@ class OptionsPageManager {
             // Search functionality
             this.setupSearchListeners();
 
+            // Synchronization
+            this.setupSynchronizationListeners();
+
             // Theme toggle
             this.themeToggle.addEventListener('click', () => this.toggleTheme());
 
             // Keyboard shortcuts
             this.setupKeyboardShortcuts();
-            console.log('Event listeners set up successfully.');
-        } catch (error) {
+                } catch (error) {
             console.error('Error setting up event listeners:', error);
         }
     }
@@ -243,6 +235,25 @@ class OptionsPageManager {
         searchQuery.addEventListener('blur', (event) => {
             event.target.style.width = 'auto';
         });
+    }
+
+    /**
+     * Set up synchronization event listeners
+     */
+    setupSynchronizationListeners() {
+        try {
+            // Individual sync buttons
+            this.getElementById('sync-history').addEventListener('click', () => this.syncBrowserHistory());
+            this.getElementById('sync-youtube').addEventListener('click', () => this.syncYouTubeHistory());
+            this.getElementById('sync-youtube-likes').addEventListener('click', () => this.syncYouTubeLikes());
+            
+
+            
+            // Sync all button
+            this.getElementById('sync-all').addEventListener('click', () => this.syncAllSources());
+        } catch (error) {
+            console.error('Error setting up synchronization listeners:', error);
+        }
     }
 
     /**
@@ -437,157 +448,23 @@ class OptionsPageManager {
         });
     }
 
-    /**
-     * Add debugging section for Chrome DevTools storage viewing (Chrome 132+)
-     */
-    addDebuggingSection() {
-        const debugSection = document.createElement('div');
-        debugSection.className = 'card mt-4';
-        debugSection.innerHTML = `
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-bug me-2"></i>
-                    Debugging & Storage
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Chrome 132+ Feature:</strong> You can now view and edit extension storage directly in DevTools!
-                    <br>
-                    <small>Open DevTools → Application → Storage → Extensions → ${chrome.runtime.id}</small>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Local Storage Keys</h6>
-                        <div id="local-storage-keys" class="bg-light p-2 rounded">
-                            <small class="text-muted">Loading...</small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Sync Storage Keys</h6>
-                        <div id="sync-storage-keys" class="bg-light p-2 rounded">
-                            <small class="text-muted">Loading...</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-3">
-                    <button id="refresh-storage-debug" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-refresh me-1"></i>
-                        Refresh Storage Info
-                    </button>
-                    <button id="export-storage-debug" class="btn btn-sm btn-outline-secondary ms-2">
-                        <i class="fas fa-download me-1"></i>
-                        Export Storage Data
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Add to the page
-        const container = document.querySelector('.container-fluid');
-        if (container) {
-            container.appendChild(debugSection);
-        }
-        
-        // Setup event listeners
-        this.setupDebuggingEventListeners();
-        
-        // Initial load
-        this.loadStorageDebugInfo();
-    }
 
-    /**
-     * Setup debugging section event listeners
-     */
-    setupDebuggingEventListeners() {
-        document.getElementById('refresh-storage-debug')?.addEventListener('click', () => {
-            this.loadStorageDebugInfo();
-        });
-        
-        document.getElementById('export-storage-debug')?.addEventListener('click', () => {
-            this.exportStorageData();
-        });
-    }
 
-    /**
-     * Load storage debugging information
-     */
-    async loadStorageDebugInfo() {
-        try {
-            // Get local storage keys
-            const localKeys = await this.getStorageKeys('local');
-            const localKeysElement = document.getElementById('local-storage-keys');
-            if (localKeysElement) {
-                localKeysElement.innerHTML = localKeys.length > 0 
-                    ? `<code>${localKeys.join(', ')}</code>`
-                    : '<small class="text-muted">No keys found</small>';
-            }
-            
-            // Get sync storage keys
-            const syncKeys = await this.getStorageKeys('sync');
-            const syncKeysElement = document.getElementById('sync-storage-keys');
-            if (syncKeysElement) {
-                syncKeysElement.innerHTML = syncKeys.length > 0 
-                    ? `<code>${syncKeys.join(', ')}</code>`
-                    : '<small class="text-muted">No keys found</small>';
-            }
-        } catch (error) {
-            console.error('Error loading storage debug info:', error);
-        }
-    }
 
-    /**
-     * Get storage keys using Chrome 130+ getKeys() method
-     * @param {string} storageType - 'local' or 'sync'
-     * @returns {Promise<string[]>} Array of storage keys
-     */
-    async getStorageKeys(storageType) {
-        try {
-            const storage = chrome.storage[storageType];
-            return await storage.getKeys();
-        } catch (error) {
-            console.error(`Error getting ${storageType} storage keys:`, error);
-            return [];
-        }
-    }
 
-    /**
-     * Export storage data for debugging
-     */
-    async exportStorageData() {
-        try {
-            const localData = await chrome.storage.local.get();
-            const syncData = await chrome.storage.sync.get();
-            
-            const exportData = {
-                timestamp: new Date().toISOString(),
-                extensionId: chrome.runtime.id,
-                chromeVersion: navigator.userAgent,
-                localStorage: localData,
-                syncStorage: syncData
-            };
-            
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `youtube-watchmarker-storage-${Date.now()}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            // Show success message
-            this.showNotification('Storage data exported successfully!', 'success');
-        } catch (error) {
-            console.error('Error exporting storage data:', error);
-            this.showNotification('Error exporting storage data', 'error');
-        }
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /**
      * Export database
@@ -700,8 +577,6 @@ class OptionsPageManager {
      */
     async switchDatabaseProvider(provider) {
         try {
-            console.log(`Switching UI to ${provider} provider...`);
-            
             // Show/hide Supabase configuration based on provider selection
             if (provider === 'supabase') {
                 this.supabaseConfig.classList.remove('d-none');
@@ -969,6 +844,204 @@ class OptionsPageManager {
         }
     }
 
+    /**
+     * Synchronize browser history
+     */
+    async syncBrowserHistory() {
+        const syncButton = this.getElementById('sync-history');
+        
+        try {
+            this.showButtonLoading(syncButton, 'Syncing...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'history-synchronize'
+            });
+            
+            if (response && response.success) {
+                const videoCount = response.videoCount || 0;
+                this.showSuccess(`Browser history synchronized! Added ${videoCount} videos.`);
+                await this.updateDatabaseSize();
+            } else {
+                const errorMessage = response?.error || 'History synchronization failed';
+                
+                // Show more user-friendly error messages
+                if (errorMessage.includes('Database not initialized') || errorMessage.includes('Extension not fully initialized')) {
+                    this.showError('Extension is still initializing. Please wait a moment and try again.');
+                } else {
+                    this.showError('History sync failed: ' + errorMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Error syncing browser history:', error);
+            
+            // Show more user-friendly error messages
+            if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
+                this.showError('Extension is still initializing. Please wait a moment and try again.');
+            } else {
+                this.showError('History sync failed: ' + error.message);
+            }
+        } finally {
+            this.hideButtonLoading(syncButton);
+        }
+    }
+
+    /**
+     * Synchronize YouTube history
+     */
+    async syncYouTubeHistory() {
+        const syncButton = this.getElementById('sync-youtube');
+        
+        try {
+            this.showButtonLoading(syncButton, 'Syncing...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'youtube-synchronize'
+            });
+            
+            if (response && response.success) {
+                const videoCount = response.videoCount || 0;
+                this.showSuccess(`YouTube history synchronized! Added ${videoCount} videos.`);
+                await this.updateDatabaseSize();
+            } else {
+                const errorMessage = response?.error || 'YouTube synchronization failed';
+                
+                // Show more user-friendly error messages
+                if (errorMessage.includes('Database not initialized') || errorMessage.includes('Extension not fully initialized')) {
+                    this.showError('Extension is still initializing. Please wait a moment and try again.');
+                } else {
+                    this.showError('YouTube sync failed: ' + errorMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Error syncing YouTube history:', error);
+            
+            // Show more user-friendly error messages
+            if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
+                this.showError('Extension is still initializing. Please wait a moment and try again.');
+            } else {
+                this.showError('YouTube sync failed: ' + error.message);
+            }
+        } finally {
+            this.hideButtonLoading(syncButton);
+        }
+    }
+
+    /**
+     * Synchronize YouTube likes
+     */
+    async syncYouTubeLikes() {
+        const syncButton = this.getElementById('sync-youtube-likes');
+        
+        try {
+            this.showButtonLoading(syncButton, 'Syncing...');
+            
+            const response = await chrome.runtime.sendMessage({
+                action: 'youtube-liked-videos'
+            });
+            
+            if (response && response.success) {
+                const videoCount = response.videoCount || 0;
+                this.showSuccess(`YouTube likes synchronized! Added ${videoCount} videos.`);
+                await this.updateDatabaseSize();
+            } else {
+                const errorMessage = response?.error || 'YouTube likes synchronization failed';
+                
+                // Show more user-friendly error messages
+                if (errorMessage.includes('Database not initialized') || errorMessage.includes('Extension not fully initialized')) {
+                    this.showError('Extension is still initializing. Please wait a moment and try again.');
+                } else {
+                    this.showError('YouTube likes sync failed: ' + errorMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Error syncing YouTube likes:', error);
+            
+            // Show more user-friendly error messages
+            if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
+                this.showError('Extension is still initializing. Please wait a moment and try again.');
+            } else {
+                this.showError('YouTube likes sync failed: ' + error.message);
+            }
+        } finally {
+            this.hideButtonLoading(syncButton);
+        }
+    }
+
+    /**
+     * Synchronize all sources
+     */
+    async syncAllSources() {
+        const syncButton = this.getElementById('sync-all');
+        
+        try {
+            this.showButtonLoading(syncButton, 'Syncing All...');
+            
+            let totalVideos = 0;
+            const results = [];
+            
+            // Sync browser history
+            try {
+                const historyResponse = await chrome.runtime.sendMessage({
+                    action: 'history-synchronize'
+                });
+                if (historyResponse && historyResponse.success) {
+                    totalVideos += historyResponse.videoCount || 0;
+                    results.push(`Browser history: ${historyResponse.videoCount || 0} videos`);
+                }
+            } catch (error) {
+                console.error('Browser history sync failed:', error);
+                results.push('Browser history: failed');
+            }
+            
+            // Sync YouTube history
+            try {
+                const youtubeResponse = await chrome.runtime.sendMessage({
+                    action: 'youtube-synchronize'
+                });
+                if (youtubeResponse && youtubeResponse.success) {
+                    totalVideos += youtubeResponse.videoCount || 0;
+                    results.push(`YouTube history: ${youtubeResponse.videoCount || 0} videos`);
+                }
+            } catch (error) {
+                console.error('YouTube history sync failed:', error);
+                results.push('YouTube history: failed');
+            }
+            
+            // Sync YouTube likes
+            try {
+                const likesResponse = await chrome.runtime.sendMessage({
+                    action: 'youtube-liked-videos'
+                });
+                if (likesResponse && likesResponse.success) {
+                    totalVideos += likesResponse.videoCount || 0;
+                    results.push(`YouTube likes: ${likesResponse.videoCount || 0} videos`);
+                }
+            } catch (error) {
+                console.error('YouTube likes sync failed:', error);
+                results.push('YouTube likes: failed');
+            }
+            
+            // Update database size
+            await this.updateDatabaseSize();
+            
+            // Show results
+            const resultMessage = `All sources synchronized! Total: ${totalVideos} videos added.\n\n${results.join('\n')}`;
+            this.showSuccess(resultMessage);
+            
+        } catch (error) {
+            console.error('Error syncing all sources:', error);
+            
+            // Show more user-friendly error messages
+            if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
+                this.showError('Extension is still initializing. Please wait a moment and try again.');
+            } else {
+                this.showError('Sync all failed: ' + error.message);
+            }
+        } finally {
+            this.hideButtonLoading(syncButton);
+        }
+    }
+
 
 
 
@@ -1044,8 +1117,6 @@ class OptionsPageManager {
             this.searchState.currentQuery = '';
             this.searchState.currentPage = 1;
             
-            console.log('Performing initial search...');
-            
             const response = await chrome.runtime.sendMessage({
                 action: 'search-videos',
                 query: '', // Empty query to show all videos
@@ -1053,12 +1124,9 @@ class OptionsPageManager {
                 pageSize: 50
             });
 
-            console.log('Initial search response:', response);
-
             if (response && response.success) {
                 this.searchState.totalResults = response.totalResults || 0;
                 this.displaySearchResults(response.results);
-                console.log(`Initial search successful: ${response.totalResults} total videos found`);
             } else {
                 console.warn('Initial search failed:', response);
                 // Don't show error on initial load, just show empty state
@@ -1282,13 +1350,12 @@ class OptionsPageManager {
      */
     async loadInitialData() {
         try {
-            console.log('OptionsPageManager: Loading initial data...');
             await Promise.all([
                 this.updateDatabaseSize(),
                 this.updateProviderStatus(),
-                this.performInitialSearch() // Show all videos by default without errors
+                this.performInitialSearch(), // Show all videos by default without errors
+                
             ]);
-            console.log('OptionsPageManager: Initial data loaded successfully.');
         } catch (error) {
             console.error('Error loading initial data:', error);
         }
@@ -1386,7 +1453,7 @@ class OptionsPageManager {
      * @param {string} message - Loading message
      */
     showLoading(message) {
-        console.log('Loading:', message);
+        // Loading state
     }
 
     /**
@@ -1406,7 +1473,7 @@ class OptionsPageManager {
             this.successToast.show();
             this.announceToScreenReader(message);
         } else {
-            console.log('Success:', message);
+            // Success message
         }
     }
 
@@ -1545,32 +1612,25 @@ class OptionsPageManager {
      * Update database provider status display
      */
     async updateProviderStatus() {
-        console.log('Updating provider status...');
         try {
             const response = await chrome.runtime.sendMessage({
                 action: 'database-provider-status'
             });
-            console.log('Response from database-provider-status:', response);
-
-            if (response && response.success) {
+                        if (response && response.success) {
                 const status = response.status;
-                console.log('Current provider status:', status);
                 
                 // Update provider radio buttons based on actual provider type
                 if (status.type === 'indexeddb') {
                     this.providerIndexedDB.checked = true;
                     this.providerSupabase.checked = false;
                     this.supabaseConfig.classList.add('d-none');
-                    console.log('Set UI to IndexedDB provider');
                 } else if (status.type === 'supabase') {
                     this.providerIndexedDB.checked = false;
                     this.providerSupabase.checked = true;
                     this.supabaseConfig.classList.remove('d-none');
                     await this.loadSupabaseConfig();
-                    console.log('Set UI to Supabase provider');
                 } else {
                     // Default to IndexedDB if provider type is null or unknown
-                    console.log('Unknown provider type, defaulting to IndexedDB');
                     this.providerIndexedDB.checked = true;
                     this.providerSupabase.checked = false;
                     this.supabaseConfig.classList.add('d-none');
@@ -1579,7 +1639,6 @@ class OptionsPageManager {
                 // Load auto-sync setting
                 const autoSyncResult = await chrome.storage.local.get(['auto_sync_enabled']);
                 this.enableAutoSync.checked = autoSyncResult.auto_sync_enabled || false;
-                console.log('Auto-sync status loaded:', this.enableAutoSync.checked);
             } else {
                 console.warn('Failed to get provider status:', response?.error);
                 // Default to IndexedDB on error

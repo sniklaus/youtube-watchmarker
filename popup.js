@@ -20,8 +20,6 @@ class PopupSearchManager {
      */
     async initialize() {
         if (this.isInitialized) return;
-        console.log('PopupSearchManager: Initialization started.');
-        
         try {
             // Wait for Bootstrap to be available
             await this.waitForBootstrap();
@@ -39,7 +37,6 @@ class PopupSearchManager {
             await this.performInitialSearch();
             
             this.isInitialized = true;
-            console.log('Popup initialized successfully');
         } catch (error) {
             console.error('Failed to initialize popup:', error);
             this.showError('Failed to initialize the popup. Please refresh and try again.');
@@ -259,7 +256,7 @@ class PopupSearchManager {
                 
                 // Show a subtle message if it took multiple retries
                 if (retryCount > 0) {
-                    console.log(`Search successful after ${retryCount + 1} attempts`);
+                    // Search successful after multiple attempts
                 }
             } else {
                 // Don't show error on initial load, just show empty state
