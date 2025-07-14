@@ -86,53 +86,210 @@ export const createResponseCallback = (transformArgs, responseCallback) => {
 };
 
 /**
- * Sets a default value in local storage if the key doesn't exist
+ * Gets a value from Chrome storage asynchronously using native promises
  * @param {string} key - Storage key
- * @param {string} defaultValue - Default value to set
- * @returns {Promise<void>}
+ * @returns {Promise<string|null>} The stored value or null if not found
  */
-export const setDefaultInStorageIfNull = async (key, defaultValue) => {
-  const value = await getStorageAsync(key);
-  if (value === null) {
-    await setStorageAsync(key, String(defaultValue));
+export const getStorageAsync = async (key) => {
+  try {
+    const result = await chrome.storage.local.get([key]);
+    return result[key] || null;
+  } catch (error) {
+    throw new Error(`Failed to get ${key} from chrome.storage.local: ${error.message}`);
   }
 };
 
 /**
- * Gets a value from Chrome storage asynchronously
- * @param {string} key - Storage key
- * @returns {Promise<string|null>} The stored value or null if not found
+ * Gets multiple values from Chrome storage asynchronously
+ * @param {string[]} keys - Array of storage keys
+ * @returns {Promise<Object>} Object containing the stored values
  */
-export const getStorageAsync = (key) => {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get([key], (result) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(`Failed to get ${key} from chrome.storage.local: ${chrome.runtime.lastError.message}`));
-      } else {
-        resolve(result[key] || null);
-      }
-    });
-  });
+export const getMultipleStorageAsync = async (keys) => {
+  try {
+    return await chrome.storage.local.get(keys);
+  } catch (error) {
+    throw new Error(`Failed to get multiple keys from chrome.storage.local: ${error.message}`);
+  }
 };
 
 /**
- * Sets a value in Chrome storage asynchronously
+ * Gets all keys from Chrome storage (Chrome 130+)
+ * @returns {Promise<string[]>} Array of all storage keys
+ */
+export const getStorageKeysAsync = async () => {
+  try {
+    return await chrome.storage.local.getKeys();
+  } catch (error) {
+    throw new Error(`Failed to get storage keys: ${error.message}`);
+  }
+};
+
+/**
+ * Sets a value in Chrome storage asynchronously using native promises
  * @param {string} key - Storage key
  * @param {string} value - Value to store
  * @param {string} [errorMessage] - Custom error message
  * @returns {Promise<void>}
  */
-export const setStorageAsync = (key, value, errorMessage) => {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [key]: value }, () => {
-      if (chrome.runtime.lastError) {
-        const errorMsg = errorMessage || `Failed to set ${key} in chrome.storage.local: ${chrome.runtime.lastError.message}`;
-        reject(new Error(errorMsg));
-      } else {
-        resolve();
-      }
-    });
-  });
+export const setStorageAsync = async (key, value, errorMessage) => {
+  try {
+    await chrome.storage.local.set({ [key]: value });
+  } catch (error) {
+    const errorMsg = errorMessage || `Failed to set ${key} in chrome.storage.local: ${error.message}`;
+    throw new Error(errorMsg);
+  }
+};
+
+/**
+ * Sets multiple values in Chrome storage asynchronously
+ * @param {Object} items - Object containing key-value pairs to store
+ * @returns {Promise<void>}
+ */
+export const setMultipleStorageAsync = async (items) => {
+  try {
+    await chrome.storage.local.set(items);
+  } catch (error) {
+    throw new Error(`Failed to set multiple items in chrome.storage.local: ${error.message}`);
+  }
+};
+
+/**
+ * Removes a value from Chrome storage asynchronously
+ * @param {string} key - Storage key to remove
+ * @returns {Promise<void>}
+ */
+export const removeStorageAsync = async (key) => {
+  try {
+    await chrome.storage.local.remove([key]);
+  } catch (error) {
+    throw new Error(`Failed to remove ${key} from chrome.storage.local: ${error.message}`);
+  }
+};
+
+/**
+ * Removes multiple values from Chrome storage asynchronously
+ * @param {string[]} keys - Array of storage keys to remove
+ * @returns {Promise<void>}
+ */
+export const removeMultipleStorageAsync = async (keys) => {
+  try {
+    await chrome.storage.local.remove(keys);
+  } catch (error) {
+    throw new Error(`Failed to remove multiple keys from chrome.storage.local: ${error.message}`);
+  }
+};
+
+/**
+ * Clears all data from Chrome storage asynchronously
+ * @returns {Promise<void>}
+ */
+export const clearStorageAsync = async () => {
+  try {
+    await chrome.storage.local.clear();
+  } catch (error) {
+    throw new Error(`Failed to clear chrome.storage.local: ${error.message}`);
+  }
+};
+
+// Sync storage utilities
+/**
+ * Gets a value from Chrome sync storage asynchronously
+ * @param {string} key - Storage key
+ * @returns {Promise<any>} The stored value or undefined if not found
+ */
+export const getSyncStorageAsync = async (key) => {
+  try {
+    const result = await chrome.storage.sync.get([key]);
+    return result[key];
+  } catch (error) {
+    throw new Error(`Failed to get ${key} from chrome.storage.sync: ${error.message}`);
+  }
+};
+
+/**
+ * Gets multiple values from Chrome sync storage asynchronously
+ * @param {string[]} keys - Array of storage keys
+ * @returns {Promise<Object>} Object containing the stored values
+ */
+export const getMultipleSyncStorageAsync = async (keys) => {
+  try {
+    return await chrome.storage.sync.get(keys);
+  } catch (error) {
+    throw new Error(`Failed to get multiple keys from chrome.storage.sync: ${error.message}`);
+  }
+};
+
+/**
+ * Gets all keys from Chrome sync storage (Chrome 130+)
+ * @returns {Promise<string[]>} Array of all storage keys
+ */
+export const getSyncStorageKeysAsync = async () => {
+  try {
+    return await chrome.storage.sync.getKeys();
+  } catch (error) {
+    throw new Error(`Failed to get sync storage keys: ${error.message}`);
+  }
+};
+
+/**
+ * Sets a value in Chrome sync storage asynchronously
+ * @param {string} key - Storage key
+ * @param {any} value - Value to store
+ * @returns {Promise<void>}
+ */
+export const setSyncStorageAsync = async (key, value) => {
+  try {
+    await chrome.storage.sync.set({ [key]: value });
+  } catch (error) {
+    throw new Error(`Failed to set ${key} in chrome.storage.sync: ${error.message}`);
+  }
+};
+
+/**
+ * Sets multiple values in Chrome sync storage asynchronously
+ * @param {Object} items - Object containing key-value pairs to store
+ * @returns {Promise<void>}
+ */
+export const setMultipleSyncStorageAsync = async (items) => {
+  try {
+    await chrome.storage.sync.set(items);
+  } catch (error) {
+    throw new Error(`Failed to set multiple items in chrome.storage.sync: ${error.message}`);
+  }
+};
+
+/**
+ * Sets a default value in storage if the key doesn't exist
+ * @param {string} key - Storage key
+ * @param {any} defaultValue - Default value to set
+ * @returns {Promise<void>}
+ */
+export const setDefaultInStorageIfNull = async (key, defaultValue) => {
+  try {
+    const result = await chrome.storage.local.get([key]);
+    if (result[key] === undefined) {
+      await chrome.storage.local.set({ [key]: defaultValue });
+    }
+  } catch (error) {
+    throw new Error(`Failed to set default value for ${key}: ${error.message}`);
+  }
+};
+
+/**
+ * Sets a default value in sync storage if the key doesn't exist
+ * @param {string} key - Storage key
+ * @param {any} defaultValue - Default value to set
+ * @returns {Promise<void>}
+ */
+export const setDefaultInSyncStorageIfNull = async (key, defaultValue) => {
+  try {
+    const result = await chrome.storage.sync.get([key]);
+    if (result[key] === undefined) {
+      await chrome.storage.sync.set({ [key]: defaultValue });
+    }
+  } catch (error) {
+    throw new Error(`Failed to set default sync value for ${key}: ${error.message}`);
+  }
 };
 
 /**

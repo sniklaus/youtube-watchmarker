@@ -45,6 +45,9 @@ class OptionsPageManager {
             // Add page animations
             this.addPageAnimations();
             
+            // Add debugging section for Chrome DevTools storage viewing
+            this.addDebuggingSection();
+            
             this.isInitialized = true;
             console.log('Options page initialized successfully');
         } catch (error) {
@@ -432,6 +435,158 @@ class OptionsPageManager {
             card.style.animationDelay = `${index * 0.1}s`;
             card.classList.add('animate-slide-in-up');
         });
+    }
+
+    /**
+     * Add debugging section for Chrome DevTools storage viewing (Chrome 132+)
+     */
+    addDebuggingSection() {
+        const debugSection = document.createElement('div');
+        debugSection.className = 'card mt-4';
+        debugSection.innerHTML = `
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bug me-2"></i>
+                    Debugging & Storage
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Chrome 132+ Feature:</strong> You can now view and edit extension storage directly in DevTools!
+                    <br>
+                    <small>Open DevTools → Application → Storage → Extensions → ${chrome.runtime.id}</small>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Local Storage Keys</h6>
+                        <div id="local-storage-keys" class="bg-light p-2 rounded">
+                            <small class="text-muted">Loading...</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Sync Storage Keys</h6>
+                        <div id="sync-storage-keys" class="bg-light p-2 rounded">
+                            <small class="text-muted">Loading...</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <button id="refresh-storage-debug" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-refresh me-1"></i>
+                        Refresh Storage Info
+                    </button>
+                    <button id="export-storage-debug" class="btn btn-sm btn-outline-secondary ms-2">
+                        <i class="fas fa-download me-1"></i>
+                        Export Storage Data
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add to the page
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.appendChild(debugSection);
+        }
+        
+        // Setup event listeners
+        this.setupDebuggingEventListeners();
+        
+        // Initial load
+        this.loadStorageDebugInfo();
+    }
+
+    /**
+     * Setup debugging section event listeners
+     */
+    setupDebuggingEventListeners() {
+        document.getElementById('refresh-storage-debug')?.addEventListener('click', () => {
+            this.loadStorageDebugInfo();
+        });
+        
+        document.getElementById('export-storage-debug')?.addEventListener('click', () => {
+            this.exportStorageData();
+        });
+    }
+
+    /**
+     * Load storage debugging information
+     */
+    async loadStorageDebugInfo() {
+        try {
+            // Get local storage keys
+            const localKeys = await this.getStorageKeys('local');
+            const localKeysElement = document.getElementById('local-storage-keys');
+            if (localKeysElement) {
+                localKeysElement.innerHTML = localKeys.length > 0 
+                    ? `<code>${localKeys.join(', ')}</code>`
+                    : '<small class="text-muted">No keys found</small>';
+            }
+            
+            // Get sync storage keys
+            const syncKeys = await this.getStorageKeys('sync');
+            const syncKeysElement = document.getElementById('sync-storage-keys');
+            if (syncKeysElement) {
+                syncKeysElement.innerHTML = syncKeys.length > 0 
+                    ? `<code>${syncKeys.join(', ')}</code>`
+                    : '<small class="text-muted">No keys found</small>';
+            }
+        } catch (error) {
+            console.error('Error loading storage debug info:', error);
+        }
+    }
+
+    /**
+     * Get storage keys using Chrome 130+ getKeys() method
+     * @param {string} storageType - 'local' or 'sync'
+     * @returns {Promise<string[]>} Array of storage keys
+     */
+    async getStorageKeys(storageType) {
+        try {
+            const storage = chrome.storage[storageType];
+            return await storage.getKeys();
+        } catch (error) {
+            console.error(`Error getting ${storageType} storage keys:`, error);
+            return [];
+        }
+    }
+
+    /**
+     * Export storage data for debugging
+     */
+    async exportStorageData() {
+        try {
+            const localData = await chrome.storage.local.get();
+            const syncData = await chrome.storage.sync.get();
+            
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                extensionId: chrome.runtime.id,
+                chromeVersion: navigator.userAgent,
+                localStorage: localData,
+                syncStorage: syncData
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `youtube-watchmarker-storage-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Show success message
+            this.showNotification('Storage data exported successfully!', 'success');
+        } catch (error) {
+            console.error('Error exporting storage data:', error);
+            this.showNotification('Error exporting storage data', 'error');
+        }
     }
 
     /**

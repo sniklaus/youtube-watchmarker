@@ -6,6 +6,11 @@ import {
   getStorageAsync,
   setStorageAsync,
   setDefaultInStorageIfNull,
+  getSyncStorageAsync,
+  setSyncStorageAsync,
+  getMultipleSyncStorageAsync,
+  setMultipleSyncStorageAsync,
+  setDefaultInSyncStorageIfNull,
 } from "./utils.js";
 
 import { Database } from "./bg-database.js";
@@ -58,7 +63,10 @@ class ExtensionManager {
       this.setupMessageHandler();
       this.setupTabHook();
       this.setupRequestHook();
-      this.setupSynchronization();
+      
+      // Setup enhanced alarm system
+      this.initializeAlarmListener();
+      await this.setupSynchronization();
 
       this.isInitialized = true;
       console.log("Extension initialized successfully");
@@ -697,11 +705,7 @@ class ExtensionManager {
           return;
         }
 
-        const shouldTrackNavigation = await new Promise((resolve) => {
-          chrome.storage.sync.get(['idCondition_Brownav'], (result) => {
-            resolve(result.idCondition_Brownav === true);
-          });
-        });
+        const shouldTrackNavigation = await getSyncStorageAsync('idCondition_Brownav') === true;
         
         if (shouldTrackNavigation) {
           await this.handleTabNavigation(tabId, changeInfo, tab);
@@ -897,24 +901,120 @@ class ExtensionManager {
   }
 
   /**
-   * Setup periodic synchronization
+   * Setup periodic synchronization with enhanced reliability (Chrome 123+)
    * @param {Object} args - Arguments
    * @param {Function} callback - Callback function
    */
-  setupSynchronization() {
-    chrome.alarms.create("synchronize", {
-      periodInMinutes: 60,
-    });
+  async setupSynchronization() {
+    try {
+      // Clear any existing alarms to prevent duplicates
+      await chrome.alarms.clear("synchronize");
+      
+      // Get sync interval from settings
+      const syncInterval = await getSyncStorageAsync('sync_interval_minutes') || 60;
+      
+      // Create alarm with minimum 30 seconds (Chrome 120+)
+      const periodInMinutes = Math.max(syncInterval, 0.5);
+      
+      await chrome.alarms.create("synchronize", {
+        periodInMinutes: periodInMinutes,
+        // Chrome 123+: Alarms now run when device is asleep
+        // No additional configuration needed - this is automatic
+      });
 
+      console.log(`Synchronization alarm created with ${periodInMinutes} minute interval`);
+      
+      // Verify alarm was created
+      const alarm = await chrome.alarms.get("synchronize");
+      if (!alarm) {
+        throw new Error('Failed to create synchronization alarm');
+      }
+      
+      console.log('Synchronization alarm verified:', alarm);
+    } catch (error) {
+      console.error('Error setting up synchronization alarm:', error);
+      // Fallback: try again in 5 minutes
+      setTimeout(() => this.setupSynchronization(), 5 * 60 * 1000);
+    }
+  }
+
+  /**
+   * Initialize alarm listener with enhanced error handling
+   */
+  initializeAlarmListener() {
     chrome.alarms.onAlarm.addListener(async (alarm) => {
-      if (alarm.name === "synchronize") {
-        await this.performSynchronization();
+      try {
+        console.log(`Alarm triggered: ${alarm.name} at ${new Date().toISOString()}`);
+        
+        if (alarm.name === "synchronize") {
+          await this.performSynchronization();
+        }
+      } catch (error) {
+        console.error(`Error handling alarm ${alarm.name}:`, error);
+        
+        // Log alarm failure for debugging
+        this.logAlarmFailure(alarm.name, error);
       }
     });
   }
 
   /**
-   * Perform periodic synchronization
+   * Log alarm failure for debugging purposes
+   * @param {string} alarmName - Name of the failed alarm
+   * @param {Error} error - Error that occurred
+   */
+  async logAlarmFailure(alarmName, error) {
+    try {
+      const failureLog = {
+        alarmName,
+        error: error.message,
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent
+      };
+      
+      // Store in local storage for debugging
+      const existingLogs = await getStorageAsync('alarm_failure_logs') || '[]';
+      const logs = JSON.parse(existingLogs);
+      logs.push(failureLog);
+      
+      // Keep only last 10 failure logs
+      if (logs.length > 10) {
+        logs.splice(0, logs.length - 10);
+      }
+      
+      await setStorageAsync('alarm_failure_logs', JSON.stringify(logs));
+    } catch (logError) {
+      console.error('Error logging alarm failure:', logError);
+    }
+  }
+
+  /**
+   * Get alarm failure logs for debugging
+   * @returns {Promise<Array>} Array of alarm failure logs
+   */
+  async getAlarmFailureLogs() {
+    try {
+      const logs = await getStorageAsync('alarm_failure_logs') || '[]';
+      return JSON.parse(logs);
+    } catch (error) {
+      console.error('Error getting alarm failure logs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Clear alarm failure logs
+   */
+  async clearAlarmFailureLogs() {
+    try {
+      await setStorageAsync('alarm_failure_logs', '[]');
+    } catch (error) {
+      console.error('Error clearing alarm failure logs:', error);
+    }
+  }
+
+  /**
+   * Perform periodic synchronization with enhanced reliability
    */
   async performSynchronization() {
     try {
@@ -1102,26 +1202,7 @@ class ExtensionManager {
    * @returns {Promise<void>}
    */
   async setDefaultInSyncStorageIfNull(key, defaultValue) {
-    return new Promise((resolve, reject) => {
-      chrome.storage.sync.get([key], (result) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(`Failed to get ${key} from chrome.storage.sync: ${chrome.runtime.lastError.message}`));
-          return;
-        }
-        
-        if (result[key] === undefined) {
-          chrome.storage.sync.set({ [key]: defaultValue }, () => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(`Failed to set ${key} in chrome.storage.sync: ${chrome.runtime.lastError.message}`));
-            } else {
-              resolve();
-            }
-          });
-        } else {
-          resolve();
-        }
-      });
-    });
+    return await setDefaultInSyncStorageIfNull(key, defaultValue);
   }
 
   /**
@@ -1131,15 +1212,7 @@ class ExtensionManager {
    */
   async getSetting(key, callback) {
     try {
-      const result = await new Promise((resolve, reject) => {
-        chrome.storage.sync.get([key], (result) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(`Failed to get ${key} from chrome.storage.sync: ${chrome.runtime.lastError.message}`));
-          } else {
-            resolve(result[key]);
-          }
-        });
-      });
+      const result = await getSyncStorageAsync(key);
       callback({ success: true, value: result });
     } catch (error) {
       console.error("Error getting setting:", error);
@@ -1155,15 +1228,7 @@ class ExtensionManager {
    */
   async setSetting(key, value, callback) {
     try {
-      await new Promise((resolve, reject) => {
-        chrome.storage.sync.set({ [key]: value }, () => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(`Failed to set ${key} in chrome.storage.sync: ${chrome.runtime.lastError.message}`));
-          } else {
-            resolve();
-          }
-        });
-      });
+      await setSyncStorageAsync(key, value);
       callback({ success: true });
     } catch (error) {
       console.error("Error setting setting:", error);
@@ -1187,7 +1252,7 @@ class ExtensionManager {
   async saveFirestoreConfig(request, callback) {
     try {
       // Save Firestore configuration to Chrome sync storage
-      await chrome.storage.sync.set({
+      await setMultipleSyncStorageAsync({
         firestore_enabled: request.enabled,
         firestore_project_id: request.projectId,
         firestore_api_key: request.apiKey,
@@ -1210,7 +1275,7 @@ class ExtensionManager {
    */
   async loadFirestoreConfig(callback) {
     try {
-      const result = await chrome.storage.sync.get([
+      const result = await getMultipleSyncStorageAsync([
         'firestore_enabled',
         'firestore_project_id',
         'firestore_api_key',
@@ -1574,6 +1639,67 @@ class ExtensionManager {
     } catch (error) {
       console.error('Failed to get Supabase status:', error);
       callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Check if extension has file URL access permission (Chrome 118+)
+   * @returns {Promise<boolean>} True if file URL access is allowed
+   */
+  async checkFileUrlAccess() {
+    try {
+      return await chrome.extension.isAllowedFileSchemeAccess();
+    } catch (error) {
+      console.error('Error checking file URL access:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Safely open file URL with permission check
+   * @param {string} fileUrl - File URL to open
+   * @param {Object} options - Options for opening the URL
+   * @returns {Promise<boolean>} True if successfully opened
+   */
+  async safeOpenFileUrl(fileUrl, options = {}) {
+    try {
+      if (!fileUrl.startsWith('file://')) {
+        // Not a file URL, proceed normally
+        if (options.newTab) {
+          await chrome.tabs.create({ url: fileUrl });
+        } else {
+          await chrome.tabs.update({ url: fileUrl });
+        }
+        return true;
+      }
+
+      // Check file URL access permission
+      const hasFileAccess = await this.checkFileUrlAccess();
+      
+      if (!hasFileAccess) {
+        console.warn('File URL access not permitted. Enable "Allow access to file URLs" in chrome://extensions');
+        // Optionally show a notification to the user
+        if (chrome.notifications) {
+          chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'content/icon.png',
+            title: 'File Access Required',
+            message: 'Please enable "Allow access to file URLs" in chrome://extensions to access local files.'
+          });
+        }
+        return false;
+      }
+
+      // Permission granted, open the file URL
+      if (options.newTab) {
+        await chrome.tabs.create({ url: fileUrl });
+      } else {
+        await chrome.tabs.update({ url: fileUrl });
+      }
+      return true;
+    } catch (error) {
+      console.error('Error opening file URL:', error);
+      return false;
     }
   }
 }

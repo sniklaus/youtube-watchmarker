@@ -386,6 +386,58 @@ export class SyncManager {
       }
     }
   }
+
+  /**
+   * Get all sync-related storage keys (Chrome 130+)
+   * Useful for debugging and comprehensive sync operations
+   * @returns {Promise<string[]>} Array of sync-related storage keys
+   */
+  async getSyncRelatedKeys() {
+    try {
+      const allKeys = await chrome.storage.sync.getKeys();
+      // Filter keys that are sync-related
+      return allKeys.filter(key => 
+        key.startsWith('sync_') || 
+        key.includes('Timestamp') || 
+        key.includes('_enabled') ||
+        key.includes('firestore_') ||
+        key.includes('supabase_')
+      );
+    } catch (error) {
+      console.error('Failed to get sync-related keys:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get comprehensive sync status including all relevant keys
+   * @returns {Promise<Object>} Comprehensive sync status
+   */
+  async getComprehensiveSyncStatus() {
+    try {
+      const syncKeys = await this.getSyncRelatedKeys();
+      const syncData = await chrome.storage.sync.get(syncKeys);
+      
+      return {
+        keys: syncKeys,
+        data: syncData,
+        autoSyncEnabled: this.autoSyncEnabled,
+        syncIntervalMinutes: this.syncIntervalMinutes,
+        lastSyncTimestamp: this.lastSyncTimestamp,
+        lastSyncDate: new Date(this.lastSyncTimestamp).toISOString()
+      };
+    } catch (error) {
+      console.error('Failed to get comprehensive sync status:', error);
+      return {
+        keys: [],
+        data: {},
+        autoSyncEnabled: false,
+        syncIntervalMinutes: 60,
+        lastSyncTimestamp: 0,
+        lastSyncDate: null
+      };
+    }
+  }
 }
 
 // Create singleton instance
