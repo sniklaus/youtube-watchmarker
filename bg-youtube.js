@@ -515,7 +515,7 @@ export const Youtube = {
               return funcCallback({
                 strIdent: objQuery.result.strIdent,
                 intTimestamp:
-                  objQuery.result.intTimestamp || new Date().getTime(),
+                  objQuery.result.intTimestamp || Date.now(),
                 strTitle: objQuery.result.strTitle || "",
                 intCount: objQuery.result.intCount || 1,
               });
@@ -559,7 +559,7 @@ export const Youtube = {
                   return funcCallback({
                     strIdent: objArgs.objVideo.strIdent,
                     intTimestamp:
-                      objArgs.objVideo.intTimestamp || new Date().getTime(),
+                      objArgs.objVideo.intTimestamp || Date.now(),
                     strTitle: objArgs.objVideo.strTitle || "",
                     intCount: objArgs.objVideo.intCount || 1,
                   });
@@ -613,7 +613,7 @@ export const Youtube = {
           };
 
           objQuery.onsuccess = function () {
-            const currentTime = new Date().getTime();
+            const currentTime = Date.now();
             
             if (objQuery.result === undefined || objQuery.result === null) {
               return funcCallback({

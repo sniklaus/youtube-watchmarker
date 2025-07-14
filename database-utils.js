@@ -144,19 +144,19 @@ export class DatabaseUtils {
     return (args, callback) => {
       if (!args.objDatabase) {
         console.error("Database object store not available");
-        return callback(null);
+        return callback({});
       }
 
       if (!args.objGet) {
         console.error("No video data to put");
-        return callback(null);
+        return callback({});
       }
 
       const query = args.objDatabase.put(args.objGet);
 
       query.onerror = () => {
         console.error("Database put error:", query.error);
-        callback(null);
+        callback({});
       };
 
       query.onsuccess = () => {

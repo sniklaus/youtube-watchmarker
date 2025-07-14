@@ -1,5 +1,7 @@
 console.log("utils.js: file loaded");
 
+import { DATABASE } from "./constants.js";
+
 /**
  * Detects the browser type
  * @returns {string|null} Browser type ('firefox', 'chrome', or null)
@@ -285,7 +287,7 @@ export class BackgroundUtils {
   static get(progressCallback) {
     return (args, callback) => {
       const query = args.objDatabase
-        .index("strIdent")
+        .index(DATABASE.INDEXES.IDENT)
         .get(args.objVideo.strIdent);
 
       query.onsuccess = () => {
