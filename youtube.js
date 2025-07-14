@@ -118,6 +118,26 @@ class YouTubeWatchMarker {
         cssContent += settings.stylesheet_Hideprogress + '\n';
       }
 
+      // Add publication date CSS
+      cssContent += `
+        /* Publication Date Display */
+        .youwatch-has-publish-date::after {
+          content: " • Published: " attr(data-publish-date);
+          color: #aaa;
+          font-weight: normal;
+        }
+        
+        /* Dark theme adjustments */
+        [data-bs-theme="dark"] .youwatch-has-publish-date::after {
+          color: #ccc;
+        }
+        
+        /* Light theme adjustments */
+        [data-bs-theme="light"] .youwatch-has-publish-date::after {
+          color: #606060;
+        }
+      `;
+
       // Inject CSS if there's content
       if (cssContent.trim()) {
         const style = document.createElement('style');
@@ -396,6 +416,9 @@ class YouTubeWatchMarker {
     this.isProcessing = true;
     
     try {
+      // Clean up any stray publication dates from previous refreshes
+      this.cleanupStrayPublishDates();
+      
       const videos = this.findVideos();
       const currentState = `${window.location.href}:${document.title}:${videos.length}`;
       
@@ -414,6 +437,33 @@ class YouTubeWatchMarker {
     } finally {
       this.isProcessing = false;
     }
+  }
+
+  /**
+   * Clean up stray publication dates that might be on wrong videos
+   */
+  cleanupStrayPublishDates() {
+    const elementsWithPublishDate = document.querySelectorAll('.youwatch-has-publish-date');
+    
+    elementsWithPublishDate.forEach(element => {
+      const storedVideoId = element.getAttribute('data-video-id');
+      
+      // Find the actual video link associated with this title element
+      const videoLink = element.closest('a[href*="/watch"]') || 
+                       element.closest('[href*="/watch"]') ||
+                       element.parentElement?.querySelector('a[href*="/watch"]');
+      
+      if (videoLink) {
+        const currentVideoId = this.extractVideoId(videoLink.href);
+        
+        // If the stored video ID doesn't match the current video, remove the publication date
+        if (storedVideoId !== currentVideoId) {
+          element.classList.remove('youwatch-has-publish-date');
+          element.removeAttribute('data-publish-date');
+          element.removeAttribute('data-video-id');
+        }
+      }
+    });
   }
 
   /**
@@ -490,20 +540,16 @@ class YouTubeWatchMarker {
    */
   updateVideoTitle(videoElement, publishDate) {
     const cleanDate = this.formatPublishDate(publishDate);
+    const videoId = this.extractVideoId(videoElement.href);
     
     // Find the video title element in the DOM
     const titleElement = this.findVideoTitleElement(videoElement);
     
-    if (titleElement) {
-      // Check if we've already added the publication date
-      if (!titleElement.textContent.includes('Published:')) {
-        // Add publication date to the visible title
-        const originalTitle = titleElement.textContent;
-        titleElement.textContent = `${originalTitle} • Published: ${cleanDate}`;
-        
-        // Store original title for cleanup
-        titleElement.setAttribute('data-original-title', originalTitle);
-      }
+    if (titleElement && videoId) {
+      // Instead of modifying text content, add a CSS class and data attribute
+      titleElement.classList.add('youwatch-has-publish-date');
+      titleElement.setAttribute('data-publish-date', cleanDate);
+      titleElement.setAttribute('data-video-id', videoId);
     }
     
     // Also update the hover tooltip for accessibility
@@ -726,19 +772,21 @@ class YouTubeWatchMarker {
         videoElement.setAttribute('aria-label', cleanAriaLabel);
       }
       
-      // Clean up visible title text
+      // Clean up visible title display using CSS classes
       const titleElement = this.findVideoTitleElement(videoElement);
       if (titleElement) {
-        const originalTitle = titleElement.getAttribute('data-original-title');
-        if (originalTitle) {
-          titleElement.textContent = originalTitle;
-          titleElement.removeAttribute('data-original-title');
-        } else if (titleElement.textContent.includes('Published:')) {
-          // Fallback: remove the publication date part
-          const cleanTitle = titleElement.textContent.split(' • Published:')[0];
-          titleElement.textContent = cleanTitle;
-        }
+        titleElement.classList.remove('youwatch-has-publish-date');
+        titleElement.removeAttribute('data-publish-date');
+        titleElement.removeAttribute('data-video-id');
       }
+    });
+    
+    // Also clean up any stray elements that might have the class
+    const allTitleElements = document.querySelectorAll('.youwatch-has-publish-date');
+    allTitleElements.forEach(element => {
+      element.classList.remove('youwatch-has-publish-date');
+      element.removeAttribute('data-publish-date');
+      element.removeAttribute('data-video-id');
     });
   }
 
