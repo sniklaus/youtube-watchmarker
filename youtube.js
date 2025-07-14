@@ -650,6 +650,9 @@ class YouTubeWatchMarker {
     this.tooltipElements.forEach((handlers, videoElement) => {
       videoElement.removeEventListener('mouseenter', handlers.showTooltip);
       videoElement.removeEventListener('mouseleave', handlers.hideTooltip);
+      if (handlers.hideTooltipOnClick) {
+        videoElement.removeEventListener('click', handlers.hideTooltipOnClick);
+      }
     });
     this.tooltipElements.clear();
   }
@@ -703,13 +706,24 @@ class YouTubeWatchMarker {
         }
       }, 50);
     };
+
+    const hideTooltipOnClick = () => {
+      // Hide tooltip immediately when video is clicked (video is being played)
+      clearTimeout(hideTimeout);
+      const existingTooltip = document.querySelector('.youwatch-date-tooltip');
+      if (existingTooltip) {
+        existingTooltip.remove();
+      }
+      tooltip = null;
+    };
     
     // Add event listeners
     videoElement.addEventListener('mouseenter', showTooltip);
     videoElement.addEventListener('mouseleave', hideTooltip);
+    videoElement.addEventListener('click', hideTooltipOnClick);
     
     // Track tooltip for cleanup
-    this.tooltipElements.set(videoElement, { showTooltip, hideTooltip });
+    this.tooltipElements.set(videoElement, { showTooltip, hideTooltip, hideTooltipOnClick });
   }
 
   /**
