@@ -11,7 +11,6 @@ class YouTubeWatchMarker {
     this.publishDates = {}; // Store publication dates
     this.observers = new WeakMap();
     this.isProcessing = false;
-    this.tooltipElements = new Map(); // Track custom tooltips
     this.cssInjected = false; // Track if CSS is injected
     
     // Bind methods to preserve 'this' context
@@ -22,7 +21,6 @@ class YouTubeWatchMarker {
     this.handleProgressHookEvent = this.handleProgressHookEvent.bind(this);
     this.setupTooltips = this.setupTooltips.bind(this);
     this.extractPublishDate = this.extractPublishDate.bind(this);
-    this.createCustomTooltip = this.createCustomTooltip.bind(this);
     this.injectCSS = this.injectCSS.bind(this);
     
     this.init().catch(error => {
@@ -120,51 +118,6 @@ class YouTubeWatchMarker {
         cssContent += settings.stylesheet_Hideprogress + '\n';
       }
 
-      // Add tooltip CSS
-      cssContent += `
-        /* Simple Publication Date Tooltip */
-        .youwatch-date-tooltip {
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-family: 'Roboto', 'Arial', sans-serif;
-          font-size: 11px;
-          font-weight: 500;
-          line-height: 1.2;
-          white-space: nowrap;
-          z-index: 10000;
-          pointer-events: none;
-          opacity: 0;
-          animation: dateTooltipFadeIn 0.15s ease-out forwards;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-          backdrop-filter: blur(4px);
-        }
-
-        @keyframes dateTooltipFadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-3px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        /* Dark theme adjustments */
-        [data-bs-theme="dark"] .youwatch-date-tooltip {
-          background: rgba(40, 40, 40, 0.9);
-          color: #ffffff;
-        }
-
-        /* Light theme adjustments */
-        [data-bs-theme="light"] .youwatch-date-tooltip {
-          background: rgba(0, 0, 0, 0.85);
-          color: #ffffff;
-        }
-      `;
-
       // Inject CSS if there's content
       if (cssContent.trim()) {
         const style = document.createElement('style');
@@ -207,7 +160,7 @@ class YouTubeWatchMarker {
         clearTimeout(this.refreshTimeout);
         this.refreshTimeout = setTimeout(() => {
           this.refresh();
-          this.setupTooltips(); // Re-setup tooltips for new content
+          this.setupTooltips(); // Re-setup publication date display for new content
         }, 100);
       }
     });
@@ -471,8 +424,8 @@ class YouTubeWatchMarker {
     const BATCH_SIZE = 10;
     const BATCH_DELAY = 10; // ms
     
-    // Check if tooltips are enabled once for this batch processing
-    const tooltipsEnabled = await this.getSettingValue('idVisualization_Showpublishdate');
+    // Check if publication date display is enabled
+    const showPublishDate = await this.getSettingValue('idVisualization_Showpublishdate');
     
     for (let i = 0; i < videos.length; i += BATCH_SIZE) {
       const batch = videos.slice(i, i + BATCH_SIZE);
@@ -482,21 +435,9 @@ class YouTubeWatchMarker {
         this.markVideo(video, videoId);
         this.observeVideo(video);
         
-        // Extract and store publication date
-        const publishDate = this.extractPublishDate(video);
-        if (publishDate && !this.publishDates[videoId]) {
-          this.publishDates[videoId] = publishDate;
-        }
-        
-        // Set up tooltip if enabled and not already set up
-        if (tooltipsEnabled && !this.tooltipElements.has(video)) {
-          // Add a small delay for newly loaded videos to allow DOM to stabilize
-          setTimeout(() => {
-            // Double-check that tooltip isn't already set up (race condition prevention)
-            if (!this.tooltipElements.has(video)) {
-              this.createCustomTooltip(video, videoId);
-            }
-          }, 50);
+        // Add publication date to title if enabled
+        if (showPublishDate) {
+          this.addPublishDateToTitle(video, videoId);
         }
         
         // Check if we already have watch date for this video
@@ -510,6 +451,132 @@ class YouTubeWatchMarker {
         await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
       }
     }
+  }
+
+  /**
+   * Add publication date to video title attribute
+   * @param {Element} videoElement - Video element
+   * @param {string} videoId - Video ID
+   */
+  addPublishDateToTitle(videoElement, videoId) {
+    // Get or extract publication date
+    let publishDate = this.publishDates[videoId];
+    if (!publishDate) {
+      publishDate = this.extractPublishDate(videoElement);
+      if (publishDate) {
+        this.publishDates[videoId] = publishDate;
+      }
+    }
+    
+    // If still no publication date, try delayed extraction
+    if (!publishDate) {
+      setTimeout(() => {
+        const retryDate = this.extractPublishDate(videoElement);
+        if (retryDate) {
+          this.publishDates[videoId] = retryDate;
+          this.updateVideoTitle(videoElement, retryDate);
+        }
+      }, 100);
+      return;
+    }
+    
+    this.updateVideoTitle(videoElement, publishDate);
+  }
+
+  /**
+   * Update video element title with publication date
+   * @param {Element} videoElement - Video element
+   * @param {string} publishDate - Publication date
+   */
+  updateVideoTitle(videoElement, publishDate) {
+    const cleanDate = this.formatPublishDate(publishDate);
+    
+    // Find the video title element in the DOM
+    const titleElement = this.findVideoTitleElement(videoElement);
+    
+    if (titleElement) {
+      // Check if we've already added the publication date
+      if (!titleElement.textContent.includes('Published:')) {
+        // Add publication date to the visible title
+        const originalTitle = titleElement.textContent;
+        titleElement.textContent = `${originalTitle} • Published: ${cleanDate}`;
+        
+        // Store original title for cleanup
+        titleElement.setAttribute('data-original-title', originalTitle);
+      }
+    }
+    
+    // Also update the hover tooltip for accessibility
+    const originalTitle = videoElement.getAttribute('aria-label') || 
+                         videoElement.getAttribute('title') || 
+                         this.extractVideoTitle(videoElement);
+    
+    if (originalTitle && !originalTitle.includes('Published:')) {
+      const newTitle = `${originalTitle}\nPublished: ${cleanDate}`;
+      videoElement.setAttribute('title', newTitle);
+      
+      // Also update aria-label if it exists
+      if (videoElement.getAttribute('aria-label')) {
+        videoElement.setAttribute('aria-label', newTitle);
+      }
+    }
+  }
+
+  /**
+   * Find the video title element within a video container
+   * @param {Element} videoElement - Video element
+   * @returns {Element|null} Title element or null if not found
+   */
+  findVideoTitleElement(videoElement) {
+    let currentElement = videoElement;
+    
+    // Search up the DOM tree to find the video container
+    for (let i = 0; i < 10 && currentElement; i++) {
+      // Look for various title selectors - YouTube uses different layouts
+      const titleSelectors = [
+        // Common title selectors
+        '#video-title',
+        '.ytd-video-meta-block #video-title',
+        '.ytd-video-meta-block h3 a',
+        '.ytd-video-meta-block h3',
+        '#video-title-link',
+        '.video-title',
+        
+        // Grid and list view selectors
+        'h3 a[href*="/watch"]',
+        'h3 span[role="text"]',
+        'h3 .ytd-video-meta-block',
+        
+        // Shorts selectors
+        '.ytd-shorts-video-meta-block h3',
+        '.shorts-video-meta h3',
+        
+        // Search result selectors
+        '.ytd-video-meta-block .style-scope h3',
+        '.ytd-channel-video-player-renderer h3',
+        
+        // Generic selectors
+        'h3[class*="title"]',
+        'span[class*="title"]',
+        'a[class*="title"]'
+      ];
+      
+      for (const selector of titleSelectors) {
+        try {
+          const titleElement = currentElement.querySelector(selector);
+          if (titleElement && titleElement.textContent && titleElement.textContent.trim()) {
+            return titleElement;
+          }
+        } catch (e) {
+          // Ignore selector errors and continue
+          continue;
+        }
+      }
+      
+      currentElement = currentElement.parentNode;
+    }
+    
+    return null;
   }
 
   /**
@@ -590,10 +657,10 @@ class YouTubeWatchMarker {
   }
 
   /**
-   * Sets up custom tooltips for video elements
+   * Sets up publication date display for video elements
    */
   async setupTooltips() {
-    // Check if publication date tooltips are enabled
+    // Check if publication date display is enabled
     const isEnabled = await this.getSettingValue('idVisualization_Showpublishdate');
     if (!isEnabled) {
       return;
@@ -604,13 +671,8 @@ class YouTubeWatchMarker {
     videos.forEach(videoElement => {
       const videoId = this.extractVideoId(videoElement.href);
       
-      // Skip if tooltip already exists
-      if (this.tooltipElements.has(videoElement)) {
-        return;
-      }
-      
-      // Create custom tooltip
-      this.createCustomTooltip(videoElement, videoId);
+      // Add publication date to title
+      this.addPublishDateToTitle(videoElement, videoId);
     });
   }
 
@@ -631,125 +693,53 @@ class YouTubeWatchMarker {
 
   /**
    * Handle tooltip setting change
-   * @param {boolean} isEnabled - Whether tooltips are enabled
+   * @param {boolean} isEnabled - Whether publication date display is enabled
    */
   async handleTooltipSettingChange(isEnabled) {
     if (isEnabled) {
-      // Enable tooltips for existing videos
+      // Enable publication date display for existing videos
       await this.setupTooltips();
     } else {
-      // Disable and clean up existing tooltips
-      this.cleanupTooltips();
+      // Remove publication dates from video titles
+      this.removePublishDatesFromTitles();
     }
   }
 
   /**
-   * Clean up all existing tooltips
+   * Remove publication dates from all video titles
    */
-  cleanupTooltips() {
-    this.tooltipElements.forEach((handlers, videoElement) => {
-      videoElement.removeEventListener('mouseenter', handlers.showTooltip);
-      videoElement.removeEventListener('mouseleave', handlers.hideTooltip);
-      if (handlers.hideTooltipOnClick) {
-        videoElement.removeEventListener('click', handlers.hideTooltipOnClick);
+  removePublishDatesFromTitles() {
+    const videos = this.findVideos();
+    
+    videos.forEach(videoElement => {
+      // Clean up hover tooltip attributes
+      const currentTitle = videoElement.getAttribute('title');
+      const currentAriaLabel = videoElement.getAttribute('aria-label');
+      
+      if (currentTitle && currentTitle.includes('Published:')) {
+        const cleanTitle = currentTitle.split('\nPublished:')[0];
+        videoElement.setAttribute('title', cleanTitle);
+      }
+      
+      if (currentAriaLabel && currentAriaLabel.includes('Published:')) {
+        const cleanAriaLabel = currentAriaLabel.split('\nPublished:')[0];
+        videoElement.setAttribute('aria-label', cleanAriaLabel);
+      }
+      
+      // Clean up visible title text
+      const titleElement = this.findVideoTitleElement(videoElement);
+      if (titleElement) {
+        const originalTitle = titleElement.getAttribute('data-original-title');
+        if (originalTitle) {
+          titleElement.textContent = originalTitle;
+          titleElement.removeAttribute('data-original-title');
+        } else if (titleElement.textContent.includes('Published:')) {
+          // Fallback: remove the publication date part
+          const cleanTitle = titleElement.textContent.split(' • Published:')[0];
+          titleElement.textContent = cleanTitle;
+        }
       }
     });
-    this.tooltipElements.clear();
-  }
-
-  /**
-   * Creates a custom tooltip for a video element
-   * @param {Element} videoElement - Video element
-   * @param {string} videoId - Video ID
-   */
-  createCustomTooltip(videoElement, videoId) {
-    let tooltip = null;
-    let hideTimeout = null;
-    
-    const showTooltip = (event) => {
-      clearTimeout(hideTimeout);
-      
-      // Get publication date with retry logic
-      let publishDate = this.publishDates[videoId];
-      if (!publishDate) {
-        publishDate = this.extractPublishDate(videoElement);
-        // Cache the extracted date for future use
-        if (publishDate) {
-          this.publishDates[videoId] = publishDate;
-        }
-      }
-      
-      // If still no publication date, try a delayed extraction
-      if (!publishDate) {
-        // Retry after a short delay to allow DOM to stabilize
-        setTimeout(() => {
-          const retryDate = this.extractPublishDate(videoElement);
-          if (retryDate) {
-            this.publishDates[videoId] = retryDate;
-            // Show tooltip now if user is still hovering
-            if (videoElement.matches(':hover')) {
-              this.showTooltipWithDate(videoElement, retryDate);
-            }
-          }
-        }, 100);
-        return;
-      }
-      
-      this.showTooltipWithDate(videoElement, publishDate);
-    };
-    
-    const hideTooltip = () => {
-      hideTimeout = setTimeout(() => {
-        if (tooltip && tooltip.parentNode) {
-          tooltip.parentNode.removeChild(tooltip);
-          tooltip = null;
-        }
-      }, 50);
-    };
-
-    const hideTooltipOnClick = () => {
-      // Hide tooltip immediately when video is clicked (video is being played)
-      clearTimeout(hideTimeout);
-      const existingTooltip = document.querySelector('.youwatch-date-tooltip');
-      if (existingTooltip) {
-        existingTooltip.remove();
-      }
-      tooltip = null;
-    };
-    
-    // Add event listeners
-    videoElement.addEventListener('mouseenter', showTooltip);
-    videoElement.addEventListener('mouseleave', hideTooltip);
-    videoElement.addEventListener('click', hideTooltipOnClick);
-    
-    // Track tooltip for cleanup
-    this.tooltipElements.set(videoElement, { showTooltip, hideTooltip, hideTooltipOnClick });
-  }
-
-  /**
-   * Show tooltip with the given publication date
-   * @param {Element} videoElement - Video element
-   * @param {string} publishDate - Publication date
-   */
-  showTooltipWithDate(videoElement, publishDate) {
-    // Remove any existing tooltip
-    const existingTooltip = document.querySelector('.youwatch-date-tooltip');
-    if (existingTooltip) {
-      existingTooltip.remove();
-    }
-    
-    // Format the date text for cleaner display
-    const cleanDate = this.formatPublishDate(publishDate);
-    
-    // Create simple tooltip element
-    const tooltip = document.createElement('div');
-    tooltip.className = 'youwatch-date-tooltip';
-    tooltip.textContent = cleanDate;
-    
-    // Position tooltip closer to thumbnail
-    this.positionDateTooltip(tooltip, videoElement);
-    
-    document.body.appendChild(tooltip);
   }
 
   /**
@@ -795,50 +785,12 @@ class YouTubeWatchMarker {
     return formatted;
   }
 
-
-
   /**
-   * Position date tooltip higher above the thumbnail
-   * @param {Element} tooltip - Tooltip element
-   * @param {Element} videoElement - Video element
-   */
-  positionDateTooltip(tooltip, videoElement) {
-    const rect = videoElement.getBoundingClientRect();
-    const tooltipRect = tooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    // Position tooltip higher above the thumbnail (instead of at the bottom)
-    let left = rect.left + 8;
-    let top = rect.top - tooltipRect.height - 12; // Position above thumbnail with more spacing
-
-    // Adjust horizontal position if tooltip goes off-screen
-    if (left + tooltipRect.width > viewportWidth) {
-      left = rect.right - tooltipRect.width - 8;
-    }
-
-    // Adjust vertical position if tooltip goes off-screen at the top
-    if (top < 0) {
-      top = rect.bottom + 8; // Position below thumbnail if no room above
-    }
-
-    // Ensure tooltip stays within viewport
-    left = Math.max(5, Math.min(left, viewportWidth - tooltipRect.width - 5));
-    top = Math.max(5, Math.min(top, viewportHeight - tooltipRect.height - 5));
-
-    tooltip.style.position = 'fixed';
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
-    tooltip.style.zIndex = '10000';
-  }
-
-  /**
-   * Escape HTML to prevent XSS
+   * Escape HTML characters in text
    * @param {string} text - Text to escape
    * @returns {string} Escaped text
    */
   escapeHtml(text) {
-    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
@@ -1069,11 +1021,6 @@ class YouTubeWatchMarker {
   cleanup() {
     this.observers.forEach(observer => observer.disconnect());
     this.observers = new WeakMap();
-    this.tooltipElements.forEach(tooltip => {
-      tooltip.showTooltip.disconnect();
-      tooltip.hideTooltip.disconnect();
-    });
-    this.tooltipElements.clear();
   }
 }
 
