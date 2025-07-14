@@ -465,12 +465,17 @@ class PopupSearchManager {
         if (totalPages <= 1) return '';
 
         const currentPage = this.searchState.currentPage;
-        const startPage = Math.max(1, currentPage - 1);
-        const endPage = Math.min(totalPages, currentPage + 1);
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
 
         let paginationHtml = `
             <nav aria-label="Search results pagination" class="mt-3">
                 <ul class="pagination pagination-sm justify-content-center">
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <button class="page-link" data-page="1" ${currentPage === 1 ? 'disabled' : ''} aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </button>
+                    </li>
                     <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
                         <button class="page-link" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous">
                             <span aria-hidden="true">&laquo;</span>
@@ -491,9 +496,14 @@ class PopupSearchManager {
                             <span aria-hidden="true">&raquo;</span>
                         </button>
                     </li>
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <button class="page-link" data-page="${totalPages}" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </button>
+                    </li>
                 </ul>
                 <div class="text-center text-muted small mt-2">
-                    Page ${currentPage} of ${totalPages}
+                    Page ${currentPage} of ${totalPages} (${this.searchState.totalResults} total videos)
                 </div>
             </nav>
         `;
