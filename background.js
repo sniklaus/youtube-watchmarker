@@ -876,17 +876,23 @@ class ExtensionManager {
    */
   async ensureVideoTracked(videoId, title) {
     return new Promise((resolve, reject) => {
-      Youtube.ensure(
-        { strIdent: videoId, strTitle: title },
-        (response) => {
-          if (response) {
-            console.debug("Video ensured:", videoId);
-            resolve(response);
-          } else {
-            reject(new Error("Failed to ensure video"));
+      try {
+        Youtube.ensure(
+          { strIdent: videoId, strTitle: title },
+          (response) => {
+            if (response) {
+              console.debug("Video ensured:", videoId);
+              resolve(response);
+            } else {
+              console.error("Youtube.ensure returned null response for:", videoId, title);
+              reject(new Error("Failed to ensure video"));
+            }
           }
-        }
-      );
+        );
+      } catch (error) {
+        console.error("Error in Youtube.ensure call:", error);
+        reject(error);
+      }
     });
   }
 

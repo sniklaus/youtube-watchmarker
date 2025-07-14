@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Watchmarker for Youtube",
+  "name": "Watchmarker for Youtube Reloaded",
   "description": "A fork of the original Youtube Watchmarker, now with manifest v3 and supabase remote sync",
   "homepage_url": "https://github.com/widike/youtube-watchmarker",
   "version": "1.0.0",
@@ -33,7 +33,7 @@
         "*://www.youtube.com/*",
         "*://m.youtube.com/*"
       ],
-      "js": ["content/progress-hook.js", "youtube.js"]
+      "js": ["youtube.js"]
     }
   ],
   
@@ -43,7 +43,7 @@
   },
   
   "action": {
-    "default_title": "Watchmarker for Youtube",
+    "default_title": "Watchmarker for Youtube Reloaded",
     "default_icon": {
       "72": "content/icon.png"
     },
@@ -54,16 +54,6 @@
     "72": "content/icon.png"
   },
   
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "ruleset_1",
-        "enabled": true,
-        "path": "rules.json"
-      }
-    ]
-  },
-
    "browser_specific_settings": {
     "gecko": {
       "id": "yourect@coderect.com",

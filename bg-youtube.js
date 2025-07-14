@@ -5,7 +5,7 @@ import {
   AsyncSeries
 } from "./utils.js";
 import { DatabaseUtils } from "./database-utils.js";
-import { STORAGE_KEYS, TIMEOUTS } from "./constants.js";
+import { STORAGE_KEYS, TIMEOUTS, DATABASE } from "./constants.js";
 
 export const Youtube = {
   init: function (objRequest, funcResponse) {
@@ -502,7 +502,7 @@ export const Youtube = {
           }
           
           let objQuery = objArgs.objDatabase
-            .index("strIdent")
+            .index(DATABASE.INDEXES.IDENT)
             .get(objArgs.objVideo.strIdent);
 
           objQuery.onerror = function () {
@@ -538,32 +538,50 @@ export const Youtube = {
         objDatabase: DatabaseUtils.database("readwrite"),
         objGet: function (objArgs, funcCallback) {
           if (!objArgs.objDatabase) {
-            console.error("Database object store not available");
+            console.error("Database object store not available in Youtube.ensure");
             return funcCallback(null);
           }
           
-          let objQuery = objArgs.objDatabase
-            .index("strIdent")
-            .get(objArgs.objVideo.strIdent);
+          try {
+            let objQuery = objArgs.objDatabase
+              .index(DATABASE.INDEXES.IDENT)
+              .get(objArgs.objVideo.strIdent);
 
-          objQuery.onerror = function () {
-            console.error("Database query error:", objQuery.error);
+            objQuery.onerror = function () {
+              console.error("Database query error in Youtube.ensure:", objQuery.error);
+              return funcCallback(null);
+            };
+
+            objQuery.onsuccess = function () {
+              try {
+                if (objQuery.result === undefined || objQuery.result === null) {
+                  console.debug("Creating new video entry for:", objArgs.objVideo.strIdent);
+                  return funcCallback({
+                    strIdent: objArgs.objVideo.strIdent,
+                    intTimestamp:
+                      objArgs.objVideo.intTimestamp || new Date().getTime(),
+                    strTitle: objArgs.objVideo.strTitle || "",
+                    intCount: objArgs.objVideo.intCount || 1,
+                  });
+                }
+
+                // Return existing video data instead of null
+                console.debug("Returning existing video data for:", objArgs.objVideo.strIdent);
+                return funcCallback({
+                  strIdent: objQuery.result.strIdent,
+                  intTimestamp: objQuery.result.intTimestamp,
+                  strTitle: objQuery.result.strTitle || "",
+                  intCount: objQuery.result.intCount || 1,
+                });
+              } catch (error) {
+                console.error("Error processing query result in Youtube.ensure:", error);
+                return funcCallback(null);
+              }
+            };
+          } catch (error) {
+            console.error("Error creating database query in Youtube.ensure:", error);
             return funcCallback(null);
-          };
-
-          objQuery.onsuccess = function () {
-            if (objQuery.result === undefined || objQuery.result === null) {
-              return funcCallback({
-                strIdent: objArgs.objVideo.strIdent,
-                intTimestamp:
-                  objArgs.objVideo.intTimestamp || new Date().getTime(),
-                strTitle: objArgs.objVideo.strTitle || "",
-                intCount: objArgs.objVideo.intCount || 1,
-              });
-            }
-
-            return funcCallback(null);
-          };
+          }
         },
         objPut: DatabaseUtils.put(),
         objCount: DatabaseUtils.count(),
@@ -586,7 +604,7 @@ export const Youtube = {
           }
           
           let objQuery = objArgs.objDatabase
-            .index("strIdent")
+            .index(DATABASE.INDEXES.IDENT)
             .get(objArgs.objVideo.strIdent);
 
           objQuery.onerror = function () {
