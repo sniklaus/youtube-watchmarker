@@ -691,6 +691,9 @@ class OptionsPageManager {
             if (response && response.success) {
                 this.showSuccess(response.message || 'Databases synced successfully');
                 await this.updateDatabaseSize();
+                
+                // Refresh search results to show any changes from sync
+                await this.performSearch();
             } else {
                 throw new Error(response?.error || 'Sync failed');
             }
@@ -861,6 +864,11 @@ class OptionsPageManager {
                 const videoCount = response.videoCount || 0;
                 this.showSuccess(`Browser history synchronized! Added ${videoCount} videos.`);
                 await this.updateDatabaseSize();
+                
+                // Refresh search results to show newly added videos
+                if (videoCount > 0) {
+                    await this.performSearch();
+                }
             } else {
                 const errorMessage = response?.error || 'History synchronization failed';
                 
@@ -902,6 +910,11 @@ class OptionsPageManager {
                 const videoCount = response.videoCount || 0;
                 this.showSuccess(`YouTube history synchronized! Added ${videoCount} videos.`);
                 await this.updateDatabaseSize();
+                
+                // Refresh search results to show newly added videos
+                if (videoCount > 0) {
+                    await this.performSearch();
+                }
             } else {
                 const errorMessage = response?.error || 'YouTube synchronization failed';
                 
@@ -943,6 +956,11 @@ class OptionsPageManager {
                 const videoCount = response.videoCount || 0;
                 this.showSuccess(`YouTube likes synchronized! Added ${videoCount} videos.`);
                 await this.updateDatabaseSize();
+                
+                // Refresh search results to show newly added videos
+                if (videoCount > 0) {
+                    await this.performSearch();
+                }
             } else {
                 const errorMessage = response?.error || 'YouTube likes synchronization failed';
                 
@@ -1023,6 +1041,11 @@ class OptionsPageManager {
             
             // Update database size
             await this.updateDatabaseSize();
+            
+            // Refresh search results to show newly added videos
+            if (totalVideos > 0) {
+                await this.performSearch();
+            }
             
             // Show results
             const resultMessage = `All sources synchronized! Total: ${totalVideos} videos added.\n\n${results.join('\n')}`;
