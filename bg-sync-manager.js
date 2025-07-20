@@ -42,6 +42,10 @@ export class SyncManager {
         },
         createResponseCallback(() => {
           this.isInitialized = true;
+          
+          // Set up storage change listener
+          chrome.storage.onChanged.addListener(this.onStorageChanged.bind(this));
+          
           return {};
         }, response)
       );
@@ -57,12 +61,12 @@ export class SyncManager {
   async loadConfiguration(args, callback) {
     try {
       const result = await chrome.storage.sync.get([
-        'sync_auto_enabled',
+        'auto_sync_enabled',
         'sync_interval_minutes',
         'sync_last_timestamp'
       ]);
 
-      this.autoSyncEnabled = result.sync_auto_enabled || false;
+      this.autoSyncEnabled = result.auto_sync_enabled || false;
       this.syncIntervalMinutes = result.sync_interval_minutes || 60;
       this.lastSyncTimestamp = result.sync_last_timestamp || 0;
 
@@ -91,7 +95,7 @@ export class SyncManager {
       this.autoSyncEnabled = true;
       
       // Save configuration
-      await chrome.storage.sync.set({ sync_auto_enabled: true });
+      await chrome.storage.sync.set({ auto_sync_enabled: true });
       
       await this.startAutoSyncInternal();
       
@@ -126,7 +130,7 @@ export class SyncManager {
       this.autoSyncEnabled = false;
       
       // Save configuration
-      await chrome.storage.sync.set({ sync_auto_enabled: false });
+      await chrome.storage.sync.set({ auto_sync_enabled: false });
       
       // Clear interval
       if (this.syncInterval) {
@@ -250,23 +254,45 @@ export class SyncManager {
         throw new Error("Database provider factory not available");
       }
 
-      // Get current provider and check if it supports sync
-      const currentProvider = databaseProviderFactory.getCurrentProvider();
-      if (!currentProvider) {
-        throw new Error("No active database provider");
+      // Check if auto-sync is enabled
+      const settings = await chrome.storage.sync.get(['auto_sync_enabled']);
+      if (!settings.auto_sync_enabled) {
+        console.log("Auto-sync is disabled, skipping sync");
+        return { success: true, synced: 0, conflicts: 0, message: "Auto-sync disabled" };
       }
 
-      // For now, we'll use a simple approach - just ensure the current provider is working
-      // In the future, this could be extended to sync between IndexedDB and Supabase
-      console.log("Sync performed - current provider is active:", currentProvider.constructor.name);
+      // Get available providers
+      const availableProviders = await databaseProviderFactory.getAvailableProviders();
+      const indexedDBProvider = availableProviders.find(p => p.id === 'indexeddb');
+      const supabaseProvider = availableProviders.find(p => p.id === 'supabase');
       
-      // Update last sync timestamp
-      this.lastSyncTimestamp = Date.now();
-      await chrome.storage.sync.set({ sync_last_timestamp: this.lastSyncTimestamp });
+      // Check if both providers are available
+      if (!indexedDBProvider || !indexedDBProvider.isAvailable) {
+        throw new Error("IndexedDB provider not available");
+      }
       
-      return { success: true, synced: 0, conflicts: 0 };
+      if (!supabaseProvider || !supabaseProvider.isAvailable) {
+        console.log("Supabase provider not configured, skipping auto-sync");
+        return { success: true, synced: 0, conflicts: 0, message: "Supabase not configured" };
+      }
+
+      console.log("Starting automatic sync between IndexedDB and Supabase...");
+      
+      // Perform bidirectional sync between IndexedDB and Supabase
+      const syncResult = await databaseProviderFactory.syncProviders('indexeddb', 'supabase');
+      
+      if (syncResult) {
+        // Update last sync timestamp
+        this.lastSyncTimestamp = Date.now();
+        await chrome.storage.sync.set({ sync_last_timestamp: this.lastSyncTimestamp });
+        
+        console.log("Auto-sync completed successfully");
+        return { success: true, synced: 1, conflicts: 0, message: "Sync completed successfully" };
+      } else {
+        throw new Error("Sync operation returned false");
+      }
     } catch (error) {
-      console.error("Sync failed:", error);
+      console.error("Auto-sync failed:", error);
       throw error;
     }
   }
@@ -346,8 +372,8 @@ export class SyncManager {
   onStorageChanged(changes, namespace) {
     if (namespace === 'sync') {
       // React to relevant storage changes
-      if (changes.database_sync_enabled) {
-        const newValue = changes.database_sync_enabled.newValue;
+      if (changes.auto_sync_enabled) {
+        const newValue = changes.auto_sync_enabled.newValue;
         if (newValue !== this.autoSyncEnabled) {
           if (newValue) {
             this.startAutoSync({}, () => {});
@@ -382,7 +408,6 @@ export class SyncManager {
         key.startsWith('sync_') || 
         key.includes('Timestamp') || 
         key.includes('_enabled') ||
-        key.includes('firestore_') ||
         key.includes('supabase_')
       );
     } catch (error) {

@@ -45,6 +45,9 @@ class ExtensionManager {
       // Initialize settings first
       await this.initializeSettings();
 
+      // Migrate YouTube auto sync setting to YouTube History condition
+      await this.migrateYouTubeAutoSyncSetting();
+
       // Initialize database first so it's available for provider factory
       await this.initializeDatabase();
       
@@ -218,6 +221,29 @@ class ExtensionManager {
   }
 
   /**
+   * Migrate YouTube auto sync setting to YouTube History condition
+   */
+  async migrateYouTubeAutoSyncSetting() {
+    try {
+      const youtubeAutoSyncEnabled = await getSyncStorageAsync('youtube_auto_sync_enabled');
+      if (youtubeAutoSyncEnabled === true) {
+        // Enable YouTube History condition if it's not already set
+        const currentYouHistCondition = await getSyncStorageAsync('idCondition_Youhist');
+        if (currentYouHistCondition === undefined || currentYouHistCondition === null) {
+          await chrome.storage.sync.set({ 'idCondition_Youhist': true });
+          console.log("Migrated youtube_auto_sync_enabled to idCondition_Youhist");
+        }
+        
+        // Remove the old setting
+        await chrome.storage.sync.remove('youtube_auto_sync_enabled');
+        console.log("Removed old youtube_auto_sync_enabled setting");
+      }
+    } catch (error) {
+      console.error("Error migrating YouTube auto sync setting:", error);
+    }
+  }
+
+  /**
    * Setup action handler for extension icon clicks
    * @param {Object} args - Arguments
    * @param {Function} callback - Callback function
@@ -276,17 +302,35 @@ class ExtensionManager {
     messageHandler.register(ACTIONS.DATABASE_IMPORT, async (data) => {
       try {
         let parsedData;
+        let rawData = data.data;
+        
+        // Try to handle base64 encoded old database format first
+        if (ExtensionManager.isValidBase64(rawData)) {
+          try {
+            const decodedData = atob(rawData);
+            rawData = decodedData;
+            console.log("Successfully decoded base64 database format");
+          } catch (base64Error) {
+            console.warn("Base64 decoding failed:", base64Error);
+            // Continue with original data
+          }
+        }
         
         // Parse as JSON
         try {
-          parsedData = JSON.parse(data.data);
+          parsedData = JSON.parse(rawData);
         } catch (jsonError) {
           console.error("Failed to parse database as JSON:", jsonError);
-          throw new Error("Invalid database format - must be valid JSON");
+          throw new Error("Invalid database format. Please ensure the file contains valid JSON data or is a base64-encoded database export from an older version.");
+        }
+        
+        // Handle legacy format - if parsedData is an array, wrap it in the new format
+        if (Array.isArray(parsedData)) {
+          parsedData = { data: parsedData };
         }
         
         return new Promise((resolve, reject) => {
-          Database.import({ data: { data: parsedData } }, (response) => {
+          Database.import({ data: parsedData }, (response) => {
             if (response && response.success) {
               resolve({ success: true, message: response.message });
             } else {
@@ -384,17 +428,35 @@ class ExtensionManager {
           "database-import": (req, res) => {
             try {
               let parsedData;
+              let rawData = req.data;
+              
+              // Try to handle base64 encoded old database format first
+              if (ExtensionManager.isValidBase64(rawData)) {
+                try {
+                  const decodedData = atob(rawData);
+                  rawData = decodedData;
+                  console.log("Successfully decoded base64 database format");
+                } catch (base64Error) {
+                  console.warn("Base64 decoding failed:", base64Error);
+                  // Continue with original data
+                }
+              }
               
               // Parse as JSON
               try {
-                parsedData = JSON.parse(req.data);
+                parsedData = JSON.parse(rawData);
               } catch (jsonError) {
                 console.error("Failed to parse database as JSON:", jsonError);
-                res({ success: false, error: "Invalid database format - must be valid JSON" });
+                res({ success: false, error: "Invalid database format. Please ensure the file contains valid JSON data or is a base64-encoded database export from an older version." });
                 return;
               }
               
-              Database.import({ data: { data: parsedData } }, (response) => {
+              // Handle legacy format - if parsedData is an array, wrap it in the new format
+              if (Array.isArray(parsedData)) {
+                parsedData = { data: parsedData };
+              }
+              
+              Database.import({ data: parsedData }, (response) => {
                 if (response && response.success) {
                   res({ success: true, message: response.message });
                 } else {
@@ -647,7 +709,10 @@ class ExtensionManager {
             this.setSetting(req.key, req.value, res);
           },
           
-
+          // YouTube auto sync actions - REMOVED: This is now handled by Watch Detection Conditions - YouTube History
+          // "youtube-auto-sync-toggle": (req, res) => {
+          //   this.toggleYouTubeAutoSync(req.enabled, res);
+          // },
           
           // Database provider actions
           "database-provider-status": (req, res) => {
@@ -659,13 +724,76 @@ class ExtensionManager {
           "database-provider-sync": (req, res) => {
             this.syncDatabaseProviders(req, res);
           },
+        
           
-          // Firestore configuration actions
-          "firestore-config-save": (req, res) => {
-            this.saveFirestoreConfig(req, res);
+          // Sync Manager actions
+          "sync-manager-start": async (req, res) => {
+            try {
+              await new Promise((resolve, reject) => {
+                SyncManagerInstance.startAutoSync(req, (response) => {
+                  if (response && response.success) {
+                    resolve(response);
+                  } else {
+                    reject(new Error(response?.error || 'Failed to start sync manager'));
+                  }
+                });
+              });
+              res({ success: true });
+            } catch (error) {
+              console.error("Error starting sync manager:", error);
+              res({ success: false, error: error.message });
+            }
           },
-          "firestore-config-load": (req, res) => {
-            this.loadFirestoreConfig(res);
+          "sync-manager-stop": async (req, res) => {
+            try {
+              await new Promise((resolve, reject) => {
+                SyncManagerInstance.stopAutoSync(req, (response) => {
+                  if (response && response.success) {
+                    resolve(response);
+                  } else {
+                    reject(new Error(response?.error || 'Failed to stop sync manager'));
+                  }
+                });
+              });
+              res({ success: true });
+            } catch (error) {
+              console.error("Error stopping sync manager:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "sync-manager-sync-now": async (req, res) => {
+            try {
+              const result = await new Promise((resolve, reject) => {
+                SyncManagerInstance.syncNow(req, (response) => {
+                  if (response && response.success) {
+                    resolve(response);
+                  } else {
+                    reject(new Error(response?.error || 'Sync failed'));
+                  }
+                });
+              });
+              res({ success: true, result: result.result });
+            } catch (error) {
+              console.error("Error performing sync now:", error);
+              res({ success: false, error: error.message });
+            }
+          },
+          "sync-manager-status": async (req, res) => {
+            try {
+              const status = await new Promise((resolve, reject) => {
+                SyncManagerInstance.getStatus(req, (response) => {
+                  if (response && response.success) {
+                    resolve(response);
+                  } else {
+                    reject(new Error(response?.error || 'Failed to get sync status'));
+                  }
+                });
+              });
+              res({ success: true, status: status.status });
+            } catch (error) {
+              console.error("Error getting sync status:", error);
+              res({ success: false, error: error.message });
+            }
           }
         };
 
@@ -1023,14 +1151,16 @@ class ExtensionManager {
         console.log("Browser history sync disabled");
       }
 
+      // Check for YouTube history condition - this now handles automatic YouTube sync
       const shouldSyncYoutube = await new Promise((resolve) => {
         chrome.storage.sync.get(['idCondition_Youhist'], (result) => {
           resolve(result.idCondition_Youhist === true);
         });
       });
       
+      // Sync YouTube if condition is enabled
       if (shouldSyncYoutube) {
-        console.log("Syncing YouTube history...");
+        console.log("Syncing YouTube history (YouTube History condition enabled)...");
         await this.syncYoutube();
       } else {
         console.log("YouTube history sync disabled");
@@ -1182,61 +1312,6 @@ class ExtensionManager {
 
 
   /**
-   * Save Firestore configuration
-   * @param {Object} request - Firestore configuration
-   * @param {Function} callback - Response callback
-   */
-  async saveFirestoreConfig(request, callback) {
-    try {
-      // Save Firestore configuration to Chrome sync storage
-      await setMultipleSyncStorageAsync({
-        firestore_enabled: request.enabled,
-        firestore_project_id: request.projectId,
-        firestore_api_key: request.apiKey,
-        firestore_auth_domain: request.authDomain,
-        firestore_collection_name: request.collectionName || 'watchmarker_videos',
-        firestore_use_emulator: request.useEmulator || false
-      });
-      
-      console.log("Firestore configuration saved");
-      callback({ success: true });
-    } catch (error) {
-      console.error("Error saving Firestore config:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
-
-  /**
-   * Load Firestore configuration
-   * @param {Function} callback - Response callback
-   */
-  async loadFirestoreConfig(callback) {
-    try {
-      const result = await getMultipleSyncStorageAsync([
-        'firestore_enabled',
-        'firestore_project_id',
-        'firestore_api_key',
-        'firestore_auth_domain',
-        'firestore_collection_name',
-        'firestore_use_emulator'
-      ]);
-      
-      callback({ 
-        success: true, 
-        config: {
-          enabled: result.firestore_enabled || false,
-          projectId: result.firestore_project_id || '',
-          apiKey: result.firestore_api_key || '',
-          authDomain: result.firestore_auth_domain || '',
-          collectionName: result.firestore_collection_name || 'watchmarker_videos',
-          useEmulator: result.firestore_use_emulator || false
-        }
-      });
-    } catch (error) {
-      console.error("Error loading Firestore config:", error);
-      callback({ success: false, error: error.message });
-    }
-  }
 
   /**
    * Export database data for options page
@@ -1386,6 +1461,7 @@ class ExtensionManager {
       callback({ success: false, error: error.message });
     }
   }
+
 
   /**
    * Initialize provider factory
@@ -1604,6 +1680,74 @@ class ExtensionManager {
     } catch (error) {
       console.error('Failed to get Supabase status:', error);
       callback({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Check if a string is valid base64
+   * @param {string} str - String to check
+   * @returns {boolean} True if valid base64
+   */
+  isValidBase64(str) {
+    if (typeof str !== 'string' || str.length === 0) {
+      return false;
+    }
+    
+    // Base64 strings should only contain valid characters and proper padding
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    
+    // Check basic format
+    if (!base64Regex.test(str)) {
+      return false;
+    }
+    
+    // Base64 strings should be divisible by 4 (with padding)
+    if (str.length % 4 !== 0) {
+      return false;
+    }
+    
+    // Try to decode to verify it's actually valid base64
+    try {
+      const decoded = atob(str);
+      // Additional check: decoded content should look like JSON (start with [ or {)
+      const trimmed = decoded.trim();
+      return trimmed.startsWith('[') || trimmed.startsWith('{');
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Helper function to check if string is valid base64 (static version)
+   * @param {string} str - String to check  
+   * @returns {boolean} True if valid base64
+   */
+  static isValidBase64(str) {
+    if (typeof str !== 'string' || str.length === 0) {
+      return false;
+    }
+    
+    // Base64 strings should only contain valid characters and proper padding
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    
+    // Check basic format
+    if (!base64Regex.test(str)) {
+      return false;
+    }
+    
+    // Base64 strings should be divisible by 4 (with padding)  
+    if (str.length % 4 !== 0) {
+      return false;
+    }
+    
+    // Try to decode to verify it's actually valid base64
+    try {
+      const decoded = atob(str);
+      // Additional check: decoded content should look like JSON (start with [ or {)
+      const trimmed = decoded.trim();
+      return trimmed.startsWith('[') || trimmed.startsWith('{');
+    } catch (error) {
+      return false;
     }
   }
 

@@ -145,6 +145,8 @@ class OptionsPageManager {
             this.providerIndexedDB.addEventListener('change', () => this.switchDatabaseProvider('indexeddb'));
             this.providerSupabase.addEventListener('change', () => this.switchDatabaseProvider('supabase'));
             this.enableAutoSync.addEventListener('change', (event) => this.toggleAutoSync(event));
+            // YouTube Auto Sync removed - this functionality is now handled by Watch Detection Conditions - YouTube History
+            // this.getElementById('enable_youtube_auto_sync').addEventListener('change', (event) => this.toggleYouTubeAutoSync(event));
             
             // Supabase Configuration
             this.getElementById('supabase_save').addEventListener('click', () => this.saveSupabaseConfig());
@@ -635,10 +637,33 @@ class OptionsPageManager {
         const isEnabled = event.target.checked;
         
         try {
-            // Store the auto-sync preference
-            await chrome.storage.local.set({ auto_sync_enabled: isEnabled });
+            // Store the auto-sync preference in sync storage for persistence across devices
+            await chrome.storage.sync.set({ auto_sync_enabled: isEnabled });
             
-            this.showSuccess(`Automatic synchronization ${isEnabled ? 'enabled' : 'disabled'}`);
+            // Also notify the background script about the change
+            if (isEnabled) {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'sync-manager-start'
+                });
+                if (response && response.success) {
+                    this.showSuccess('Automatic synchronization enabled and started');
+                } else {
+                    this.showError('Failed to start automatic synchronization');
+                    event.target.checked = false;
+                    return;
+                }
+            } else {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'sync-manager-stop'
+                });
+                if (response && response.success) {
+                    this.showSuccess('Automatic synchronization disabled and stopped');
+                } else {
+                    this.showError('Failed to stop automatic synchronization');
+                    event.target.checked = true;
+                    return;
+                }
+            }
         } catch (error) {
             console.error('Error toggling auto sync:', error);
             this.showError('Failed to update auto sync setting');
@@ -1659,8 +1684,8 @@ class OptionsPageManager {
                     this.supabaseConfig.classList.add('d-none');
                 }
                 
-                // Load auto-sync setting
-                const autoSyncResult = await chrome.storage.local.get(['auto_sync_enabled']);
+                // Load auto-sync setting from sync storage
+                const autoSyncResult = await chrome.storage.sync.get(['auto_sync_enabled']);
                 this.enableAutoSync.checked = autoSyncResult.auto_sync_enabled || false;
             } else {
                 console.warn('Failed to get provider status:', response?.error);

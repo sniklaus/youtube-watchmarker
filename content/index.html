@@ -247,8 +247,7 @@
                   <label class="form-check-label" for="enable_auto_sync">
                     Enable automatic synchronization between local and remote storage
                   </label>
-                </div>
-              </div>
+                </div>             
               
               <!-- Database Operations -->
               <div class="mb-4">
@@ -257,9 +256,9 @@
                   <button class="btn btn-primary" id="idDatabase_Export">
                     <i class="fas fa-download me-2"></i>Export
                   </button>
-                  <label class="btn btn-primary">
+                  <label class="btn btn-primary" title="Import database from JSON or legacy base64-encoded .database files">
                     <i class="fas fa-upload me-2"></i>Import
-                    <input type="file" id="idDatabase_Import" class="d-none" accept=".json,.database">
+                    <input type="file" id="idDatabase_Import" class="d-none" accept=".json,.database" title="Select a JSON export file or legacy .database file">
                   </label>
                   <button class="btn btn-warning" id="idDatabase_Reset">
                     <i class="fas fa-trash me-2"></i>Reset
@@ -488,7 +487,7 @@
                     <input class="form-check-input" type="checkbox" id="idCondition_Youhist" />
                     <label class="form-check-label" for="idCondition_Youhist">
                       <strong>YouTube History</strong>
-                      <br><small class="text-muted">Mark when video appears in YouTube's watch history</small>
+                      <br><small class="text-muted">Mark when video appears in YouTube's watch history (includes automatic hourly sync)</small>
                     </label>
                   </div>
                 </div>
