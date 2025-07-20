@@ -315,8 +315,8 @@ export class DatabaseManager {
    */
   async getProviderStatus(request, response) {
     try {
-      const status = await this.providerFactory.getStatus();
-      response({ success: true, data: status });
+      const status = this.providerFactory.getProviderStatus();
+      response({ success: true, status: status });
     } catch (error) {
       console.error("Failed to get provider status:", error);
       response({ success: false, error: error.message });

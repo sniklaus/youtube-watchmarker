@@ -20,7 +20,7 @@ import { Youtube } from "./bg-youtube.js";
 import { Search } from "./bg-search.js";
 import { databaseProviderFactory } from "./database-provider-factory.js";
 import { credentialStorage } from "./credential-storage.js";
-import { messageHandler } from "./message-handler.js";
+// Removed legacy messageHandler import - using standard Chrome API instead
 import { ACTIONS } from "./constants.js";
 
 /**
@@ -256,134 +256,63 @@ class ExtensionManager {
     });
   }
 
-  /**
-   * Setup message handler for content script communication
-   */
-  setupMessageHandler() {
-    // Initialize the unified message handler
-    messageHandler.init();
 
-    // Register all action handlers
-    this.registerMessageHandlers();
-  }
+
+    // Legacy registerMessageHandlers removed - using standard Chrome API in setupMessageHandler instead
 
   /**
-   * Register all message handlers with the unified MessageHandler
+   * Process video chunks sequentially to avoid memory issues
+   * @param {Array} videoData - Array of video objects to import
+   * @param {number} chunkSize - Size of each chunk
+   * @param {number} currentIndex - Current processing index
+   * @param {number} totalProcessed - Total videos processed so far
+   * @param {number} totalVideos - Total number of videos
+   * @returns {Promise<number>} Promise that resolves with total processed count
    */
-  registerMessageHandlers() {
-    // YouTube actions
-    messageHandler.register(ACTIONS.YOUTUBE_LOOKUP, async (data) => {
-      const messageRequest = { strIdent: data.videoId, strTitle: data.title };
-      if (data.title) {
-        this.titleCache.set(data.videoId, data.title);
+  processChunksSequentially(videoData, chunkSize, currentIndex, totalProcessed, totalVideos) {
+    return new Promise((resolve, reject) => {
+      if (currentIndex >= totalVideos) {
+        resolve(totalProcessed);
+        return;
       }
-      return new Promise((resolve) => {
-        Youtube.lookup(messageRequest, resolve);
-      });
-    });
-
-    messageHandler.register(ACTIONS.YOUTUBE_ENSURE, async (data) => {
-      const messageRequest = { strIdent: data.videoId, strTitle: data.title };
-      if (data.title) {
-        this.titleCache.set(data.videoId, data.title);
-      }
-      return new Promise((resolve) => {
-        Youtube.ensure(messageRequest, resolve);
-      });
-    });
-
-    // Database actions
-    messageHandler.register(ACTIONS.DATABASE_EXPORT, async () => {
-      return new Promise((resolve) => {
-        this.exportDatabaseData(resolve);
-      });
-    });
-
-    messageHandler.register(ACTIONS.DATABASE_IMPORT, async (data) => {
-      try {
-        let parsedData;
-        let rawData = data.data;
-        
-        // Try to handle base64 encoded old database format first
-        if (ExtensionManager.isValidBase64(rawData)) {
-          try {
-            const decodedData = atob(rawData);
-            rawData = decodedData;
-            console.log("Successfully decoded base64 database format");
-          } catch (base64Error) {
-            console.warn("Base64 decoding failed:", base64Error);
-            // Continue with original data
-          }
-        }
-        
-        // Parse as JSON
-        try {
-          parsedData = JSON.parse(rawData);
-        } catch (jsonError) {
-          console.error("Failed to parse database as JSON:", jsonError);
-          throw new Error("Invalid database format. Please ensure the file contains valid JSON data or is a base64-encoded database export from an older version.");
-        }
-        
-        // Handle legacy format - if parsedData is an array, wrap it in the new format
-        if (Array.isArray(parsedData)) {
-          parsedData = { data: parsedData };
-        }
-        
-        return new Promise((resolve, reject) => {
-          Database.import({ data: parsedData }, (response) => {
-            if (response && response.success) {
-              resolve({ success: true, message: response.message });
-            } else {
-              reject(new Error(response?.error || "Import failed"));
+      
+      const chunk = videoData.slice(currentIndex, currentIndex + chunkSize);
+      const chunkData = { data: chunk };
+      const chunkNumber = Math.floor(currentIndex / chunkSize) + 1;
+      const totalChunks = Math.ceil(totalVideos / chunkSize);
+      
+      console.log(`Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} videos)`);
+      
+      Database.import({ data: chunkData }, (response) => {
+        if (response && response.success) {
+          const newProcessed = totalProcessed + chunk.length;
+          const progressPercent = Math.round((newProcessed / totalVideos) * 100);
+          console.log(`Chunk processed successfully. Total: ${newProcessed}/${totalVideos} (${progressPercent}%)`);
+          
+          // Small delay before processing next chunk
+          setTimeout(() => {
+            // Hint for garbage collection after every 5 chunks
+            if (chunkNumber % 5 === 0 && globalThis.gc) {
+              try {
+                globalThis.gc();
+              } catch (e) {
+                // GC not available, continue
+              }
             }
-          });
-        });
-      } catch (error) {
-        console.error("Database import error:", error);
-        throw error;
-      }
+            
+            // Process next chunk
+            this.processChunksSequentially(videoData, chunkSize, currentIndex + chunkSize, newProcessed, totalVideos)
+              .then(resolve)
+              .catch(reject);
+          }, 150);
+        } else {
+          reject(new Error(response?.error || `Failed to import chunk ${chunkNumber}`));
+        }
+      });
     });
-
-    // Add more handlers...
-    this.registerAdditionalHandlers();
   }
 
-  /**
-   * Register additional message handlers
-   */
-  registerAdditionalHandlers() {
-    // Search actions
-    messageHandler.register(ACTIONS.SEARCH_DELETE, async (data) => {
-      const deleteRequest = { strIdent: data.videoId };
-      return new Promise((resolve, reject) => {
-        Search.delete(deleteRequest, (response) => {
-          if (response) {
-            resolve({ success: true });
-          } else {
-            reject(new Error("Delete failed"));
-          }
-        }, (progress) => {
-          console.log("Delete progress:", progress);
-        });
-      });
-    });
-
-    // Settings actions
-    messageHandler.register(ACTIONS.GET_SETTING, async (data) => {
-      return new Promise((resolve) => {
-        this.getSetting(data.key, resolve);
-      });
-    });
-
-    messageHandler.register(ACTIONS.SET_SETTING, async (data) => {
-      return new Promise((resolve) => {
-        this.setSetting(data.key, data.value, resolve);
-      });
-    });
-
-    // Setup modern message handler
-    this.setupMessageHandler();
-  }
+  // Legacy registerAdditionalHandlers completely removed - all handlers now in standard Chrome API setupMessageHandler
 
   /**
    * Setup message handler
@@ -426,6 +355,7 @@ class ExtensionManager {
             this.exportDatabaseData(res);
           },
           "database-import": (req, res) => {
+            console.log("Database import started via standard Chrome API");
             try {
               let parsedData;
               let rawData = req.data;
@@ -453,16 +383,70 @@ class ExtensionManager {
               
               // Handle legacy format - if parsedData is an array, wrap it in the new format
               if (Array.isArray(parsedData)) {
-                parsedData = { data: parsedData };
+                // Also handle field mapping for legacy formats
+                const mappedData = parsedData.map(video => {
+                  const mappedVideo = { ...video };
+                  
+                  // Handle legacy timestamp field names
+                  if (mappedVideo.longTimestamp && !mappedVideo.intTimestamp) {
+                    mappedVideo.intTimestamp = mappedVideo.longTimestamp;
+                    delete mappedVideo.longTimestamp;
+                  }
+                  
+                  // Ensure required fields exist with defaults
+                  mappedVideo.intTimestamp = mappedVideo.intTimestamp || Date.now();
+                  mappedVideo.intCount = mappedVideo.intCount || 1;
+                  mappedVideo.strTitle = mappedVideo.strTitle || "";
+                  
+                  return mappedVideo;
+                });
+                
+                parsedData = { data: mappedData };
               }
               
-              Database.import({ data: parsedData }, (response) => {
-                if (response && response.success) {
-                  res({ success: true, message: response.message });
-                } else {
-                  res({ success: false, error: response?.error || "Import failed" });
-                }
-              });
+              // Check if we have a large dataset that needs chunked processing
+              const videoData = parsedData.data || [];
+              let chunkSize = 1000; // Default chunk size
+              
+              // Adjust chunk size based on dataset size for better performance
+              if (videoData.length > 50000) {
+                chunkSize = 500; // Smaller chunks for very large datasets
+              } else if (videoData.length > 10000) {
+                chunkSize = 750; // Medium chunks for large datasets
+              } else if (videoData.length > 5000) {
+                chunkSize = 1000; // Standard chunks for moderate datasets
+              }
+              
+              console.log(`Dataset size: ${videoData.length} videos, using chunk size: ${chunkSize}`);
+              
+              if (videoData.length > chunkSize) {
+                console.log(`Large dataset detected (${videoData.length} videos), processing in chunks of ${chunkSize}`);
+                
+                // Process chunks using Promise chain instead of async/await
+                this.processChunksSequentially(videoData, chunkSize, 0, 0, videoData.length)
+                  .then(totalProcessed => {
+                    const successMessage = `Successfully imported ${totalProcessed} videos in ${Math.ceil(videoData.length/chunkSize)} chunks`;
+                    console.log("Chunked import completed:", successMessage);
+                    res({ 
+                      success: true, 
+                      message: successMessage
+                    });
+                  })
+                  .catch(error => {
+                    console.error("Chunked import failed:", error);
+                    res({ success: false, error: `Chunked import failed: ${error.message}` });
+                  });
+              } else {
+                // For smaller datasets, use the original single-pass import
+                Database.import({ data: parsedData }, (response) => {
+                  if (response && response.success) {
+                    console.log("Single-pass import completed:", response.message);
+                    res({ success: true, message: response.message });
+                  } else {
+                    res({ success: false, error: response?.error || "Import failed" });
+                  }
+                });
+              }
             } catch (error) {
               console.error("Database import error:", error);
               res({ success: false, error: "Import failed: " + error.message });
@@ -799,7 +783,23 @@ class ExtensionManager {
 
         const handler = actionHandlers[action];
         if (handler) {
-          handler(request, responseHandler);
+          // Handle async functions properly
+          const result = handler(request, responseHandler);
+          if (result instanceof Promise) {
+            // For async handlers, properly handle both success and error cases
+            result
+              .then(asyncResult => {
+                // If the async function returns a result, send it
+                if (asyncResult !== undefined) {
+                  responseHandler(asyncResult);
+                }
+                // Note: if asyncResult is undefined, the handler should have called responseHandler directly
+              })
+              .catch(error => {
+                console.error("Async handler error:", error);
+                responseHandler({ success: false, error: error.message });
+              });
+          }
           return true; // Indicate asynchronous response
         } else {
           console.warn("Unknown action:", action);

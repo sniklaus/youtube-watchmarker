@@ -405,8 +405,10 @@ export class DatabaseProviderFactory {
    */
   async switchToSupabase() {
     try {
+      
       // Check if credentials are available
       const hasCredentials = await credentialStorage.hasCredentials();
+      
       if (!hasCredentials) {
         throw new Error('No Supabase credentials found. Please configure Supabase credentials first using the "Save Configuration" button.');
       }
@@ -418,12 +420,14 @@ export class DatabaseProviderFactory {
 
       // Initialize Supabase provider
       const success = await supabaseDatabaseProvider.init();
+      
       if (!success) {
         throw new Error('Failed to initialize Supabase provider. Please check your credentials and try again.');
       }
 
       // Test the connection
       const connectionTest = await supabaseDatabaseProvider.testConnection();
+      
       if (!connectionTest) {
         throw new Error('Supabase connection test failed. Please verify your credentials.');
       }
@@ -537,6 +541,23 @@ export class DatabaseProviderFactory {
       isInitialized: this.currentProvider.isInitialized,
       info: this.currentProvider.getProviderInfo()
     };
+  }
+
+  /**
+   * Switch to a specific provider
+   * @param {string} provider - Provider type ('indexeddb' or 'supabase')
+   * @returns {Promise<boolean>} Success status
+   */
+  async switchProvider(provider) {
+    if (!provider || !['indexeddb', 'supabase'].includes(provider)) {
+      throw new Error('Invalid provider type. Must be "indexeddb" or "supabase"');
+    }
+
+    if (provider === 'indexeddb') {
+      return await this.switchToIndexedDB();
+    } else if (provider === 'supabase') {
+      return await this.switchToSupabase();
+    }
   }
 
   /**

@@ -510,9 +510,19 @@ class OptionsPageManager {
         const importButton = event.target.closest('label');
         
         try {
-            this.showButtonLoading(importButton, 'Importing...');
+            this.showButtonLoading(importButton, 'Reading file...');
             
             const fileContent = await this.readFileAsText(file);
+            
+            // Check file size and warn user about large files
+            const fileSizeMB = file.size / (1024 * 1024);
+            if (fileSizeMB > 1) {
+                this.showButtonLoading(importButton, `Processing large file (${fileSizeMB.toFixed(1)}MB)...`);
+                console.log(`Large file detected: ${fileSizeMB.toFixed(1)}MB`);
+                
+                // Add a small delay to show the loading message
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
             
             const response = await chrome.runtime.sendMessage({
                 action: 'database-import',
@@ -520,10 +530,10 @@ class OptionsPageManager {
             });
 
             if (response && response.success) {
-                this.showSuccess('Database imported successfully');
+                this.showSuccess(response.message || 'Database imported successfully');
                 await this.loadInitialData(); // Refresh displayed data
             } else {
-                this.showError('Failed to import database');
+                this.showError(response?.error || 'Failed to import database');
             }
         } catch (error) {
             console.error('Import error:', error);
@@ -574,20 +584,44 @@ class OptionsPageManager {
     }
 
     /**
-     * Switch database provider (UI state only)
+     * Switch database provider
      * @param {string} provider - Provider type ('indexeddb' or 'supabase')
      */
     async switchDatabaseProvider(provider) {
         try {
-            // Show/hide Supabase configuration based on provider selection
+            
             if (provider === 'supabase') {
+                // Show Supabase configuration panel
                 this.supabaseConfig.classList.remove('d-none');
                 
                 // Load existing configuration if available
                 await this.loadSupabaseConfig();
                 
-                // Don't automatically switch to Supabase - let user configure first
-                this.showSuccess('Supabase configuration panel opened. Please configure your database credentials below.');
+                // Check if credentials already exist
+                const statusResponse = await chrome.runtime.sendMessage({
+                    action: 'supabase-get-status'
+                });
+                
+                
+                if (statusResponse && statusResponse.success && statusResponse.status && statusResponse.status.configured) {
+                    // Credentials exist, switch to Supabase immediately
+                    try {
+                        await this.actuallySwitchProvider('supabase');
+                        this.showSuccess('Successfully switched to Supabase database');
+                    } catch (switchError) {
+                        console.error('[OptionsPageManager] Failed to switch to Supabase:', switchError);
+                        this.showError('Failed to switch to Supabase: ' + switchError.message);
+                        
+                        // Revert radio button selection on error
+                        this.providerIndexedDB.checked = true;
+                        this.providerSupabase.checked = false;
+                        this.supabaseConfig.classList.add('d-none');
+                        return;
+                    }
+                } else {
+                    // No credentials exist, show configuration instructions
+                    this.showSuccess('Supabase configuration panel opened. Please configure your database credentials below.');
+                }
             } else {
                 this.supabaseConfig.classList.add('d-none');
                 
@@ -1455,44 +1489,44 @@ class OptionsPageManager {
      * @param {string} loadingText - Optional loading text
      */
     showButtonLoading(buttonIdOrElement, loadingText = null) {
-        const button = typeof buttonIdOrElement === 'string' 
-            ? this.getElementById(buttonIdOrElement) 
-            : buttonIdOrElement;
-            
+        const button = typeof buttonIdOrElement === 'string' ? this.getElementById(buttonIdOrElement) : buttonIdOrElement;
         if (!button) return;
-        
-        // Store original state
-        button.dataset.originalText = button.innerHTML;
-        button.dataset.originalDisabled = button.disabled;
-        
-        // Create loading content
-        const spinner = '<i class="fas fa-spinner fa-spin me-2"></i>';
+
+        // Store original content if not already stored
+        if (!button.dataset.originalContent) {
+            button.dataset.originalContent = button.innerHTML;
+        }
+
         const text = loadingText || 'Loading...';
         
-        button.innerHTML = spinner + text;
-        button.disabled = true;
+        // For labels acting as buttons, we must preserve the input element
+        const input = button.querySelector('input');
+        const inputHTML = input ? input.outerHTML : '';
+
+        button.innerHTML = `
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="button-text ms-2">${text}</span>
+            ${inputHTML}
+        `;
+
+        if (input) {
+            button.classList.add('disabled');
+        } else {
+            button.disabled = true;
+        }
     }
 
     /**
-     * Hide loading state on a button
-     * @param {string|HTMLElement} buttonIdOrElement - Button ID or element
+     * Hide loading indicator from button
+     * @param {string|HTMLElement} buttonIdOrElement - Button element or ID
      */
     hideButtonLoading(buttonIdOrElement) {
-        const button = typeof buttonIdOrElement === 'string' 
-            ? this.getElementById(buttonIdOrElement) 
-            : buttonIdOrElement;
-            
-        if (!button) return;
-        
-        // Restore original state
-        if (button.dataset.originalText) {
-            button.innerHTML = button.dataset.originalText;
-            delete button.dataset.originalText;
-        }
-        
-        if (button.dataset.originalDisabled !== undefined) {
-            button.disabled = button.dataset.originalDisabled === 'true';
-            delete button.dataset.originalDisabled;
+        const button = typeof buttonIdOrElement === 'string' ? this.getElementById(buttonIdOrElement) : buttonIdOrElement;
+        if (button && button.dataset.originalContent) {
+            button.innerHTML = button.dataset.originalContent;
+            button.classList.remove('disabled');
+            button.disabled = false;
+            delete button.dataset.originalContent;
         }
     }
 
@@ -1664,7 +1698,8 @@ class OptionsPageManager {
             const response = await chrome.runtime.sendMessage({
                 action: 'database-provider-status'
             });
-                        if (response && response.success) {
+            
+            if (response && response.success) {
                 const status = response.status;
                 
                 // Update provider radio buttons based on actual provider type
