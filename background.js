@@ -20,8 +20,6 @@ import { Youtube } from "./bg-youtube.js";
 import { Search } from "./bg-search.js";
 import { databaseProviderFactory } from "./database-provider-factory.js";
 import { credentialStorage } from "./credential-storage.js";
-// Removed legacy messageHandler import - using standard Chrome API instead
-import { ACTIONS } from "./constants.js";
 
 /**
  * Extension background script manager
@@ -256,10 +254,6 @@ class ExtensionManager {
     });
   }
 
-
-
-    // Legacy registerMessageHandlers removed - using standard Chrome API in setupMessageHandler instead
-
   /**
    * Process video chunks sequentially to avoid memory issues
    * @param {Array} videoData - Array of video objects to import
@@ -311,8 +305,6 @@ class ExtensionManager {
       });
     });
   }
-
-  // Legacy registerAdditionalHandlers completely removed - all handlers now in standard Chrome API setupMessageHandler
 
   /**
    * Setup message handler
@@ -381,7 +373,7 @@ class ExtensionManager {
                 return;
               }
               
-              // Handle legacy format - if parsedData is an array, wrap it in the new format
+              // Handle legacy DB format - if parsedData is an array, wrap it in the new format
               if (Array.isArray(parsedData)) {
                 // Also handle field mapping for legacy formats
                 const mappedData = parsedData.map(video => {
