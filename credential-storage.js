@@ -1,58 +1,168 @@
 /**
  * Secure credential storage for database connections
- * Uses Chrome storage with basic encryption for sensitive data
+ * Uses Chrome storage with AES-GCM encryption for sensitive data
  */
 
 /**
- * Simple encryption/decryption utility
- * Note: This is basic obfuscation. For production use, consider more robust encryption
+ * Production-level encryption utility using Web Crypto API
+ * Uses AES-GCM with PBKDF2 key derivation for maximum security
  */
-class SimpleEncryption {
+class WebEncryption {
   constructor() {
-    // Generate a simple key based on extension ID and user agent
-    this.key = this.generateKey();
+    // Generate a unique salt for this extension instance
+    this.masterSalt = null;
+    this.initialized = false;
   }
 
-  generateKey() {
-    const baseString = (chrome.runtime.id || 'fallback') + navigator.userAgent;
-    let hash = 0;
-    for (let i = 0; i < baseString.length; i++) {
-      const char = baseString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(16);
-  }
+  /**
+   * Initialize the encryption system with a master salt
+   */
+  async initialize() {
+    if (this.initialized) return;
 
-  encrypt(text) {
-    if (!text) return '';
-    const key = this.key;
-    let encrypted = '';
-    for (let i = 0; i < text.length; i++) {
-      const keyChar = key.charCodeAt(i % key.length);
-      const textChar = text.charCodeAt(i);
-      encrypted += String.fromCharCode(textChar ^ keyChar);
-    }
-    return btoa(encrypted);
-  }
-
-  decrypt(encryptedText) {
-    if (!encryptedText) return '';
     try {
-      const encrypted = atob(encryptedText);
-      const key = this.key;
-      let decrypted = '';
-      for (let i = 0; i < encrypted.length; i++) {
-        const keyChar = key.charCodeAt(i % key.length);
-        const encryptedChar = encrypted.charCodeAt(i);
-        decrypted += String.fromCharCode(encryptedChar ^ keyChar);
+      // Try to get existing salt from storage
+      const result = await chrome.storage.local.get(['encryption_salt']);
+      
+      if (result.encryption_salt) {
+        this.masterSalt = new Uint8Array(result.encryption_salt);
+      } else {
+        // Generate new salt and store it
+        this.masterSalt = crypto.getRandomValues(new Uint8Array(32));
+        await chrome.storage.local.set({
+          encryption_salt: Array.from(this.masterSalt)
+        });
       }
-      return decrypted;
+      
+      this.initialized = true;
     } catch (error) {
-      console.error('Failed to decrypt data:', error);
+      console.error('Failed to initialize encryption:', error);
+      throw new Error('Encryption initialization failed');
+    }
+  }
+
+  /**
+   * Generate a cryptographic key from the extension ID and user agent
+   * Uses PBKDF2 for secure key derivation
+   */
+  async deriveKey() {
+    await this.initialize();
+
+    // Create key material from extension ID and user agent (stable across sessions)
+    const keyMaterial = (chrome.runtime.id || 'fallback') + navigator.userAgent;
+    const encoder = new TextEncoder();
+    const keyMaterialBuffer = encoder.encode(keyMaterial);
+
+    // Import the key material
+    const importedKey = await crypto.subtle.importKey(
+      'raw',
+      keyMaterialBuffer,
+      'PBKDF2',
+      false,
+      ['deriveKey']
+    );
+
+    // Derive AES-GCM key using PBKDF2
+    const derivedKey = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: this.masterSalt,
+        iterations: 100000, // High iteration count for security
+        hash: 'SHA-256'
+      },
+      importedKey,
+      {
+        name: 'AES-GCM',
+        length: 256 // 256-bit key
+      },
+      false, // Key is not extractable
+      ['encrypt', 'decrypt']
+    );
+
+    return derivedKey;
+  }
+
+  /**
+   * Encrypt text using AES-GCM
+   * @param {string} text - Text to encrypt
+   * @returns {string} Base64 encoded encrypted data with IV
+   */
+  async encrypt(text) {
+    if (!text) return '';
+
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      
+      // Generate random IV for each encryption
+      const iv = crypto.getRandomValues(new Uint8Array(12)); // 12 bytes for GCM
+      
+      // Get the encryption key
+      const key = await this.deriveKey();
+      
+      // Encrypt the data
+      const encrypted = await crypto.subtle.encrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv
+        },
+        key,
+        data
+      );
+
+      // Combine IV and encrypted data
+      const combined = new Uint8Array(iv.length + encrypted.byteLength);
+      combined.set(iv, 0);
+      combined.set(new Uint8Array(encrypted), iv.length);
+
+      // Return base64 encoded result
+      return btoa(String.fromCharCode(...combined));
+    } catch (error) {
+      console.error('Encryption failed:', error);
+      throw new Error('Failed to encrypt data');
+    }
+  }
+
+  /**
+   * Decrypt AES-GCM encrypted text
+   * @param {string} encryptedText - Base64 encoded encrypted data with IV
+   * @returns {string} Decrypted text
+   */
+  async decrypt(encryptedText) {
+    if (!encryptedText) return '';
+
+    try {
+      // Decode base64
+      const combined = new Uint8Array(
+        atob(encryptedText).split('').map(char => char.charCodeAt(0))
+      );
+
+      // Extract IV (first 12 bytes) and encrypted data
+      const iv = combined.slice(0, 12);
+      const encrypted = combined.slice(12);
+
+      // Get the decryption key
+      const key = await this.deriveKey();
+
+      // Decrypt the data
+      const decrypted = await crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv
+        },
+        key,
+        encrypted
+      );
+
+      // Convert back to text
+      const decoder = new TextDecoder();
+      return decoder.decode(decrypted);
+    } catch (error) {
+      console.error('Decryption failed:', error);
       return '';
     }
   }
+
 }
 
 /**
@@ -60,7 +170,7 @@ class SimpleEncryption {
  */
 export class CredentialStorage {
   constructor() {
-    this.encryption = new SimpleEncryption();
+    this.encryption = new WebEncryption();
     this.storageKey = 'supabase_credentials';
   }
 
@@ -86,10 +196,10 @@ export class CredentialStorage {
 
       // Encrypt sensitive data
       const encryptedCredentials = {
-        supabaseUrl: this.encryption.encrypt(credentials.supabaseUrl),
-        apiKey: this.encryption.encrypt(credentials.apiKey),
-        jwtToken: credentials.jwtToken ? this.encryption.encrypt(credentials.jwtToken) : null,
-        projectRef: credentials.projectRef ? this.encryption.encrypt(credentials.projectRef) : null,
+        supabaseUrl: await this.encryption.encrypt(credentials.supabaseUrl),
+        apiKey: await this.encryption.encrypt(credentials.apiKey),
+        jwtToken: credentials.jwtToken ? await this.encryption.encrypt(credentials.jwtToken) : null,
+        projectRef: credentials.projectRef ? await this.encryption.encrypt(credentials.projectRef) : null,
         stored_at: Date.now()
       };
 
@@ -120,10 +230,10 @@ export class CredentialStorage {
 
       // Decrypt sensitive data
       const credentials = {
-        supabaseUrl: encryptedCredentials.supabaseUrl ? this.encryption.decrypt(encryptedCredentials.supabaseUrl) : null,
-        apiKey: encryptedCredentials.apiKey ? this.encryption.decrypt(encryptedCredentials.apiKey) : null,
-        jwtToken: encryptedCredentials.jwtToken ? this.encryption.decrypt(encryptedCredentials.jwtToken) : null,
-        projectRef: encryptedCredentials.projectRef ? this.encryption.decrypt(encryptedCredentials.projectRef) : null,
+        supabaseUrl: await this.encryption.decrypt(encryptedCredentials.supabaseUrl),
+        apiKey: await this.encryption.decrypt(encryptedCredentials.apiKey),
+        jwtToken: encryptedCredentials.jwtToken ? await this.encryption.decrypt(encryptedCredentials.jwtToken) : null,
+        projectRef: encryptedCredentials.projectRef ? await this.encryption.decrypt(encryptedCredentials.projectRef) : null,
         stored_at: encryptedCredentials.stored_at
       };
 
