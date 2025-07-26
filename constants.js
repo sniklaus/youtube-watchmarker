@@ -3,8 +3,6 @@
  * Centralizes all magic numbers, storage keys, and configuration values
  * 
  * @fileoverview Centralized constants for the YouTube Watchmarker extension
- * @author WiDiKe
- * @version 1.0.0
  */
 
 /**

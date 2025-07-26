@@ -1,9 +1,4 @@
 /**
- * Secure credential storage for database connections
- * Uses Chrome storage with AES-GCM encryption for sensitive data
- */
-
-/**
  * Production-level encryption utility using Web Crypto API
  * Uses AES-GCM with PBKDF2 key derivation for maximum security
  */

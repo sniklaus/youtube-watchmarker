@@ -5,11 +5,8 @@ import {
   createResponseCallback,
   getStorageAsync,
   setStorageAsync,
-  setDefaultInStorageIfNull,
   getSyncStorageAsync,
   setSyncStorageAsync,
-  getMultipleSyncStorageAsync,
-  setMultipleSyncStorageAsync,
   setDefaultInSyncStorageIfNull,
 } from "./utils.js";
 
