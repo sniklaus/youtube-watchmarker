@@ -245,6 +245,7 @@ export const Youtube = {
       // Store videos in the current provider
       let processedCount = 0;
       let updatedCount = 0;
+      let skippedCount = 0;
       
       for (const video of objVideos) {
         try {
@@ -253,18 +254,11 @@ export const Youtube = {
           
           let videoToStore;
           if (existingVideo) {
-            // Update existing video with latest information
-            videoToStore = {
-              strIdent: video.strIdent,
-              intTimestamp: Math.max(existingVideo.intTimestamp || 0, video.intTimestamp || 0),
-              strTitle: existingVideo.strTitle || video.strTitle,
-              intCount: Math.max(existingVideo.intCount || 1, video.intCount || 1),
-            };
-            updatedCount++;
-          } else {
-            // Create new video record
-            videoToStore = video;
+            skippedCount++;
+            continue;
           }
+          // Create new video record
+          videoToStore = video;
           
           await currentProvider.putVideo(videoToStore);
           processedCount++;
@@ -284,11 +278,12 @@ export const Youtube = {
       const result = {
         objVideos: objVideos,
         videoCount: processedCount,
-        updatedCount: updatedCount,
-        newCount: processedCount - updatedCount
+        updatedCount: 0,
+        newCount: processedCount,
+        skippedCount: skippedCount
       };
 
-      console.log(`YouTube sync completed: ${processedCount} videos processed (${result.newCount} new, ${updatedCount} updated)`);
+      console.log(`YouTube sync completed: ${processedCount} videos processed (${processedCount} new, ${skippedCount} skipped)`);
       funcResponse(result);
 
     } catch (error) {
@@ -453,6 +448,7 @@ export const Youtube = {
       // Store videos in the current provider
       let processedCount = 0;
       let updatedCount = 0;
+      let skippedCount = 0;
       
       for (const video of objVideos) {
         try {
@@ -461,18 +457,11 @@ export const Youtube = {
           
           let videoToStore;
           if (existingVideo) {
-            // Update existing video with latest information
-            videoToStore = {
-              strIdent: video.strIdent,
-              intTimestamp: Math.max(existingVideo.intTimestamp || 0, video.intTimestamp || 0),
-              strTitle: existingVideo.strTitle || video.strTitle,
-              intCount: Math.max(existingVideo.intCount || 1, video.intCount || 1),
-            };
-            updatedCount++;
-          } else {
-            // Create new video record
-            videoToStore = video;
+            skippedCount++;
+            continue;
           }
+          // Create new video record
+          videoToStore = video;
           
           await currentProvider.putVideo(videoToStore);
           processedCount++;
@@ -492,11 +481,12 @@ export const Youtube = {
       const result = {
         objVideos: objVideos,
         videoCount: processedCount,
-        updatedCount: updatedCount,
-        newCount: processedCount - updatedCount
+        updatedCount: 0,
+        newCount: processedCount,
+        skippedCount: skippedCount
       };
 
-      console.log(`YouTube liked videos sync completed: ${processedCount} videos processed (${result.newCount} new, ${updatedCount} updated)`);
+      console.log(`YouTube liked videos sync completed: ${processedCount} videos processed (${processedCount} new, ${skippedCount} skipped)`);
       funcResponse(result);
 
     } catch (error) {
