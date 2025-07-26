@@ -113,34 +113,6 @@ Currently, only manual installation of the unpacked source code is supported. Th
 - **Bidirectional Sync**: Merge data between IndexedDB and Supabase
 - **Automatic Sync**: Configurable periodic synchronization
 
-## Development
-
-### Setup
-```bash
-# Install dependencies
-npm install
-
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Format code
-npm run format
-
-# Load extension for development
-npm run dev
-```
-
-### Development Workflow
-1. Clone the repository
-2. Run `npm install` to install development dependencies
-3. Load the extension as unpacked in Chrome Developer Mode
-4. Make changes and reload the extension to test
-5. Use browser DevTools to debug content scripts and popup
-6. Check service worker logs in Extensions page
-
 ## Privacy & Security
 
 - **No Data Collection**: Extension doesn't collect or transmit personal data
@@ -162,14 +134,6 @@ Browser history sync extracts YouTube video visits from your browser's history, 
 
 **Can I customize how watched videos are displayed?**  
 Yes, the extension offers multiple visual options including fade-out, grayscale, badges, watch dates, and hiding progress bars. All can be enabled/disabled independently.
-
-## Contributing
-
-Contributions are welcome! Please ensure your code follows the established patterns:
-- Use modern JavaScript features (ES6+)
-- Follow the existing class-based architecture
-- Add JSDoc comments for new functions
-- Test on Chrome/Chromium browsers
 
 ## Special Thanks
 
