@@ -3,8 +3,6 @@ import {
   BackgroundUtils,
   AsyncSeries
 } from "./utils.js";
-import { DatabaseUtils } from "./database-utils.js";
-import { DATABASE } from "./constants.js";
 
 export const Search = {
   init: function (objRequest, funcResponse) {

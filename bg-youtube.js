@@ -1,11 +1,9 @@
 import {
   createResponseCallback,
-  parseIncompleteJson,
   BackgroundUtils,
   AsyncSeries
 } from "./utils.js";
-import { DatabaseUtils } from "./database-utils.js";
-import { STORAGE_KEYS, TIMEOUTS, DATABASE } from "./constants.js";
+import { TIMEOUTS } from "./constants.js";
 
 export const Youtube = {
   init: function (objRequest, funcResponse) {
@@ -544,123 +542,113 @@ export const Youtube = {
     }
   },
 
-  ensure: function (objRequest, funcResponse) {
-    AsyncSeries.run(
-      {
-        objVideo: function (objArgs, funcCallback) {
-          return funcCallback(objRequest);
-        },
-        objDatabase: DatabaseUtils.database("readwrite"),
-        objGet: function (objArgs, funcCallback) {
-          if (!objArgs.objDatabase) {
-            console.error("Database object store not available in Youtube.ensure");
-            return funcCallback(null);
-          }
-          
-          try {
-            let objQuery = objArgs.objDatabase
-              .index(DATABASE.INDEXES.IDENT)
-              .get(objArgs.objVideo.strIdent);
+  ensure: async function (objRequest, funcResponse) {
+    try {
+      // Use the database provider factory instead of direct IndexedDB access
+      const extensionManager = globalThis.extensionManager;
+      if (!extensionManager || !extensionManager.providerFactory) {
+        console.error("Database provider factory not available");
+        funcResponse(null);
+        return;
+      }
 
-            objQuery.onerror = function () {
-              console.error("Database query error in Youtube.ensure:", objQuery.error);
-              return funcCallback(null);
-            };
+      const currentProvider = extensionManager.providerFactory.getCurrentProvider();
+      if (!currentProvider) {
+        console.error("No current database provider available");
+        funcResponse(null);
+        return;
+      }
 
-            objQuery.onsuccess = function () {
-              try {
-                if (objQuery.result === undefined || objQuery.result === null) {
-                  console.debug("Creating new video entry for:", objArgs.objVideo.strIdent);
-                  return funcCallback({
-                    strIdent: objArgs.objVideo.strIdent,
-                    intTimestamp:
-                      objArgs.objVideo.intTimestamp || Date.now(),
-                    strTitle: objArgs.objVideo.strTitle || "",
-                    intCount: objArgs.objVideo.intCount || 1,
-                  });
-                }
+      // Check if video already exists in the database
+      const existingVideo = await currentProvider.getVideo(objRequest.strIdent);
+      
+      let videoToReturn;
+      if (existingVideo) {
+        // Return existing video data
+        console.debug("Returning existing video data for:", objRequest.strIdent);
+        videoToReturn = {
+          strIdent: existingVideo.strIdent,
+          intTimestamp: existingVideo.intTimestamp,
+          strTitle: existingVideo.strTitle || "",
+          intCount: existingVideo.intCount || 1,
+        };
+      } else {
+        // Create new video entry
+        console.debug("Creating new video entry for:", objRequest.strIdent);
+        const newVideo = {
+          strIdent: objRequest.strIdent,
+          intTimestamp: objRequest.intTimestamp || Date.now(),
+          strTitle: objRequest.strTitle || "",
+          intCount: objRequest.intCount || 1,
+        };
+        
+        // Store the new video in the current provider
+        await currentProvider.putVideo(newVideo);
+        videoToReturn = newVideo;
+      }
 
-                // Return existing video data instead of null
-                console.debug("Returning existing video data for:", objArgs.objVideo.strIdent);
-                return funcCallback({
-                  strIdent: objQuery.result.strIdent,
-                  intTimestamp: objQuery.result.intTimestamp,
-                  strTitle: objQuery.result.strTitle || "",
-                  intCount: objQuery.result.intCount || 1,
-                });
-              } catch (error) {
-                console.error("Error processing query result in Youtube.ensure:", error);
-                return funcCallback(null);
-              }
-            };
-          } catch (error) {
-            console.error("Error creating database query in Youtube.ensure:", error);
-            return funcCallback(null);
-          }
-        },
-        objPut: DatabaseUtils.put(),
-        objCount: DatabaseUtils.count(),
-      },
-      createResponseCallback(objArgs => objArgs.objGet, funcResponse),
-    );
+      funcResponse(videoToReturn);
+      
+    } catch (error) {
+      console.error("YouTube ensure error:", error);
+      funcResponse(null);
+    }
   },
 
-  mark: function (objRequest, funcResponse) {
-    AsyncSeries.run(
-      {
-        objVideo: function (objArgs, funcCallback) {
-          return funcCallback(objRequest);
-        },
-        objDatabase: DatabaseUtils.database("readwrite"),
-        objGet: function (objArgs, funcCallback) {
-          if (!objArgs.objDatabase) {
-            console.error("Database object store not available");
-            return funcCallback(null);
-          }
-          
-          let objQuery = objArgs.objDatabase
-            .index(DATABASE.INDEXES.IDENT)
-            .get(objArgs.objVideo.strIdent);
+  mark: async function (objRequest, funcResponse) {
+    try {
+      // Use the database provider factory instead of direct IndexedDB access
+      const extensionManager = globalThis.extensionManager;
+      if (!extensionManager || !extensionManager.providerFactory) {
+        console.error("Database provider factory not available");
+        funcResponse(null);
+        return;
+      }
 
-          objQuery.onerror = function () {
-            console.error("Database query error:", objQuery.error);
-            return funcCallback(null);
-          };
+      const currentProvider = extensionManager.providerFactory.getCurrentProvider();
+      if (!currentProvider) {
+        console.error("No current database provider available");
+        funcResponse(null);
+        return;
+      }
 
-          objQuery.onsuccess = function () {
-            const currentTime = Date.now();
-            
-            if (objQuery.result === undefined || objQuery.result === null) {
-              return funcCallback({
-                strIdent: objArgs.objVideo.strIdent,
-                intTimestamp: objArgs.objVideo.intTimestamp || currentTime,
-                strTitle: objArgs.objVideo.strTitle || "",
-                intCount: objArgs.objVideo.intCount || 1,
-              });
-            } else if (
-              objQuery.result !== undefined &&
-              objQuery.result !== null
-            ) {
-              const existingTimestamp = objQuery.result.intTimestamp || 0;
-              const timeSinceLastView = currentTime - existingTimestamp;
-              
-              // Only increment count if enough time has passed since last view
-              const shouldIncrementCount = timeSinceLastView >= TIMEOUTS.VIEW_COUNT_COOLDOWN;
-              
-              return funcCallback({
-                strIdent: objQuery.result.strIdent,
-                intTimestamp: objArgs.objVideo.intTimestamp || currentTime,
-                strTitle:
-                  objArgs.objVideo.strTitle || objQuery.result.strTitle || "",
-                intCount: shouldIncrementCount ? (objQuery.result.intCount + 1 || 1) : (objQuery.result.intCount || 1),
-              });
-            }
-          };
-        },
-        objPut: DatabaseUtils.put(),
-        objCount: DatabaseUtils.count(),
-      },
-      createResponseCallback(objArgs => objArgs.objGet, funcResponse),
-    );
+      // Check if video already exists in the database
+      const existingVideo = await currentProvider.getVideo(objRequest.strIdent);
+      const currentTime = Date.now();
+      
+      let videoToStore;
+      if (existingVideo) {
+        // Update existing video
+        const existingTimestamp = existingVideo.intTimestamp || 0;
+        const timeSinceLastView = currentTime - existingTimestamp;
+        
+        // Only increment count if enough time has passed since last view
+        const shouldIncrementCount = timeSinceLastView >= TIMEOUTS.VIEW_COUNT_COOLDOWN;
+        
+        videoToStore = {
+          strIdent: existingVideo.strIdent,
+          intTimestamp: objRequest.intTimestamp || currentTime,
+          strTitle: objRequest.strTitle || existingVideo.strTitle || "",
+          intCount: shouldIncrementCount ? (existingVideo.intCount + 1 || 1) : (existingVideo.intCount || 1),
+        };
+      } else {
+        // Create new video entry
+        videoToStore = {
+          strIdent: objRequest.strIdent,
+          intTimestamp: objRequest.intTimestamp || currentTime,
+          strTitle: objRequest.strTitle || "",
+          intCount: objRequest.intCount || 1,
+        };
+      }
+
+      // Store the video in the current provider
+      await currentProvider.putVideo(videoToStore);
+      
+      funcResponse(videoToStore);
+      
+    } catch (error) {
+      console.error("YouTube mark error:", error);
+      funcResponse(null);
+    }
   },
 };

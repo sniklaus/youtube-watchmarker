@@ -1,5 +1,3 @@
-import { DATABASE } from "./constants.js";
-
 /**
  * Detects the browser type
  * @returns {string|null} Browser type ('firefox', 'chrome', or null)
@@ -397,166 +395,9 @@ export class BackgroundUtils {
     };
   }
 
-  /**
-   * Gets database connection with modern async/await support
-   * @param {string} mode - Transaction mode ('readonly' or 'readwrite')
-   * @returns {Function} Function that returns database object store
-   */
-  static database(mode = 'readwrite') {
-    return (args, callback) => {
-      const Database = globalThis.Database;
-      if (!Database) {
-        console.error("Database object not available in globalThis");
-        return callback(null);
-      }
-      if (!Database.database) {
-        console.error("Database not initialized - database property is null");
-        return callback(null);
-      }
-      if (!Database.isInitialized) {
-        console.error("Database not fully initialized - isInitialized flag is false");
-        return callback(null);
-      }
-      try {
-        const objectStore = Database.getObjectStore(mode);
-        if (!objectStore) {
-          console.error("Failed to get object store from database");
-          return callback(null);
-        }
-        return callback(objectStore);
-      } catch (error) {
-        console.error("Error getting database object store:", error);
-        return callback(null);
-      }
-    };
-  }
+  
 
-  /**
-   * Gets video data from database with progress reporting
-   * @param {Function} progressCallback - Progress reporting function
-   * @returns {Function} Function for AsyncSeries
-   */
-  static get(progressCallback) {
-    return (args, callback) => {
-      const query = args.objDatabase
-        .index(DATABASE.INDEXES.IDENT)
-        .get(args.objVideo.strIdent);
-
-      query.onsuccess = () => {
-        if (args.intNew === undefined) {
-          args.intNew = 0;
-          args.intExisting = 0;
-        }
-
-        // Only call progress callback if it's provided and is a function
-        if (progressCallback && typeof progressCallback === 'function') {
-          progressCallback({
-            strProgress: `imported ${args.intNew + args.intExisting} videos - ${args.intNew} were new`,
-          });
-        }
-
-        // Handle timestamp field compatibility
-        if (args.objVideo.intTimestamp === undefined) {
-          args.objVideo.intTimestamp = args.objVideo.longTimestamp;
-        }
-
-        if (!query.result) {
-          args.intNew++;
-          return callback({
-            strIdent: args.objVideo.strIdent,
-            intTimestamp: args.objVideo.intTimestamp || Date.now(),
-            strTitle: args.objVideo.strTitle || "",
-            intCount: args.objVideo.intCount || 1,
-          });
-        } else {
-          args.intExisting++;
-          return callback({
-            strIdent: query.result.strIdent,
-            intTimestamp: Math.max(
-              query.result.intTimestamp,
-              args.objVideo.intTimestamp
-            ) || Date.now(),
-            strTitle: query.result.strTitle || args.objVideo.strTitle || "",
-            intCount: Math.max(
-              query.result.intCount,
-              args.objVideo.intCount
-            ) || 1,
-          });
-        }
-      };
-    };
-  }
-
-  /**
-   * Puts video data into database
-   * @returns {Function} Function for AsyncSeries
-   */
-  static put() {
-    return (args, callback) => {
-      if (!args.objDatabase) {
-        console.error("Database object store not available");
-        return callback({});
-      }
-      
-      if (!args.objGet || !args.objGet.strIdent || !args.objGet.strIdent.trim()) {
-        return callback({});
-      }
-
-      const query = args.objDatabase.put(args.objGet);
-      
-      query.onerror = () => {
-        console.error("Database put error:", query.error);
-        return callback({});
-      };
-      
-      query.onsuccess = () => callback({});
-    };
-  }
-
-  /**
-   * Moves to next video in processing queue
-   * @returns {Function} Function for AsyncSeries
-   */
-  static videoNext() {
-    return (args, callback) => {
-      args.intVideo++;
-
-      if (args.intVideo < args.objVideos.length) {
-        return callback({}, "objVideo");
-      }
-
-      args.intVideo = 0;
-      return callback({});
-    };
-  }
-
-  /**
-   * Counts items in database and updates storage
-   * @returns {Function} Function for AsyncSeries
-   */
-  static count() {
-    return (args, callback) => {
-      if (!args.objDatabase) {
-        console.error("Database object store not available");
-        return callback({});
-      }
-      
-      const query = args.objDatabase.count();
-
-      query.onerror = () => {
-        console.error("Database count error:", query.error);
-        return callback({});
-      };
-
-      query.onsuccess = async () => {
-        await setStorageAsync(
-          "databaseSize",
-          String(query.result)
-        );
-        return callback({});
-      };
-    };
-  }
+  
 
   /**
    * Sets current timestamp in storage
@@ -623,24 +464,6 @@ export class BackgroundUtils {
             strAuth: `SAPISIDHASH ${time}_${hashHex}`,
           });
         });
-    };
-  }
-
-  /**
-   * Gets current video from processing queue
-   * @returns {Function} Function for AsyncSeries
-   */
-  static video() {
-    return (args, callback) => {
-      if (!Object.hasOwn(args, "intVideo")) {
-        args.intVideo = 0;
-      }
-
-      if (args.intVideo >= args.objVideos.length) {
-        return callback({}, "objVideo-Next");
-      }
-
-      return callback(args.objVideos[args.intVideo]);
     };
   }
 }

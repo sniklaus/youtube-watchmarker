@@ -3,8 +3,6 @@ import {
   BackgroundUtils,
   AsyncSeries
 } from "./utils.js";
-import { DatabaseUtils } from "./database-utils.js";
-import { STORAGE_KEYS } from "./constants.js";
 
 export const History = {
   init: function (objRequest, funcResponse) {
