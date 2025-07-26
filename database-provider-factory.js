@@ -197,6 +197,26 @@ class IndexedDBProvider {
     });
   }
 
+  async deleteVideo(videoId) {
+    if (!this.isConnected) {
+      throw new Error('Database not connected');
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.databaseManager.database.transaction([this.databaseManager.STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(this.databaseManager.STORE_NAME);
+      const request = store.delete(videoId);
+
+      request.onsuccess = () => {
+        resolve(true);
+      };
+
+      request.onerror = () => {
+        reject(new Error('Failed to delete video'));
+      };
+    });
+  }
+
   async importVideos(videos) {
     if (!this.isConnected) {
       throw new Error('Database not connected');

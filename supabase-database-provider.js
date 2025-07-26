@@ -686,6 +686,30 @@ GROUP BY t.tablename, t.rowsecurity;
   }
 
   /**
+   * Delete a single video record by ID
+   * @param {string} videoId - YouTube video ID
+   * @returns {Promise<boolean>} Success status
+   */
+  async deleteVideo(videoId) {
+    try {
+      if (!this.isConnected) {
+        throw new Error('Database not connected');
+      }
+
+      const response = await this.makeRequest('DELETE', `/${this.tableName}?str_ident=eq.${videoId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete video: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to delete video:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Import multiple videos (batch operation)
    * @param {Array} videos - Array of video objects
    * @returns {Promise<boolean>} Success status

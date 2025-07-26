@@ -19,138 +19,125 @@ export const Search = {
     );
   },
 
-  lookup: function (objRequest, funcResponse) {
-    AsyncSeries.run(
-      {
-        objDatabase: DatabaseUtils.database("readonly"),
-        objGet: function (objArgs, funcCallback) {
-          if (!objArgs.objDatabase) {
-            console.error("Database object store not available");
-            return funcCallback([]);
-          }
-          
-          let objQuery = objArgs.objDatabase
-            .index(DATABASE.INDEXES.TIMESTAMP)
-            .openCursor(null, "prev");
+  lookup: async function (objRequest, funcResponse) {
+    try {
+      // Use the database provider factory instead of direct IndexedDB access
+      const extensionManager = globalThis.extensionManager;
+      if (!extensionManager || !extensionManager.providerFactory) {
+        console.error("Database provider factory not available");
+        funcResponse({ objVideos: [] });
+        return;
+      }
 
-          objQuery.skip = objRequest.intSkip;
-          objQuery.results = [];
+      const currentProvider = extensionManager.providerFactory.getCurrentProvider();
+      if (!currentProvider) {
+        console.error("No current database provider available");
+        funcResponse({ objVideos: [] });
+        return;
+      }
 
-          objQuery.onerror = function () {
-            console.error("Database cursor error:", objQuery.error);
-            return funcCallback([]);
-          };
+      // Get all videos from the current provider
+      const allVideos = await currentProvider.getAllVideos();
+      
+      // Filter videos based on search query
+      let filteredVideos = [];
+      
+      if (!objRequest.strQuery || objRequest.strQuery.trim() === '') {
+        // Empty query - show all videos
+        filteredVideos = allVideos;
+      } else {
+        // Non-empty query - search in both ID and title (case-insensitive)
+        const searchTerm = objRequest.strQuery.toLowerCase().trim();
+        filteredVideos = allVideos.filter(video => {
+          const videoId = (video.strIdent || '').toLowerCase();
+          const videoTitle = (video.strTitle || '').toLowerCase();
+          return videoId.includes(searchTerm) || videoTitle.includes(searchTerm);
+        });
+      }
 
-          objQuery.onsuccess = function () {
-            if (objQuery.result === undefined || objQuery.result === null) {
-              return funcCallback(objQuery.results);
-            }
+      // Sort by timestamp (newest first) to match original behavior
+      filteredVideos.sort((a, b) => (b.intTimestamp || 0) - (a.intTimestamp || 0));
 
-            if (objQuery.results.length === objRequest.intLength) {
-              return funcCallback(objQuery.results);
-            }
+      // Apply pagination
+      const skip = objRequest.intSkip || 0;
+      const length = objRequest.intLength || filteredVideos.length;
+      const paginatedVideos = filteredVideos.slice(skip, skip + length);
 
-            // Check if this video matches the search criteria
-            let matches = false;
-            
-            if (!objRequest.strQuery || objRequest.strQuery.trim() === '') {
-              // Empty query - show all videos
-              matches = true;
-            } else {
-              // Non-empty query - search in both ID and title (case-insensitive)
-              const searchTerm = objRequest.strQuery.toLowerCase().trim();
-              const videoId = (objQuery.result.value.strIdent || '').toLowerCase();
-              const videoTitle = (objQuery.result.value.strTitle || '').toLowerCase();
-              
-              matches = videoId.includes(searchTerm) || videoTitle.includes(searchTerm);
-            }
-
-            if (matches) {
-              if (objQuery.skip !== 0) {
-                objQuery.skip -= 1;
-              } else {
-                objQuery.results.push({
-                  strIdent: objQuery.result.value.strIdent,
-                  intTimestamp: objQuery.result.value.intTimestamp,
-                  strTitle: objQuery.result.value.strTitle,
-                  intCount: objQuery.result.value.intCount,
-                });
-              }
-            }
-
-            objQuery.result.continue();
-          };
-        },
-      },
-      createResponseCallback(objArgs => ({ objVideos: objArgs.objGet }), funcResponse),
-    );
+      // Return in the expected format
+      funcResponse({ objVideos: paginatedVideos });
+      
+    } catch (error) {
+      console.error("Search lookup error:", error);
+      funcResponse({ objVideos: [] });
+    }
   },
 
-  delete: function (objRequest, funcResponse, funcProgress) {
-    AsyncSeries.run(
-      {
-        objDatabase: DatabaseUtils.database("readwrite"),
-        objDelete: function (objArgs, funcCallback) {
-          if (!objArgs.objDatabase) {
-            console.error("Database object store not available");
-            return funcCallback(null);
-          }
-          
-          funcProgress({
-            strProgress: "1/2 - deleting it from the database",
-          });
+  delete: async function (objRequest, funcResponse, funcProgress) {
+    try {
+      // Use the database provider factory instead of direct IndexedDB access
+      const extensionManager = globalThis.extensionManager;
+      if (!extensionManager || !extensionManager.providerFactory) {
+        console.error("Database provider factory not available");
+        funcResponse({ success: false });
+        return;
+      }
 
-          let objQuery = objArgs.objDatabase.delete(objRequest.strIdent);
+      const currentProvider = extensionManager.providerFactory.getCurrentProvider();
+      if (!currentProvider) {
+        console.error("No current database provider available");
+        funcResponse({ success: false });
+        return;
+      }
 
-          objQuery.onerror = function () {
-            console.error("Database delete error:", objQuery.error);
-            return funcCallback(null);
-          };
+      // Step 1: Delete from database
+      funcProgress({
+        strProgress: "1/2 - deleting it from the database",
+      });
 
-          objQuery.onsuccess = function () {
-            return funcCallback({});
-          };
-        },
-        objCount: DatabaseUtils.count(),
-        objHistory: function (objArgs, funcCallback) {
-          funcProgress({
-            strProgress: "2/2 - deleting it from the history in the browser",
-          });
+      await currentProvider.deleteVideo(objRequest.strIdent);
 
-          chrome.history.search(
-            {
-              text: objRequest.strIdent,
-              startTime: 0,
-              maxResults: 1000000,
-            },
-            function (objResults) {
-              for (let objResult of objResults) {
-                if (
-                  objResult.url.indexOf("https://www.youtube.com/watch?v=") !==
-                  0 &&
-                  objResult.url.indexOf("https://www.youtube.com/shorts/") !==
-                  0 &&
-                  objResult.url.indexOf("https://m.youtube.com/watch?v=") !== 0
-                ) {
-                  continue;
-                } else if (
-                  objResult.title === undefined ||
-                  objResult.title === null
-                ) {
-                  continue;
-                }
+      // Step 2: Delete from browser history  
+      funcProgress({
+        strProgress: "2/2 - deleting it from the history in the browser",
+      });
 
-                chrome.history.deleteUrl({
-                  url: objResult.url,
-                });
-              }
+      // Search for YouTube URLs containing this video ID
+      const historyResults = await new Promise((resolve) => {
+        chrome.history.search(
+          {
+            text: objRequest.strIdent,
+            startTime: 0,
+            maxResults: 1000000,
+          },
+          resolve
+        );
+      });
 
-              return funcCallback({});
-            },
-          );
-        },
-      },
-      createResponseCallback(() => ({ success: true }), funcResponse),
-    );
+      // Delete matching URLs from browser history
+      for (let historyResult of historyResults) {
+        if (
+          historyResult.url.indexOf("https://www.youtube.com/watch?v=") !== 0 &&
+          historyResult.url.indexOf("https://www.youtube.com/shorts/") !== 0 &&
+          historyResult.url.indexOf("https://m.youtube.com/watch?v=") !== 0
+        ) {
+          continue;
+        } else if (
+          historyResult.title === undefined ||
+          historyResult.title === null
+        ) {
+          continue;
+        }
+
+        chrome.history.deleteUrl({
+          url: historyResult.url,
+        });
+      }
+
+      funcResponse({ success: true });
+      
+    } catch (error) {
+      console.error("Search delete error:", error);
+      funcResponse({ success: false });
+    }
   },
 };

@@ -1807,3 +1807,6 @@ class ExtensionManager {
 
 // Initialize the extension manager
 const extensionManager = new ExtensionManager();
+
+// Make extensionManager globally available for other modules
+globalThis.extensionManager = extensionManager;
