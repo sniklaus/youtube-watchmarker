@@ -801,6 +801,50 @@ class ExtensionManager {
         sendResponse({ success: false, error: error.message });
       }
     });
+
+    // Setup port handler for long-lived connections
+    chrome.runtime.onConnect.addListener((port) => {
+      if (port.name === "youtube-watchmarker") {
+        console.log("Content script connected via port");
+        
+        port.onMessage.addListener((message) => {
+          try {
+            const { action, videoId, title } = message;
+            
+            // Handle the same actions as regular messages
+            if (action === "youtube-lookup") {
+              const messageRequest = { strIdent: videoId, strTitle: title };
+              if (title) {
+                this.titleCache.set(videoId, title);
+              }
+              
+              Youtube.lookup(messageRequest, (response) => {
+                if (port && !port.disconnected) {
+                  port.postMessage(response);
+                }
+              });
+            } else if (action === "youtube-ensure") {
+              const messageRequest = { strIdent: videoId, strTitle: title };
+              if (title) {
+                this.titleCache.set(videoId, title);
+              }
+              
+              Youtube.ensure(messageRequest, (response) => {
+                if (port && !port.disconnected) {
+                  port.postMessage(response);
+                }
+              });
+            }
+          } catch (error) {
+            console.error("Error handling port message:", error);
+          }
+        });
+        
+        port.onDisconnect.addListener(() => {
+          console.log("Content script disconnected from port");
+        });
+      }
+    });
   }
 
   /**

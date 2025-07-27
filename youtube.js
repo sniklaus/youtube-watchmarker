@@ -65,7 +65,7 @@ class YouTubeWatchMarker {
       throw new Error("Runtime invalid during init");
     }
     
-    // Fetch and cache settings
+    // Fetch and cache settings (with fallbacks)
     await this.cacheSettings();
     
     await this.injectCSS();
@@ -83,32 +83,49 @@ class YouTubeWatchMarker {
     });
     
     // Listen for storage changes to update tooltip settings and cache
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'sync') {
-        // Update cache
-        for (const [key, {newValue}] of Object.entries(changes)) {
-          this.settingsCache[key] = newValue;
+    if (this.isStorageAvailable()) {
+      chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'sync') {
+          // Update cache
+          for (const [key, {newValue}] of Object.entries(changes)) {
+            this.settingsCache[key] = newValue;
+          }
+          
+          // Handle CSS changes
+          const cssKeys = ['stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge', 'stylesheet_Showdate', 'stylesheet_Hideprogress'];
+          const visualKeys = ['idVisualization_Fadeout', 'idVisualization_Grayout', 'idVisualization_Showbadge', 'idVisualization_Showdate', 'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'];
+          
+          if (cssKeys.some(key => changes[key]) || visualKeys.some(key => changes[key])) {
+            // Reset CSS injection flag and re-inject
+            this.cssInjected = false;
+            this.injectCSS();
+          }
+          
+          // Handle tooltip changes
+          if (changes.idVisualization_Showpublishdate) {
+            this.handleTooltipSettingChange(changes.idVisualization_Showpublishdate.newValue);
+          }
         }
-        
-        // Handle CSS changes
-        const cssKeys = ['stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge', 'stylesheet_Showdate', 'stylesheet_Hideprogress'];
-        const visualKeys = ['idVisualization_Fadeout', 'idVisualization_Grayout', 'idVisualization_Showbadge', 'idVisualization_Showdate', 'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'];
-        
-        if (cssKeys.some(key => changes[key]) || visualKeys.some(key => changes[key])) {
-          // Reset CSS injection flag and re-inject
-          this.cssInjected = false;
-          this.injectCSS();
-        }
-        
-        // Handle tooltip changes
-        if (changes.idVisualization_Showpublishdate) {
-          this.handleTooltipSettingChange(changes.idVisualization_Showpublishdate.newValue);
-        }
-      }
-    });
+      });
+    } else {
+      console.warn('Storage not available - skipping storage change listener');
+    }
     
     // Setup periodic runtime check
     this.setupRuntimeCheck();
+  }
+
+  /**
+   * Check if Chrome storage API is available
+   * @returns {boolean} True if storage is available
+   */
+  isStorageAvailable() {
+    try {
+      return !!(chrome && chrome.runtime && chrome.runtime.id && chrome.storage && chrome.storage.sync);
+    } catch (error) {
+      console.warn("Storage availability check failed:", error);
+      return false;
+    }
   }
 
   /**
@@ -123,9 +140,18 @@ class YouTubeWatchMarker {
       'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'
     ];
     
+    if (!this.isStorageAvailable()) {
+      console.warn('Storage not available during cacheSettings - using defaults');
+      keys.forEach(key => {
+        this.settingsCache[key] = false;
+      });
+      return;
+    }
+    
     try {
       const results = await chrome.storage.sync.get(keys);
       this.settingsCache = { ...results };
+      console.log('Settings cached successfully:', Object.keys(this.settingsCache).length, 'keys');
     } catch (error) {
       console.error('Failed to cache settings:', error);
       // Set defaults to false
@@ -872,17 +898,17 @@ class YouTubeWatchMarker {
    * @param {string} key - Setting key
    * @returns {Promise<boolean>} Setting value
    */
-  async getSettingValue(key, maxRetries = 3, retryDelay = 1000) {
+  async getSettingValue(key, maxRetries = 2, retryDelay = 1000) {
     if (this.settingsCache.hasOwnProperty(key)) {
       return this.settingsCache[key] || false;
     }
     
-    // If not cached, fetch with retry
+    // If not cached, try to fetch with retry
     let attempts = 0;
     
     while (attempts < maxRetries) {
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.log(`Runtime invalid (attempt ${attempts + 1}/${maxRetries}) - retrying in ${retryDelay}ms...`);
+      if (!this.isStorageAvailable()) {
+        console.log(`Storage not available (attempt ${attempts + 1}/${maxRetries}) - retrying in ${retryDelay}ms...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         attempts++;
         continue;
@@ -894,19 +920,15 @@ class YouTubeWatchMarker {
         return this.settingsCache[key];
       } catch (error) {
         console.error(`Storage get error (attempt ${attempts + 1}/${maxRetries}):`, error);
-        if (error.message?.includes("context invalidated") || error.message?.includes("undefined")) {
+        attempts++;
+        if (attempts < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, retryDelay));
-          attempts++;
-          // Increase delay for next retry
           retryDelay *= 1.5;
-        } else {
-          this.settingsCache[key] = false;
-          return false;
         }
       }
     }
     
-    console.error(`Failed to get setting ${key} after ${maxRetries} attempts`);
+    console.error(`Failed to get setting ${key} after ${maxRetries} attempts - using default`);
     this.settingsCache[key] = false;
     return false;
   }
@@ -1265,9 +1287,15 @@ class YouTubeWatchMarker {
    */
   setupRuntimeCheck() {
     setInterval(() => {
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.warn("Runtime became invalid - attempting reconnect");
+      if (!this.isStorageAvailable()) {
+        console.warn("Runtime/Storage became invalid - attempting reconnect");
         this.connectToBackground();
+        // Try to re-cache settings if storage becomes available
+        if (this.isStorageAvailable()) {
+          this.cacheSettings().catch(error => {
+            console.error("Failed to re-cache settings:", error);
+          });
+        }
       }
     }, 15000); // Check every 15 seconds
   }
