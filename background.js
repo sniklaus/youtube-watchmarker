@@ -805,7 +805,6 @@ class ExtensionManager {
     // Setup port handler for long-lived connections
     chrome.runtime.onConnect.addListener((port) => {
       if (port.name === "youtube-watchmarker") {
-        console.log("Content script connected via port");
         
         port.onMessage.addListener((message) => {
           try {
@@ -840,9 +839,6 @@ class ExtensionManager {
           }
         });
         
-        port.onDisconnect.addListener(() => {
-          console.log("Content script disconnected from port");
-        });
       }
     });
   }
