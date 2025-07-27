@@ -13,6 +13,9 @@ class YouTubeWatchMarker {
     this.isProcessing = false;
     this.cssInjected = false; // Track if CSS is injected
     
+    // Settings cache
+    this.settingsCache = {};
+    
     // Bind methods to preserve 'this' context
     this.refresh = this.refresh.bind(this);
     this.markVideo = this.markVideo.bind(this);
@@ -26,16 +29,45 @@ class YouTubeWatchMarker {
     // Long-lived port for background communication
     this.backgroundPort = null;
     this.connectToBackground();
-
-    this.init().catch(error => {
+    
+    this.safeInit().catch(error => {
       console.error('Failed to initialize YouTubeWatchMarker:', error);
     });
+  }
+
+  /**
+   * Safe initialization with error handling and retry
+   */
+  async safeInit(retryCount = 0) {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 2000;
+    
+    try {
+      await this.init();
+    } catch (error) {
+      console.error(`Initialization failed (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error);
+      if (retryCount < MAX_RETRIES && (error.message?.includes('context invalidated') || error.message?.includes('undefined'))) {
+        console.log(`Retrying initialization in ${RETRY_DELAY/1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        await this.safeInit(retryCount + 1);
+      } else {
+        throw error;
+      }
+    }
   }
 
   /**
    * Initialize the extension
    */
   async init() {
+    // Check runtime validity before proceeding
+    if (!chrome.runtime || !chrome.runtime.id) {
+      throw new Error("Runtime invalid during init");
+    }
+    
+    // Fetch and cache settings
+    await this.cacheSettings();
+    
     await this.injectCSS();
     this.setupPeriodicRefresh();
     this.setupRatingObserver();
@@ -50,12 +82,17 @@ class YouTubeWatchMarker {
       this.handleProgressHookEvent(event);
     });
     
-    // Listen for storage changes to update tooltip settings
+    // Listen for storage changes to update tooltip settings and cache
     chrome.storage.onChanged.addListener((changes, namespace) => {
       if (namespace === 'sync') {
+        // Update cache
+        for (const [key, {newValue}] of Object.entries(changes)) {
+          this.settingsCache[key] = newValue;
+        }
+        
         // Handle CSS changes
         const cssKeys = ['stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge', 'stylesheet_Showdate', 'stylesheet_Hideprogress'];
-        const visualKeys = ['idVisualization_Fadeout', 'idVisualization_Grayout', 'idVisualization_Showbadge', 'idVisualization_Showdate', 'idVisualization_Hideprogress'];
+        const visualKeys = ['idVisualization_Fadeout', 'idVisualization_Grayout', 'idVisualization_Showbadge', 'idVisualization_Showdate', 'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'];
         
         if (cssKeys.some(key => changes[key]) || visualKeys.some(key => changes[key])) {
           // Reset CSS injection flag and re-inject
@@ -69,6 +106,33 @@ class YouTubeWatchMarker {
         }
       }
     });
+    
+    // Setup periodic runtime check
+    this.setupRuntimeCheck();
+  }
+
+  /**
+   * Fetch and cache all required settings
+   */
+  async cacheSettings() {
+    const keys = [
+      'stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge',
+      'stylesheet_Showdate', 'stylesheet_Hideprogress',
+      'idVisualization_Fadeout', 'idVisualization_Grayout',
+      'idVisualization_Showbadge', 'idVisualization_Showdate',
+      'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'
+    ];
+    
+    try {
+      const results = await chrome.storage.sync.get(keys);
+      this.settingsCache = { ...results };
+    } catch (error) {
+      console.error('Failed to cache settings:', error);
+      // Set defaults to false
+      keys.forEach(key => {
+        this.settingsCache[key] = false;
+      });
+    }
   }
 
   /**
@@ -118,8 +182,9 @@ class YouTubeWatchMarker {
     if (this.cssInjected) return;
     
     try {
-      // Get all settings from storage
-      const settings = await chrome.storage.sync.get([
+      // Get all settings from cache/storage
+      const settings = {};
+      const keys = [
         'stylesheet_Fadeout',
         'stylesheet_Grayout', 
         'stylesheet_Showbadge',
@@ -130,7 +195,11 @@ class YouTubeWatchMarker {
         'idVisualization_Showbadge',
         'idVisualization_Showdate',
         'idVisualization_Hideprogress'
-      ]);
+      ];
+      
+      for (const key of keys) {
+        settings[key] = await this.getSettingValue(key);
+      }
 
       // Remove any existing injected styles to prevent duplicates
       const existingStyle = document.getElementById('youwatch-injected-styles');
@@ -457,6 +526,13 @@ class YouTubeWatchMarker {
    */
   async refresh() {
     if (this.isProcessing) return;
+    
+    // Check runtime validity
+    if (!chrome.runtime || !chrome.runtime.id) {
+      console.error("Runtime invalid during refresh - skipping");
+      return;
+    }
+    
     this.isProcessing = true;
     
     try {
@@ -518,7 +594,7 @@ class YouTubeWatchMarker {
     const BATCH_SIZE = 10;
     const BATCH_DELAY = 10; // ms
     
-    // Check if publication date display is enabled
+    // Check if publication date display is enabled from cache
     const showPublishDate = await this.getSettingValue('idVisualization_Showpublishdate');
     
     for (let i = 0; i < videos.length; i += BATCH_SIZE) {
@@ -775,7 +851,7 @@ class YouTubeWatchMarker {
    * Sets up publication date display for video elements
    */
   async setupTooltips() {
-    // Check if publication date display is enabled
+    // Check if publication date display is enabled from cache
     const isEnabled = await this.getSettingValue('idVisualization_Showpublishdate');
     if (!isEnabled) {
       return;
@@ -792,18 +868,47 @@ class YouTubeWatchMarker {
   }
 
   /**
-   * Get a setting value from storage
+   * Get a setting value from cache, fallback to storage if not cached
    * @param {string} key - Setting key
    * @returns {Promise<boolean>} Setting value
    */
-  async getSettingValue(key) {
-    try {
-      const result = await chrome.storage.sync.get([key]);
-      return result[key] || false;
-    } catch (error) {
-      console.error(`Error getting setting ${key}:`, error);
-      return false;
+  async getSettingValue(key, maxRetries = 3, retryDelay = 1000) {
+    if (this.settingsCache.hasOwnProperty(key)) {
+      return this.settingsCache[key] || false;
     }
+    
+    // If not cached, fetch with retry
+    let attempts = 0;
+    
+    while (attempts < maxRetries) {
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.log(`Runtime invalid (attempt ${attempts + 1}/${maxRetries}) - retrying in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        attempts++;
+        continue;
+      }
+      
+      try {
+        const result = await chrome.storage.sync.get([key]);
+        this.settingsCache[key] = result[key] || false;
+        return this.settingsCache[key];
+      } catch (error) {
+        console.error(`Storage get error (attempt ${attempts + 1}/${maxRetries}):`, error);
+        if (error.message?.includes("context invalidated") || error.message?.includes("undefined")) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          attempts++;
+          // Increase delay for next retry
+          retryDelay *= 1.5;
+        } else {
+          this.settingsCache[key] = false;
+          return false;
+        }
+      }
+    }
+    
+    console.error(`Failed to get setting ${key} after ${maxRetries} attempts`);
+    this.settingsCache[key] = false;
+    return false;
   }
 
   /**
@@ -1153,6 +1258,18 @@ class YouTubeWatchMarker {
       
       chrome.runtime.sendMessage(message);
     }
+  }
+
+  /**
+   * Setup periodic check for runtime validity
+   */
+  setupRuntimeCheck() {
+    setInterval(() => {
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.warn("Runtime became invalid - attempting reconnect");
+        this.connectToBackground();
+      }
+    }, 15000); // Check every 15 seconds
   }
 
   /**
