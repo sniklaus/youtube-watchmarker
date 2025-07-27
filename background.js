@@ -65,6 +65,8 @@ class ExtensionManager {
       // Setup enhanced alarm system
       this.initializeAlarmListener();
       await this.setupSynchronization();
+      // Setup keep-alive alarm
+      await this.setupKeepAliveAlarm();
 
       this.isInitialized = true;
     } catch (error) {
@@ -1048,6 +1050,25 @@ class ExtensionManager {
   }
 
   /**
+   * Setup keep-alive alarm to prevent service worker termination
+   */
+  async setupKeepAliveAlarm() {
+    try {
+      // Clear any existing keep-alive alarm
+      await chrome.alarms.clear("keep-alive");
+      
+      // Create alarm that runs every 4 minutes (under 5-min idle limit)
+      await chrome.alarms.create("keep-alive", {
+        periodInMinutes: 4
+      });
+      
+      console.log("Keep-alive alarm set up successfully");
+    } catch (error) {
+      console.error("Failed to set up keep-alive alarm:", error);
+    }
+  }
+
+  /**
    * Initialize alarm listener with enhanced error handling
    */
   initializeAlarmListener() {
@@ -1055,6 +1076,12 @@ class ExtensionManager {
       try {
         if (alarm.name === "synchronize") {
           await this.performSynchronization();
+        } else if (alarm.name === "keep-alive") {
+          // Minimal operation to keep worker alive - e.g., log or check storage
+          console.log("Keep-alive ping:", new Date().toISOString());
+          // Optional: Perform a small storage read to ensure activity
+          await chrome.storage.local.get("lastKeepAlive");
+          await chrome.storage.local.set({ lastKeepAlive: Date.now() });
         }
       } catch (error) {
         console.error(`Error handling alarm ${alarm.name}:`, error);
@@ -1807,3 +1834,11 @@ const extensionManager = new ExtensionManager();
 
 // Make extensionManager globally available for other modules
 globalThis.extensionManager = extensionManager;
+
+// Listen for service worker startup to reinitialize
+chrome.runtime.onStartup.addListener(() => {
+  console.log("Service worker restarted - reinitializing...");
+  extensionManager.init().catch(error => {
+    console.error("Reinitialization failed:", error);
+  });
+});

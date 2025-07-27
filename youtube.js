@@ -23,6 +23,10 @@ class YouTubeWatchMarker {
     this.extractPublishDate = this.extractPublishDate.bind(this);
     this.injectCSS = this.injectCSS.bind(this);
     
+    // Long-lived port for background communication
+    this.backgroundPort = null;
+    this.connectToBackground();
+
     this.init().catch(error => {
       console.error('Failed to initialize YouTubeWatchMarker:', error);
     });
@@ -63,6 +67,29 @@ class YouTubeWatchMarker {
         if (changes.idVisualization_Showpublishdate) {
           this.handleTooltipSettingChange(changes.idVisualization_Showpublishdate.newValue);
         }
+      }
+    });
+  }
+
+  /**
+   * Establish long-lived connection to background
+   */
+  connectToBackground() {
+    this.backgroundPort = chrome.runtime.connect({ name: "youtube-watchmarker" });
+    
+    this.backgroundPort.onDisconnect.addListener(() => {
+      console.log("Disconnected from background - reconnecting...");
+      this.backgroundPort = null;
+      setTimeout(() => this.connectToBackground(), 1000);
+    });
+    
+    this.backgroundPort.onMessage.addListener((response) => {
+      if (response && response.strIdent) {
+        this.watchDates[response.strIdent] = response.intTimestamp;
+        
+        // Mark all videos with this ID
+        const videosWithId = this.findVideos(response.strIdent);
+        videosWithId.forEach(video => this.markVideo(video, response.strIdent));
       }
     });
   }
@@ -633,22 +660,31 @@ class YouTubeWatchMarker {
   requestVideoData(videoElement, videoId) {
     const title = this.extractVideoTitle(videoElement);
     
-    chrome.runtime.sendMessage(
-      {
+    // Use long-lived port if available, fallback to sendMessage
+    if (this.backgroundPort) {
+      try {
+        this.backgroundPort.postMessage({
+          action: "youtube-lookup",
+          videoId: videoId,
+          title: title,
+        });
+      } catch (error) {
+        console.error("Port error:", error);
+        // Fallback to sendMessage if port fails
+        chrome.runtime.sendMessage({
+          action: "youtube-lookup",
+          videoId: videoId,
+          title: title,
+        });
+      }
+    } else {
+      // Fallback if port not connected
+      chrome.runtime.sendMessage({
         action: "youtube-lookup",
         videoId: videoId,
         title: title,
-      },
-      (response) => {
-        if (response && response.strIdent) {
-          this.watchDates[response.strIdent] = response.intTimestamp;
-          
-          // Mark all videos with this ID
-          const videosWithId = this.findVideos(response.strIdent);
-          videosWithId.forEach(video => this.markVideo(video, response.strIdent));
-        }
-      }
-    );
+      });
+    }
   }
 
   /**
@@ -1007,22 +1043,23 @@ class YouTubeWatchMarker {
    * @param {string} title - Video title
    */
   markVideoAsWatchedFromRating(videoId, title) {
-    chrome.runtime.sendMessage(
-      {
-        action: "youtube-ensure",
-        videoId: videoId,
-        title: title,
-      },
-      (response) => {
-        if (response && response.strIdent) {
-          this.watchDates[response.strIdent] = response.intTimestamp;
-          
-          // Mark all videos with this ID on current page
-          const videosWithId = this.findVideos(response.strIdent);
-          videosWithId.forEach(video => this.markVideo(video, response.strIdent));
-        }
+    // Use long-lived port if available, fallback to sendMessage
+    const message = {
+      action: "youtube-ensure",
+      videoId: videoId,
+      title: title,
+    };
+    
+    if (this.backgroundPort) {
+      try {
+        this.backgroundPort.postMessage(message);
+      } catch (error) {
+        console.error("Port error in rating mark:", error);
+        chrome.runtime.sendMessage(message);
       }
-    );
+    } else {
+      chrome.runtime.sendMessage(message);
+    }
   }
 
   /**
@@ -1036,23 +1073,23 @@ class YouTubeWatchMarker {
       return;
     }
     
-    // Mark video as watched
-    chrome.runtime.sendMessage(
-      {
-        action: "youtube-ensure",
-        videoId: strIdent,
-        title: strTitle,
-      },
-      (response) => {
-        if (response && response.strIdent) {
-          this.watchDates[response.strIdent] = response.intTimestamp;
-          
-          // Mark all videos with this ID on current page
-          const videosWithId = this.findVideos(response.strIdent);
-          videosWithId.forEach(video => this.markVideo(video, response.strIdent));
-        }
+    // Use long-lived port if available, fallback to sendMessage
+    const message = {
+      action: "youtube-ensure",
+      videoId: strIdent,
+      title: strTitle,
+    };
+    
+    if (this.backgroundPort) {
+      try {
+        this.backgroundPort.postMessage(message);
+      } catch (error) {
+        console.error("Port error in progress hook:", error);
+        chrome.runtime.sendMessage(message);
       }
-    );
+    } else {
+      chrome.runtime.sendMessage(message);
+    }
   }
 
   /**
