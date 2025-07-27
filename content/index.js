@@ -471,7 +471,7 @@ class OptionsPageManager {
      */
     async exportDatabase() {
         try {
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'database-export'
             });
 
@@ -522,7 +522,7 @@ class OptionsPageManager {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'database-import',
                 data: fileContent
             });
@@ -565,7 +565,7 @@ class OptionsPageManager {
         }
 
         try {
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'database-reset'
             });
 
@@ -596,7 +596,7 @@ class OptionsPageManager {
                 await this.loadSupabaseConfig();
                 
                 // Check if credentials already exist
-                const statusResponse = await chrome.runtime.sendMessage({
+                const statusResponse = await this.sendMessageWithRetry({
                     action: 'supabase-get-status'
                 });
                 
@@ -647,7 +647,7 @@ class OptionsPageManager {
      * @param {string} provider - Provider type ('indexeddb' or 'supabase')
      */
     async actuallySwitchProvider(provider) {
-        const response = await chrome.runtime.sendMessage({
+        const response = await this.sendMessageWithRetry({
             action: 'database-provider-switch',
             provider: provider
         });
@@ -674,7 +674,7 @@ class OptionsPageManager {
             
             // Also notify the background script about the change
             if (isEnabled) {
-                const response = await chrome.runtime.sendMessage({
+                const response = await this.sendMessageWithRetry({
                     action: 'sync-manager-start'
                 });
                 if (response && response.success) {
@@ -685,7 +685,7 @@ class OptionsPageManager {
                     return;
                 }
             } else {
-                const response = await chrome.runtime.sendMessage({
+                const response = await this.sendMessageWithRetry({
                     action: 'sync-manager-stop'
                 });
                 if (response && response.success) {
@@ -714,7 +714,7 @@ class OptionsPageManager {
             this.showButtonLoading(syncButton, 'Syncing...');
             
             // Get current provider status
-            const statusResponse = await chrome.runtime.sendMessage({
+            const statusResponse = await this.sendMessageWithRetry({
                 action: 'database-provider-status'
             });
             
@@ -723,7 +723,7 @@ class OptionsPageManager {
             }
             
             // Get available providers
-            const providersResponse = await chrome.runtime.sendMessage({
+            const providersResponse = await this.sendMessageWithRetry({
                 action: 'database-provider-list'
             });
             
@@ -740,7 +740,7 @@ class OptionsPageManager {
             }
             
             // Perform bidirectional sync between IndexedDB and Supabase
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'database-provider-sync',
                 providers: ['indexeddb', 'supabase']
             });
@@ -778,7 +778,7 @@ class OptionsPageManager {
                 return;
             }
 
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'supabase-configure',
                 credentials: credentials
             });
@@ -814,7 +814,7 @@ class OptionsPageManager {
         try {
             this.showButtonLoading(testButton, 'Testing...');
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'supabase-test'
             });
             
@@ -840,7 +840,7 @@ class OptionsPageManager {
         }
 
         try {
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'supabase-clear'
             });
 
@@ -871,12 +871,12 @@ class OptionsPageManager {
     async loadSupabaseConfig() {
         try {
             // Get masked credentials for display
-            const credentialsResponse = await chrome.runtime.sendMessage({
+            const credentialsResponse = await this.sendMessageWithRetry({
                 action: 'supabase-get-credentials'
             });
 
             // Get credential status
-            const statusResponse = await chrome.runtime.sendMessage({
+            const statusResponse = await this.sendMessageWithRetry({
                 action: 'supabase-get-status'
             });
 
@@ -909,7 +909,7 @@ class OptionsPageManager {
         try {
             this.showButtonLoading(syncButton, 'Syncing...');
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'history-synchronize'
             });
             
@@ -955,7 +955,7 @@ class OptionsPageManager {
         try {
             this.showButtonLoading(syncButton, 'Syncing...');
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'youtube-synchronize'
             });
             
@@ -1001,7 +1001,7 @@ class OptionsPageManager {
         try {
             this.showButtonLoading(syncButton, 'Syncing...');
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'youtube-liked-videos'
             });
             
@@ -1052,7 +1052,7 @@ class OptionsPageManager {
             
             // Sync browser history
             try {
-                const historyResponse = await chrome.runtime.sendMessage({
+                const historyResponse = await this.sendMessageWithRetry({
                     action: 'history-synchronize'
                 });
                 if (historyResponse && historyResponse.success) {
@@ -1066,7 +1066,7 @@ class OptionsPageManager {
             
             // Sync YouTube history
             try {
-                const youtubeResponse = await chrome.runtime.sendMessage({
+                const youtubeResponse = await this.sendMessageWithRetry({
                     action: 'youtube-synchronize'
                 });
                 if (youtubeResponse && youtubeResponse.success) {
@@ -1080,7 +1080,7 @@ class OptionsPageManager {
             
             // Sync YouTube likes
             try {
-                const likesResponse = await chrome.runtime.sendMessage({
+                const likesResponse = await this.sendMessageWithRetry({
                     action: 'youtube-liked-videos'
                 });
                 if (likesResponse && likesResponse.success) {
@@ -1150,7 +1150,7 @@ class OptionsPageManager {
             searchButton.disabled = true;
             searchResults.classList.add('search-loading');
 
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'search-videos',
                 query: query, // Use the query from search state
                 page: this.searchState.currentPage,
@@ -1193,7 +1193,7 @@ class OptionsPageManager {
             this.searchState.currentQuery = '';
             this.searchState.currentPage = 1;
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'search-videos',
                 query: '', // Empty query to show all videos
                 page: 1,
@@ -1332,7 +1332,7 @@ class OptionsPageManager {
         try {
             this.showButtonLoading(deleteButton, 'Deleting...');
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'search-delete',
                 videoId: videoId
             });
@@ -1442,7 +1442,7 @@ class OptionsPageManager {
      */
     async updateDatabaseSize() {
         try {
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'database-size'
             });
 
@@ -1689,7 +1689,7 @@ class OptionsPageManager {
      */
     async updateProviderStatus() {
         try {
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.sendMessageWithRetry({
                 action: 'database-provider-status'
             });
             
@@ -1732,6 +1732,22 @@ class OptionsPageManager {
         }
     }
 
+    /**
+     * Send message to background with retry for service worker termination
+     * @param {Object} message - The message to send
+     * @returns {Promise<Object>} Response from background
+     */
+    async sendMessageWithRetry(message) {
+      try {
+        return await chrome.runtime.sendMessage(message);
+      } catch (error) {
+        if (error.message && error.message.includes('Receiving end does not exist')) {
+          console.log('Retrying message due to service worker termination');
+          return await chrome.runtime.sendMessage(message);
+        }
+        throw error;
+      }
+    }
    
 }
 
