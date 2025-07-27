@@ -244,6 +244,32 @@
         font-size: 0.85rem;
         padding: 0.4rem 0.75rem;
       }
+      
+      /* Initial loading animation */
+      #initial-loading {
+        min-height: 300px;
+        animation: pulse 1.5s ease-in-out infinite alternate;
+      }
+      
+      @keyframes pulse {
+        from { opacity: 0.8; }
+        to { opacity: 1; }
+      }
+      
+      #initial-loading .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        border-width: 0.3em;
+      }
+      
+      #initial-loading h6 {
+        font-weight: 500;
+        color: var(--color-text-primary);
+      }
+      
+      #initial-loading p {
+        color: var(--color-text-muted);
+      }
     </style>
     
     <!-- Main JavaScript Module -->
@@ -289,7 +315,18 @@
         </div>
         
         <!-- Search Results -->
-        <div id="idSearch_Results" class="search-results"></div>
+        <div id="idSearch_Results" class="search-results">
+          <!-- Initial Loading Animation -->
+          <div id="initial-loading" class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+            <div class="spinner-border text-primary mb-3" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="text-center">
+              <h6 class="mb-2">Loading your watch history...</h6>
+              <p class="small mb-0">This may take a few seconds for large collections</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

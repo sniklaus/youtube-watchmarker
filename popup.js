@@ -74,6 +74,7 @@ class PopupSearchManager {
         this.searchResults = document.getElementById('idSearch_Results');
         this.searchIcon = document.getElementById('search-icon');
         this.searchSpinner = document.getElementById('search-spinner');
+        this.initialLoading = document.getElementById('initial-loading');
         
         // Options link
         this.openOptionsLink = document.getElementById('open-options');
@@ -252,6 +253,7 @@ class PopupSearchManager {
 
             if (response && response.success) {
                 this.searchState.totalResults = response.totalResults || 0;
+                this.hideInitialLoading();
                 this.displaySearchResults(response.results);
                 
                 // Show a subtle message if it took multiple retries
@@ -260,10 +262,12 @@ class PopupSearchManager {
                 }
             } else {
                 // Don't show error on initial load, just show empty state
+                this.hideInitialLoading();
                 this.searchResults.innerHTML = '<div class="alert alert-info m-3"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history.</div>';
             }
         } catch (error) {
             console.error('Initial search error:', error);
+            this.hideInitialLoading();
             this.searchResults.innerHTML = '<div class="alert alert-info m-3"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history.</div>';
         }
     }
@@ -306,6 +310,7 @@ class PopupSearchManager {
                 const errorMessage = query 
                     ? 'Search failed. Please try again.' 
                     : 'Failed to load watch history.';
+                this.hideInitialLoading();
                 this.showError(response?.error || errorMessage);
                 this.searchResults.innerHTML = `<div class="alert alert-warning m-3"><i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}</div>`;
             }
@@ -314,6 +319,7 @@ class PopupSearchManager {
             const errorMessage = query 
                 ? 'Search failed. Please try again.' 
                 : 'Failed to load watch history.';
+            this.hideInitialLoading();
             this.showError(errorMessage);
             this.searchResults.innerHTML = `<div class="alert alert-danger m-3"><i class="fas fa-exclamation-circle me-2"></i>An error occurred. Please try again.</div>`;
         } finally {
@@ -327,9 +333,21 @@ class PopupSearchManager {
     }
 
     /**
+     * Hide initial loading animation
+     */
+    hideInitialLoading() {
+        if (this.initialLoading) {
+            this.initialLoading.style.display = 'none';
+        }
+    }
+
+    /**
      * Display search results
      */
     displaySearchResults(results) {
+        // Ensure initial loading is hidden
+        this.hideInitialLoading();
+        
         if (!results || results.length === 0) {
             const message = this.searchState.currentQuery 
                 ? 'No videos found matching your search.' 
