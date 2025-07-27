@@ -18,7 +18,6 @@ export class SupabaseDatabaseProvider {
     this.credentials = null;
     this.baseUrl = null;
     this.apiKey = null;
-    this.jwtToken = null;
     this.maxRetries = 3;
     this.retryDelay = 1000;
   }
@@ -39,11 +38,6 @@ export class SupabaseDatabaseProvider {
       return false;
     }
     
-    // Check if it looks like a JWT (starts with ey)
-    if (!apiKey.startsWith('ey')) {
-      console.warn('API key does not appear to be a valid JWT format');
-      return false;
-    }
     
     return true;
   }
@@ -119,7 +113,6 @@ export class SupabaseDatabaseProvider {
       // Set up API configuration
       this.baseUrl = this.credentials.supabaseUrl;
       this.apiKey = this.credentials.apiKey;
-      this.jwtToken = this.credentials.jwtToken;
 
       // Test connection and ensure schema
       await this.ensureSchema();
@@ -435,7 +428,7 @@ GROUP BY t.tablename, t.rowsecurity;
     const requestHeaders = {
       'Content-Type': 'application/json',
       'apikey': this.apiKey,
-      'Authorization': `Bearer ${this.jwtToken || this.apiKey}`,
+      'Authorization': `Bearer ${this.apiKey}`,
       'Prefer': 'return=representation',
       'X-Client-Info': 'youtube-watchmarker-extension',
       // Add security headers
@@ -1015,7 +1008,6 @@ GROUP BY t.tablename, t.rowsecurity;
       this.isConnected = false;
       this.baseUrl = null;
       this.apiKey = null;
-      this.jwtToken = null;
       
       console.log('Supabase provider closed');
       return true;

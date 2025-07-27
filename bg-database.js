@@ -366,8 +366,11 @@ export class DatabaseManager {
    */
   async configureSupabase(request, response) {
     try {
-      const { url, apiKey, jwtToken } = request;
-      await credentialStorage.setSupabaseCredentials(url, apiKey, jwtToken);
+      const { url, apiKey } = request;
+      await credentialStorage.storeCredentials({
+        supabaseUrl: url,
+        apiKey: apiKey
+      });
       response({ success: true, message: 'Supabase configured successfully' });
     } catch (error) {
       console.error("Failed to configure Supabase:", error);
@@ -416,8 +419,8 @@ export class DatabaseManager {
    */
   async getSupabaseCredentials(request, response) {
     try {
-      const credentials = await credentialStorage.getSupabaseCredentials();
-      response({ success: true, data: credentials });
+      const credentials = await credentialStorage.getMaskedCredentials();
+      response({ success: true, credentials: credentials });
     } catch (error) {
       console.error("Failed to get Supabase credentials:", error);
       response({ success: false, error: error.message });

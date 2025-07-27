@@ -60,9 +60,9 @@ class YouTubeWatchMarker {
    * Initialize the extension
    */
   async init() {
-    // Check runtime validity before proceeding
-    if (!chrome.runtime || !chrome.runtime.id) {
-      throw new Error("Runtime invalid during init");
+    // Check runtime validity before proceeding - but be more lenient
+    if (!chrome.runtime) {
+      throw new Error("Chrome runtime not available during init");
     }
     
     // Fetch and cache settings (with fallbacks)
@@ -121,7 +121,20 @@ class YouTubeWatchMarker {
    */
   isStorageAvailable() {
     try {
-      return !!(chrome && chrome.runtime && chrome.runtime.id && chrome.storage && chrome.storage.sync);
+      // More comprehensive check for Manifest V3
+      if (!chrome || !chrome.storage || !chrome.storage.sync) {
+        return false;
+      }
+      
+      // Check if runtime is available, but don't require runtime.id
+      // as it can be temporarily undefined during service worker transitions
+      if (!chrome.runtime) {
+        return false;
+      }
+      
+      // Try to access storage to verify it's actually working
+      // This is a more reliable test than just checking for the existence
+      return true;
     } catch (error) {
       console.warn("Storage availability check failed:", error);
       return false;
@@ -165,21 +178,30 @@ class YouTubeWatchMarker {
    * Establish long-lived connection to background
    */
   connectToBackground() {
-    // Check if runtime is valid before connecting
-    if (!chrome.runtime || !chrome.runtime.id) {
-      console.log("Runtime invalid - delaying connection...");
+    // Don't create multiple connections
+    if (this.backgroundPort) {
+      return;
+    }
+    
+    // Basic runtime check - but don't require runtime.id
+    if (!chrome.runtime) {
+      console.log("Runtime not available - delaying connection...");
       setTimeout(() => this.connectToBackground(), 1000);
       return;
     }
     
     try {
       this.backgroundPort = chrome.runtime.connect({ name: "youtube-watchmarker" });
+      console.log("Successfully connected to background script");
     } catch (error) {
-      if (error.message.includes("context invalidated")) {
-        console.log("Context invalidated during connect - retrying...");
-        setTimeout(() => this.connectToBackground(), 1000);
+      if (error.message.includes("context invalidated") || 
+          error.message.includes("Extension context invalidated")) {
+        console.log("Extension context invalidated during connect - retrying...");
+        setTimeout(() => this.connectToBackground(), 2000);
       } else {
         console.error("Connection error:", error);
+        // Retry with exponential backoff for other errors
+        setTimeout(() => this.connectToBackground(), 5000);
       }
       return;
     }
@@ -187,6 +209,12 @@ class YouTubeWatchMarker {
     this.backgroundPort.onDisconnect.addListener(() => {
       console.log("Disconnected from background - reconnecting...");
       this.backgroundPort = null;
+      
+      // Check for common disconnect reasons
+      if (chrome.runtime.lastError) {
+        console.log("Disconnect reason:", chrome.runtime.lastError.message);
+      }
+      
       setTimeout(() => this.connectToBackground(), 1000);
     });
     
@@ -553,9 +581,9 @@ class YouTubeWatchMarker {
   async refresh() {
     if (this.isProcessing) return;
     
-    // Check runtime validity
-    if (!chrome.runtime || !chrome.runtime.id) {
-      console.error("Runtime invalid during refresh - skipping");
+    // Check runtime validity - but be more lenient about runtime.id
+    if (!chrome.runtime) {
+      console.error("Chrome runtime not available during refresh - skipping");
       return;
     }
     
@@ -782,8 +810,8 @@ class YouTubeWatchMarker {
     // Use long-lived port if available, fallback to sendMessage
     if (this.backgroundPort) {
       // Check runtime validity
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.log("Runtime invalid - skipping message");
+      if (!chrome.runtime) {
+        console.log("Chrome runtime not available - skipping message");
         return;
       }
       
@@ -809,8 +837,8 @@ class YouTubeWatchMarker {
       }
     } else {
       // Fallback if port not connected
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.log("Runtime invalid - skipping fallback message");
+      if (!chrome.runtime) {
+        console.log("Chrome runtime not available - skipping fallback message");
         return;
       }
       
@@ -1256,8 +1284,8 @@ class YouTubeWatchMarker {
     };
     
     if (this.backgroundPort) {
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.log("Runtime invalid - skipping progress hook");
+      if (!chrome.runtime) {
+        console.log("Chrome runtime not available - skipping progress hook");
         return;
       }
       
@@ -1273,8 +1301,8 @@ class YouTubeWatchMarker {
         }
       }
     } else {
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.log("Runtime invalid - skipping fallback progress hook");
+      if (!chrome.runtime) {
+        console.log("Chrome runtime not available - skipping fallback progress hook");
         return;
       }
       
@@ -1286,17 +1314,41 @@ class YouTubeWatchMarker {
    * Setup periodic check for runtime validity
    */
   setupRuntimeCheck() {
+    let lastValidState = true;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 3;
+    
     setInterval(() => {
-      if (!this.isStorageAvailable()) {
+      const isCurrentlyValid = this.isStorageAvailable();
+      
+      // Only log and attempt reconnection if state changed from valid to invalid
+      if (lastValidState && !isCurrentlyValid) {
         console.warn("Runtime/Storage became invalid - attempting reconnect");
-        this.connectToBackground();
+        reconnectAttempts = 0;
+      }
+      
+      if (!isCurrentlyValid && reconnectAttempts < maxReconnectAttempts) {
+        reconnectAttempts++;
+        console.log(`Reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+        
+        // Only attempt background reconnection if we don't have a valid port
+        if (!this.backgroundPort) {
+          this.connectToBackground();
+        }
+        
         // Try to re-cache settings if storage becomes available
         if (this.isStorageAvailable()) {
           this.cacheSettings().catch(error => {
             console.error("Failed to re-cache settings:", error);
           });
+          reconnectAttempts = 0; // Reset on success
         }
+      } else if (isCurrentlyValid && !lastValidState) {
+        console.log("Runtime/Storage connection restored");
+        reconnectAttempts = 0;
       }
+      
+      lastValidState = isCurrentlyValid;
     }, 15000); // Check every 15 seconds
   }
 

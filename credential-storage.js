@@ -173,8 +173,7 @@ export class CredentialStorage {
    * Store Supabase credentials securely
    * @param {Object} credentials - Database credentials
    * @param {string} credentials.supabaseUrl - Supabase project URL
-   * @param {string} credentials.apiKey - Supabase API key (anon or service role)
-   * @param {string} credentials.jwtToken - JWT token for authentication (optional)
+   * @param {string} credentials.apiKey - Supabase service role API key
    * @param {string} credentials.projectRef - Project reference ID
    */
   async storeCredentials(credentials) {
@@ -193,7 +192,6 @@ export class CredentialStorage {
       const encryptedCredentials = {
         supabaseUrl: await this.encryption.encrypt(credentials.supabaseUrl),
         apiKey: await this.encryption.encrypt(credentials.apiKey),
-        jwtToken: credentials.jwtToken ? await this.encryption.encrypt(credentials.jwtToken) : null,
         projectRef: credentials.projectRef ? await this.encryption.encrypt(credentials.projectRef) : null,
         stored_at: Date.now()
       };
@@ -227,7 +225,6 @@ export class CredentialStorage {
       const credentials = {
         supabaseUrl: await this.encryption.decrypt(encryptedCredentials.supabaseUrl),
         apiKey: await this.encryption.decrypt(encryptedCredentials.apiKey),
-        jwtToken: encryptedCredentials.jwtToken ? await this.encryption.decrypt(encryptedCredentials.jwtToken) : null,
         projectRef: encryptedCredentials.projectRef ? await this.encryption.decrypt(encryptedCredentials.projectRef) : null,
         stored_at: encryptedCredentials.stored_at
       };
@@ -259,7 +256,7 @@ export class CredentialStorage {
         method: 'GET',
         headers: {
           'apikey': credentials.apiKey,
-          'Authorization': `Bearer ${credentials.jwtToken || credentials.apiKey}`
+          'Authorization': `Bearer ${credentials.apiKey}`
         }
       });
 
@@ -366,7 +363,6 @@ export class CredentialStorage {
       return {
         supabaseUrl: credentials.supabaseUrl,
         apiKey: this.maskSensitiveValue(credentials.apiKey),
-        jwtToken: credentials.jwtToken ? this.maskSensitiveValue(credentials.jwtToken) : null,
         projectRef: credentials.projectRef ? this.maskSensitiveValue(credentials.projectRef) : null,
         stored_at: credentials.stored_at
       };
@@ -410,7 +406,6 @@ export class CredentialStorage {
           configured: false,
           hasUrl: false,
           hasApiKey: false,
-          hasJwtToken: false,
           storedAt: null
         };
       }
@@ -419,7 +414,6 @@ export class CredentialStorage {
         configured: true,
         hasUrl: !!credentials.supabaseUrl,
         hasApiKey: !!credentials.apiKey,
-        hasJwtToken: !!credentials.jwtToken,
         storedAt: credentials.stored_at ? new Date(credentials.stored_at) : null
       };
     } catch (error) {
@@ -428,7 +422,6 @@ export class CredentialStorage {
         configured: false,
         hasUrl: false,
         hasApiKey: false,
-        hasJwtToken: false,
         storedAt: null
       };
     }

@@ -73,7 +73,7 @@ class OptionsPageManager {
         const elementIds = [
             'theme-toggle', 'theme-icon', 'idDatabase_Size', 'provider_indexeddb',
             'provider_supabase', 'enable_auto_sync', 'supabase-config',
-            'supabase_url', 'supabase_api_key', 'supabase_jwt_token',
+            'supabase_url', 'supabase_api_key',
             'search-icon', 'search-spinner', 'successToast', 'errorToast',
             'successToastMessage', 'errorToastMessage', 'sr-announcements'
         ];
@@ -108,13 +108,11 @@ class OptionsPageManager {
         // Supabase configuration elements
         this.supabaseUrl = this.getElementById('supabase_url');
         this.supabaseApiKey = this.getElementById('supabase_api_key');
-        this.supabaseJwtToken = this.getElementById('supabase_jwt_token');
         
         // Current configuration display elements
         this.currentConfig = this.getElementById('current-config');
         this.currentUrl = this.getElementById('current-url');
         this.currentApiKey = this.getElementById('current-api-key');
-        this.currentJwtToken = this.getElementById('current-jwt-token');
         
         // Search elements
         this.searchIcon = this.getElementById('search-icon');
@@ -771,8 +769,7 @@ class OptionsPageManager {
         try {
             const credentials = {
                 supabaseUrl: this.supabaseUrl.value.trim(),
-                apiKey: this.supabaseApiKey.value.trim(),
-                jwtToken: this.supabaseJwtToken.value.trim() || null
+                apiKey: this.supabaseApiKey.value.trim()
             };
 
             // Validate required fields
@@ -791,7 +788,6 @@ class OptionsPageManager {
                 
                 // Clear sensitive fields for security
                 this.supabaseApiKey.value = '';
-                this.supabaseJwtToken.value = '';
                 
                 // Now try to switch to Supabase
                 try {
@@ -852,7 +848,6 @@ class OptionsPageManager {
                 // Clear form fields
                 this.supabaseUrl.value = '';
                 this.supabaseApiKey.value = '';
-                this.supabaseJwtToken.value = '';
                 
                 this.showSuccess('Supabase configuration cleared');
                 
@@ -891,7 +886,6 @@ class OptionsPageManager {
                 // Display current configuration
                 this.currentUrl.textContent = credentials.supabaseUrl || '-';
                 this.currentApiKey.textContent = credentials.apiKey || '-';
-                this.currentJwtToken.textContent = credentials.jwtToken || 'Not configured';
                 
                 this.currentConfig.classList.remove('d-none');
             } else {

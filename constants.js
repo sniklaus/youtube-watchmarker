@@ -89,8 +89,7 @@ export const STORAGE_KEYS = {
   // Supabase Configuration
   SUPABASE: {
     URL: "supabaseUrl",
-    API_KEY: "apiKey", 
-    JWT_TOKEN: "jwtToken"
+    API_KEY: "apiKey"
   }
 };
 
