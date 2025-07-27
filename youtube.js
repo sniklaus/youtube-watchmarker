@@ -75,8 +75,25 @@ class YouTubeWatchMarker {
    * Establish long-lived connection to background
    */
   connectToBackground() {
-    this.backgroundPort = chrome.runtime.connect({ name: "youtube-watchmarker" });
+    // Check if runtime is valid before connecting
+    if (!chrome.runtime || !chrome.runtime.id) {
+      console.log("Runtime invalid - delaying connection...");
+      setTimeout(() => this.connectToBackground(), 1000);
+      return;
+    }
     
+    try {
+      this.backgroundPort = chrome.runtime.connect({ name: "youtube-watchmarker" });
+    } catch (error) {
+      if (error.message.includes("context invalidated")) {
+        console.log("Context invalidated during connect - retrying...");
+        setTimeout(() => this.connectToBackground(), 1000);
+      } else {
+        console.error("Connection error:", error);
+      }
+      return;
+    }
+      
     this.backgroundPort.onDisconnect.addListener(() => {
       console.log("Disconnected from background - reconnecting...");
       this.backgroundPort = null;
@@ -662,6 +679,12 @@ class YouTubeWatchMarker {
     
     // Use long-lived port if available, fallback to sendMessage
     if (this.backgroundPort) {
+      // Check runtime validity
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.log("Runtime invalid - skipping message");
+        return;
+      }
+      
       try {
         this.backgroundPort.postMessage({
           action: "youtube-lookup",
@@ -669,16 +692,26 @@ class YouTubeWatchMarker {
           title: title,
         });
       } catch (error) {
-        console.error("Port error:", error);
-        // Fallback to sendMessage if port fails
-        chrome.runtime.sendMessage({
-          action: "youtube-lookup",
-          videoId: videoId,
-          title: title,
-        });
+        if (error.message.includes("context invalidated")) {
+          console.log("Context invalidated during postMessage - will reconnect");
+          this.backgroundPort = null; // Trigger reconnection
+        } else {
+          console.error("Port error:", error);
+          // Fallback to sendMessage if port fails
+          chrome.runtime.sendMessage({
+            action: "youtube-lookup",
+            videoId: videoId,
+            title: title,
+          });
+        }
       }
     } else {
       // Fallback if port not connected
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.log("Runtime invalid - skipping fallback message");
+        return;
+      }
+      
       chrome.runtime.sendMessage({
         action: "youtube-lookup",
         videoId: videoId,
@@ -1051,13 +1084,28 @@ class YouTubeWatchMarker {
     };
     
     if (this.backgroundPort) {
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.log("Runtime invalid - skipping rating mark");
+        return;
+      }
+      
       try {
         this.backgroundPort.postMessage(message);
       } catch (error) {
-        console.error("Port error in rating mark:", error);
-        chrome.runtime.sendMessage(message);
+        if (error.message.includes("context invalidated")) {
+          console.log("Context invalidated during rating postMessage");
+          this.backgroundPort = null;
+        } else {
+          console.error("Port error in rating mark:", error);
+          chrome.runtime.sendMessage(message);
+        }
       }
     } else {
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.log("Runtime invalid - skipping fallback rating mark");
+        return;
+      }
+      
       chrome.runtime.sendMessage(message);
     }
   }
@@ -1081,13 +1129,28 @@ class YouTubeWatchMarker {
     };
     
     if (this.backgroundPort) {
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.log("Runtime invalid - skipping progress hook");
+        return;
+      }
+      
       try {
         this.backgroundPort.postMessage(message);
       } catch (error) {
-        console.error("Port error in progress hook:", error);
-        chrome.runtime.sendMessage(message);
+        if (error.message.includes("context invalidated")) {
+          console.log("Context invalidated during progress postMessage");
+          this.backgroundPort = null;
+        } else {
+          console.error("Port error in progress hook:", error);
+          chrome.runtime.sendMessage(message);
+        }
       }
     } else {
+      if (!chrome.runtime || !chrome.runtime.id) {
+        console.log("Runtime invalid - skipping fallback progress hook");
+        return;
+      }
+      
       chrome.runtime.sendMessage(message);
     }
   }
