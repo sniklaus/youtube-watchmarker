@@ -1,7 +1,8 @@
 import {
   createResponseCallback,
   BackgroundUtils,
-  AsyncSeries
+  AsyncSeries,
+  decodeHtmlEntitiesAndFixEncoding
 } from "./utils.js";
 
 export const History = {
@@ -94,6 +95,9 @@ export const History = {
         if (cleanTitle.slice(-10) === " - YouTube") {
           cleanTitle = cleanTitle.slice(0, -10);
         }
+        
+        // Fix UTF-8 double encoding issues in the title
+        cleanTitle = decodeHtmlEntitiesAndFixEncoding(cleanTitle);
 
         // Extract video ID from URL
         let videoId;

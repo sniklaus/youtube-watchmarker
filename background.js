@@ -852,8 +852,8 @@ class ExtensionManager {
     chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       try {
         if (tabId < 0 || !this.isYouTubeUrl(tab.url)) {
-          return;
-        }
+        return;
+      }
 
         const shouldTrackNavigation = await getSyncStorageAsync('idCondition_Brownav') === true;
         
@@ -993,9 +993,9 @@ class ExtensionManager {
   async handleProgressRequest(details) {
     try {
       if (details.url.includes("muted=1")) {
-        return;
-      }
-
+              return;
+            }
+            
       const urlParams = new URLSearchParams(details.url.split('?')[1]);
       const elapsedTimes = urlParams.get('et')?.split(',') || [];
       const videoId = urlParams.get('docid');
@@ -1203,7 +1203,7 @@ class ExtensionManager {
       if (shouldSyncHistory) {
         console.log("Syncing browser history...");
         await this.syncHistory();
-      } else {
+            } else {
         console.log("Browser history sync disabled");
       }
 
@@ -1218,7 +1218,7 @@ class ExtensionManager {
       if (shouldSyncYoutube) {
         console.log("Syncing YouTube history (YouTube History condition enabled)...");
         await this.syncYoutube();
-      } else {
+                } else {
         console.log("YouTube history sync disabled");
       }
       
@@ -1254,9 +1254,9 @@ class ExtensionManager {
       } catch (error) {
         console.error("Error during history sync:", error);
         reject(error);
-      }
-    });
-  }
+                }
+              });
+            }
 
   /**
    * Synchronize YouTube history
@@ -1310,7 +1310,7 @@ class ExtensionManager {
 
       const count = await currentProvider.getVideoCount();
       callback({ success: true, size: count.toString() });
-    } catch (error) {
+          } catch (error) {
       console.error("Error getting database size:", error);
       callback({ success: false, error: error.message });
     }
@@ -1573,7 +1573,7 @@ class ExtensionManager {
         const success = await this.providerFactory.switchToIndexedDB();
         if (success) {
           callback({ success: true, message: `Successfully switched to ${provider}` });
-        } else {
+            } else {
           callback({ success: false, error: `Failed to switch to ${provider}` });
         }
       } else if (provider === 'supabase') {

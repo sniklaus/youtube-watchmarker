@@ -1,7 +1,8 @@
 import {
   createResponseCallback,
   BackgroundUtils,
-  AsyncSeries
+  AsyncSeries,
+  decodeHtmlEntitiesAndFixEncoding
 } from "./utils.js";
 import { TIMEOUTS } from "./constants.js";
 
@@ -56,49 +57,8 @@ export const Youtube = {
       let objVideos = [];
       
       try {
-        // Helper function to decode HTML entities
-        const decodeHtmlEntities = (text) => {
-          const decodeMap = {
-            "\\u0022": '"',
-            "\\u0026": '&',
-            "\\u003C": '<',
-            "\\u003D": '=',
-            "\\u003E": '>',
-            "\\u0027": "'",
-            "\\u003A": ':',
-            "\\u002F": '/',
-            "\\u003B": ';',
-            "\\u003F": '?',
-            "\\u0040": '@',
-            "\\u005B": '[',
-            "\\u005D": ']',
-            "\\u007B": '{',
-            "\\u007D": '}',
-            "\\u005C": '\\',
-            "\\u007C": '|',
-            "\\u0060": '`',
-            "\\u007E": '~',
-            "\\u0021": '!',
-            "\\u0023": '#',
-            "\\u0024": '$',
-            "\\u0025": '%',
-            "\\u005E": '^',
-            "\\u002A": '*',
-            "\\u0028": '(',
-            "\\u0029": ')',
-            "\\u002B": '+',
-            "\\u002D": '-',
-            "\\u002E": '.',
-            "\\u002C": ',',
-            "\\u0020": ' '
-          };
-          
-          let decoded = text;
-          for (const [encoded, decodedChar] of Object.entries(decodeMap)) {
-            decoded = decoded.replaceAll(encoded, decodedChar);
-          }
-          return decoded;
-        };
+        // Helper function to decode HTML entities (replaced with enhanced version from utils.js)
+        const decodeHtmlEntities = decodeHtmlEntitiesAndFixEncoding;
         
         // Helper function to safely extract nested property
         const getNestedProperty = (obj, path) => {
@@ -327,25 +287,8 @@ export const Youtube = {
       let objVideos = [];
       
       try {
-        // Helper function to decode HTML entities
-        const decodeHtmlEntities = (text) => {
-          const decodeMap = {
-            "\\u0022": '"',
-            "\\u0026": '&',
-            "\\u003C": '<',
-            "\\u003D": '=',
-            "\\u003E": '>',
-            "\\u0027": "'",
-            "\\u003A": ':',
-            "\\u002F": '/',
-          };
-          
-          let decoded = text;
-          for (const [encoded, decodedChar] of Object.entries(decodeMap)) {
-            decoded = decoded.replaceAll(encoded, decodedChar);
-          }
-          return decoded;
-        };
+        // Helper function to decode HTML entities (replaced with enhanced version from utils.js)
+        const decodeHtmlEntities = decodeHtmlEntitiesAndFixEncoding;
 
         // Extract liked videos with detailed regex (with date)
         const objVideoWithDate = new RegExp(
