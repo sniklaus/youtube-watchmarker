@@ -8,6 +8,7 @@ import {
   getSyncStorageAsync,
   setSyncStorageAsync,
   setDefaultInSyncStorageIfNull,
+  isValidVideoTitle
 } from "./utils.js";
 
 import { Database } from "./bg-database.js";
@@ -905,6 +906,38 @@ class ExtensionManager {
     let title = changeInfo.title;
     if (title.endsWith(" - YouTube")) {
       title = title.slice(0, -10);
+    }
+
+    // Don't save videos with generic or invalid titles
+    if (!isValidVideoTitle(title)) {
+      console.debug("Skipping video with invalid/generic title:", title);
+      
+      // Schedule a retry to get a better title after the page loads
+      setTimeout(async () => {
+        try {
+          const updatedTab = await chrome.tabs.get(tabId);
+          if (updatedTab && this.isYouTubeVideoUrl(updatedTab.url) && updatedTab.title) {
+            let retryTitle = updatedTab.title;
+            if (retryTitle.endsWith(" - YouTube")) {
+              retryTitle = retryTitle.slice(0, -10);
+            }
+            
+            // Only proceed if we now have a valid title
+            if (isValidVideoTitle(retryTitle)) {
+              console.debug("Retry successful, got valid title:", retryTitle);
+              const videoId = updatedTab.url.split("&")[0].slice(-11);
+              await this.markVideoAsWatched(videoId, retryTitle);
+              await this.notifyYouTubeTabs(videoId, retryTitle);
+            } else {
+              console.debug("Retry still has invalid title:", retryTitle);
+            }
+          }
+        } catch (error) {
+          console.debug("Tab retry failed (tab may have been closed):", error.message);
+        }
+      }, 2000); // Wait 2 seconds for the page to load properly
+      
+      return;
     }
 
     const videoId = tab.url.split("&")[0].slice(-11);

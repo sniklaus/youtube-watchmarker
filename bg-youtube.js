@@ -2,7 +2,8 @@ import {
   createResponseCallback,
   BackgroundUtils,
   AsyncSeries,
-  decodeHtmlEntitiesAndFixEncoding
+  decodeHtmlEntitiesAndFixEncoding,
+  isValidVideoTitle
 } from "./utils.js";
 import { TIMEOUTS } from "./constants.js";
 
@@ -497,21 +498,37 @@ export const Youtube = {
       
       let videoToReturn;
       if (existingVideo) {
-        // Return existing video data
+        // Prefer valid titles when updating existing videos
+        let titleToUse = existingVideo.strTitle || "";
+        if (objRequest.strTitle && isValidVideoTitle(objRequest.strTitle)) {
+          titleToUse = objRequest.strTitle;
+        } else if (!isValidVideoTitle(titleToUse) && objRequest.strTitle) {
+          // If existing title is invalid but new title exists, use new title
+          titleToUse = objRequest.strTitle;
+        }
+        
+        // Return existing video data with potentially updated title
         console.debug("Returning existing video data for:", objRequest.strIdent);
         videoToReturn = {
           strIdent: existingVideo.strIdent,
           intTimestamp: existingVideo.intTimestamp,
-          strTitle: existingVideo.strTitle || "",
+          strTitle: titleToUse,
           intCount: existingVideo.intCount || 1,
         };
+        
+        // Update the database if title changed
+        if (titleToUse !== existingVideo.strTitle) {
+          await currentProvider.putVideo(videoToReturn);
+        }
       } else {
-        // Create new video entry
+        // Create new video entry only with valid titles
+        const titleToUse = objRequest.strTitle && isValidVideoTitle(objRequest.strTitle) ? objRequest.strTitle : "";
+        
         console.debug("Creating new video entry for:", objRequest.strIdent);
         const newVideo = {
           strIdent: objRequest.strIdent,
           intTimestamp: objRequest.intTimestamp || Date.now(),
-          strTitle: objRequest.strTitle || "",
+          strTitle: titleToUse,
           intCount: objRequest.intCount || 1,
         };
         
@@ -558,18 +575,29 @@ export const Youtube = {
         // Only increment count if enough time has passed since last view
         const shouldIncrementCount = timeSinceLastView >= TIMEOUTS.VIEW_COUNT_COOLDOWN;
         
+        // Prefer valid titles over invalid ones
+        let titleToUse = existingVideo.strTitle || "";
+        if (objRequest.strTitle && isValidVideoTitle(objRequest.strTitle)) {
+          titleToUse = objRequest.strTitle;
+        } else if (!isValidVideoTitle(titleToUse) && objRequest.strTitle) {
+          // If existing title is invalid but new title exists, use new title even if not ideal
+          titleToUse = objRequest.strTitle;
+        }
+        
         videoToStore = {
           strIdent: existingVideo.strIdent,
           intTimestamp: objRequest.intTimestamp || currentTime,
-          strTitle: objRequest.strTitle || existingVideo.strTitle || "",
+          strTitle: titleToUse,
           intCount: shouldIncrementCount ? (existingVideo.intCount + 1 || 1) : (existingVideo.intCount || 1),
         };
       } else {
-        // Create new video entry
+        // Create new video entry only if title is valid or no title is provided
+        const titleToUse = objRequest.strTitle && isValidVideoTitle(objRequest.strTitle) ? objRequest.strTitle : "";
+        
         videoToStore = {
           strIdent: objRequest.strIdent,
           intTimestamp: objRequest.intTimestamp || currentTime,
-          strTitle: objRequest.strTitle || "",
+          strTitle: titleToUse,
           intCount: objRequest.intCount || 1,
         };
       }

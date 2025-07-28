@@ -567,3 +567,62 @@ export const decodeHtmlEntitiesAndFixEncoding = (text) => {
   return decoded;
 };
 
+/**
+ * Validates if a video title is meaningful and not a generic placeholder
+ * @param {string} title - Video title to validate
+ * @returns {boolean} True if title is valid and meaningful
+ */
+export const isValidVideoTitle = (title) => {
+  if (!title || typeof title !== 'string') {
+    return false;
+  }
+  
+  const trimmedTitle = title.trim();
+  
+  // Check if title is empty or too short
+  if (trimmedTitle.length < 2) {
+    return false;
+  }
+  
+  // List of generic/invalid titles to avoid
+  const invalidTitles = [
+    'YouTube',
+    'Youtube',
+    'YOUTUBE',
+    'Video',
+    'Untitled',
+    'Loading...',
+    'Loading',
+    '...',
+    'Private video',
+    'Deleted video',
+    '[Deleted video]',
+    '[Private video]',
+    'Video unavailable'
+  ];
+  
+  // Check for exact matches with invalid titles
+  if (invalidTitles.includes(trimmedTitle)) {
+    return false;
+  }
+  
+  // Check for generic patterns
+  const genericPatterns = [
+    /^Video \d+$/i,           // "Video 123"
+    /^Untitled( \d+)?$/i,     // "Untitled" or "Untitled 1"
+    /^Loading\.{3,}$/i,       // "Loading..."
+    /^\[.*\]$/,               // Anything in brackets like "[Private video]"
+    /^\.{3,}$/,               // Just dots
+    /^-+$/,                   // Just dashes
+    /^_+$/,                   // Just underscores
+  ];
+  
+  // Check if title matches any generic pattern
+  if (genericPatterns.some(pattern => pattern.test(trimmedTitle))) {
+    return false;
+  }
+  
+  // Title seems valid
+  return true;
+};
+
