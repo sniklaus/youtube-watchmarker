@@ -576,6 +576,21 @@ class ExtensionManager {
               res({ success: false, error: error.message });
             }
           },
+          "supabase-check-table": async (req, res) => {
+            try {
+              const currentProvider = this.providerFactory.getCurrentProvider();
+              if (!currentProvider || !currentProvider.checkTableExists) {
+                res({ success: false, error: 'Supabase provider not available' });
+                return;
+              }
+              
+              const exists = await currentProvider.checkTableExists();
+              res({ success: true, tableExists: exists });
+            } catch (error) {
+              console.error("Error checking Supabase table:", error);
+              res({ success: false, error: error.message });
+            }
+          },
           
           // Search actions
           "search-videos": (req, res) => {

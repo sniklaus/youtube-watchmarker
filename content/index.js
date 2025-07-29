@@ -612,22 +612,21 @@ class OptionsPageManager {
                     // Credentials exist, switch to Supabase immediately
                     try {
                         await this.actuallySwitchProvider('supabase');
-                        this.showSuccess('Successfully switched to Supabase database');
-                        // Hide setup instructions on successful switch
-                        this.hideSetupInstructions();
+                        
+                        // Check if table exists after successful switch
+                        const tableExists = await this.checkTableExists();
+                        
+                        if (tableExists) {
+                            this.showSuccess('Successfully switched to Supabase database');
+                            // Hide setup instructions on successful switch with table
+                            this.hideSetupInstructions();
+                        } else {
+                            this.showSetupInstructions();
+                            this.showSuccess('Successfully switched to Supabase! However, table setup is required. Please follow the instructions below.');
+                        }
                     } catch (switchError) {
                         console.error('[OptionsPageManager] Failed to switch to Supabase:', switchError);
-                        const errorMessage = switchError.message;
-                        
-                        // Check if error indicates table doesn't exist
-                        if (this.isTableMissingError(errorMessage)) {
-                            this.showSetupInstructions();
-                            this.showError('Database table setup required. Please follow the instructions below to create the table.');
-                            // Don't revert the UI since we want to keep the configuration panel open
-                            return;
-                        } else {
-                            this.showError('Failed to switch to Supabase: ' + errorMessage);
-                        }
+                        this.showError('Failed to switch to Supabase: ' + switchError.message);
                         
                         // Revert radio button selection on error
                         this.providerIndexedDB.checked = true;
@@ -813,19 +812,21 @@ class OptionsPageManager {
                 // Now try to switch to Supabase
                 try {
                     await this.actuallySwitchProvider('supabase');
-                    // Hide setup instructions if switch is successful
-                    this.hideSetupInstructions();
+                    
+                    // Check if table exists after successful switch
+                    const tableExists = await this.checkTableExists();
+                    
+                    if (tableExists) {
+                        // Hide setup instructions if switch and table are both OK
+                        this.hideSetupInstructions();
+                        this.showSuccess('Successfully switched to Supabase database - ready to use!');
+                    } else {
+                        this.showSetupInstructions();
+                        this.showSuccess('Successfully switched to Supabase! However, table setup is required. Please follow the instructions below.');
+                    }
                 } catch (switchError) {
                     console.error('Failed to switch to Supabase after configuration:', switchError);
-                    const errorMessage = switchError.message;
-                    
-                    // Check if error indicates table doesn't exist
-                    if (this.isTableMissingError(errorMessage)) {
-                        this.showSetupInstructions();
-                        this.showError('Configuration saved! However, the database table setup is required. Please follow the instructions below.');
-                    } else {
-                        this.showError('Configuration saved but failed to switch to Supabase: ' + errorMessage);
-                    }
+                    this.showError('Configuration saved but failed to switch to Supabase: ' + switchError.message);
                 }
             } else {
                 throw new Error(response?.error || 'Failed to save configuration');
@@ -850,31 +851,23 @@ class OptionsPageManager {
             });
             
             if (response && response.success) {
-                this.showSuccess(response.message || 'Connection successful');
-                // Hide setup instructions if connection is successful
-                this.supabaseSetupInstructions.classList.add('d-none');
-            } else {
-                const errorMessage = response?.error || 'Connection failed';
+                // Check if table exists after successful connection
+                const tableExists = await this.checkTableExists();
                 
-                // Check if error indicates table doesn't exist
-                if (this.isTableMissingError(errorMessage)) {
-                    this.showSetupInstructions();
-                    this.showError('Table setup required. Please follow the instructions below to create the database table.');
+                if (tableExists) {
+                    this.showSuccess(response.message || 'Connection successful - table is ready!');
+                    // Hide setup instructions if connection and table are both OK
+                    this.hideSetupInstructions();
                 } else {
-                    this.showError('Connection test failed: ' + errorMessage);
+                    this.showSetupInstructions();
+                    this.showSuccess('Connection successful, but table setup is required. Please follow the instructions below.');
                 }
+            } else {
+                this.showError('Connection test failed: ' + (response?.error || 'Connection failed'));
             }
         } catch (error) {
             console.error('Error testing connection:', error);
-            const errorMessage = error.message;
-            
-            // Check if error indicates table doesn't exist
-            if (this.isTableMissingError(errorMessage)) {
-                this.showSetupInstructions();
-                this.showError('Table setup required. Please follow the instructions below to create the database table.');
-            } else {
-                this.showError('Connection test failed: ' + errorMessage);
-            }
+            this.showError('Connection test failed: ' + error.message);
         } finally {
             this.hideButtonLoading(testButton);
         }
@@ -950,7 +943,24 @@ class OptionsPageManager {
     }
 
     /**
-     * Check if an error message indicates the table doesn't exist
+     * Check if the Supabase table exists
+     * @returns {Promise<boolean>} True if table exists
+     */
+    async checkTableExists() {
+        try {
+            const response = await this.sendMessageWithRetry({
+                action: 'supabase-check-table'
+            });
+            
+            return response && response.success && response.tableExists;
+        } catch (error) {
+            console.error('Error checking table existence:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Check if an error message indicates the table doesn't exist (deprecated - use checkTableExists instead)
      * @param {string} errorMessage - Error message to check
      * @returns {boolean} True if error indicates missing table
      */

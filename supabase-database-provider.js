@@ -130,6 +130,25 @@ export class SupabaseDatabaseProvider {
   }
 
   /**
+   * Check if the database table exists
+   * @returns {Promise<boolean>} True if table exists and is accessible
+   */
+  async checkTableExists() {
+    try {
+      if (!this.baseUrl || !this.apiKey) {
+        return false;
+      }
+      
+      // Check if table exists by trying to select from it
+      const response = await this.makeRequest('GET', `/${this.tableName}?select=count&limit=1`);
+      return response.ok;
+    } catch (error) {
+      console.debug('Table existence check failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Ensure database schema exists
    * @private
    */

@@ -63,7 +63,8 @@ export class DatabaseManager {
             'supabase-test': this.testSupabase.bind(this),
             'supabase-clear': this.clearSupabase.bind(this),
             'supabase-get-credentials': this.getSupabaseCredentials.bind(this),
-            'supabase-get-status': this.getSupabaseStatus.bind(this)
+            'supabase-get-status': this.getSupabaseStatus.bind(this),
+            'supabase-check-table': this.checkSupabaseTable.bind(this)
           }),
         },
         createResponseCallback(() => {
@@ -393,6 +394,21 @@ export class DatabaseManager {
       }
     } catch (error) {
       console.error("Failed to test Supabase:", error);
+      response({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Check Supabase table existence
+   * @param {Object} request - Request object
+   * @param {Function} response - Response callback
+   */
+  async checkSupabaseTable(request, response) {
+    try {
+      const exists = await supabaseDatabaseProvider.checkTableExists();
+      response({ success: true, tableExists: exists });
+    } catch (error) {
+      console.error("Failed to check Supabase table:", error);
       response({ success: false, error: error.message });
     }
   }

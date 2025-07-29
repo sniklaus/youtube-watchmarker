@@ -323,30 +323,30 @@
                 
                 <!-- Supabase Table Setup Instructions (hidden by default) -->
                 <div id="supabase-setup-instructions" class="mt-4 d-none">
-                  <div class="alert alert-warning">
-                    <h6 class="alert-heading">
-                      <i class="fas fa-exclamation-triangle me-2"></i>
+                  <div class="alert alert-info border-primary">
+                    <h6 class="alert-heading text-primary">
+                      <i class="fas fa-info-circle me-2"></i>
                       Database Table Setup Required
                     </h6>
-                    <p class="mb-3">
+                    <p class="mb-3 text-dark">
                       Your Supabase database doesn't have the required table yet. Please follow these simple steps to create it:
                     </p>
                     
                     <div class="mb-3">
-                      <h6>Supabase SQL Editor</h6>
-                      <ol class="mb-2">
-                        <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">Supabase Dashboard</a></li>
+                      <h6 class="text-primary">Supabase SQL Editor</h6>
+                      <ol class="mb-2 text-dark">
+                        <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-primary">Supabase Dashboard</a></li>
                         <li>Select your project</li>
                         <li>Open the <strong>SQL Editor</strong> from the sidebar</li>
                         <li>Copy and paste the SQL code below</li>
                         <li>Click <strong>Run</strong> to execute the query</li>
                       </ol>
                     </div>
-                                        
+                                         
                     <div class="mb-3">
-                      <h6>SQL Code to Execute:</h6>
-                      <div class="bg-dark text-light p-3 rounded" style="font-family: 'Courier New', monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto;">
-                        <pre class="mb-0" id="supabase-sql-code">-- YouTube Watchmarker ReloadedTable Schema
+                      <h6 class="text-primary">SQL Code to Execute:</h6>
+                      <div class="bg-dark text-light p-3 rounded border" style="font-family: 'Courier New', monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto;">
+                        <pre class="mb-0" id="supabase-sql-code">-- YouTube Watchmarker Table Schema
 -- Run this SQL in your Supabase SQL Editor
 
 -- Create main table for storing YouTube watch history
@@ -393,13 +393,13 @@ WHERE schemaname = 'public'
 AND tablename = 'youtube_watch_history';</pre>
                       </div>
                       <div class="mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-sql-button">
+                        <button type="button" class="btn btn-sm btn-primary" id="copy-sql-button">
                           <i class="fas fa-copy me-1"></i>Copy SQL Code
                         </button>
                       </div>
                     </div>
                     
-                    <p class="mb-0">
+                    <p class="mb-0 text-dark">
                       <strong>⚠️ Important:</strong> After running the SQL, click the "Test Connection" button above to verify the setup.
                     </p>
                   </div>
