@@ -139,50 +139,39 @@ export class SupabaseDatabaseProvider {
       const response = await this.makeRequest('GET', `/${this.tableName}?select=count&limit=1`);
       
       if (response.ok) {
-        // Check if RLS is properly configured
-        try {
-          const rlsStatus = await this.checkRLSStatus();
-          if (!(rlsStatus.rlsEnabled && rlsStatus.policies.length > 0)) {
-            console.warn('⚠️  Database security could not be fully verified');
-            console.warn('Please ensure RLS is enabled and policies are configured');
-          }
-        } catch (rlsError) {
-          console.warn('Could not verify RLS status:', rlsError.message);
-        }
-        
+        console.log('✅ Database table exists and is accessible');
         return;
       }
 
       // If table doesn't exist, we need to create it
-      // For browser extensions, we cannot directly execute DDL via PostgREST
-      // Users must create the schema manually or via Supabase CLI/Dashboard
+      // PostgREST cannot execute DDL statements - users must create the schema manually
       console.warn('❌ Table does not exist in your Supabase database.');
       console.warn('');
-      console.warn('🔧 SETUP REQUIRED: Create the database schema');
+      console.warn('🔧 SETUP REQUIRED: Create the database table');
       console.warn('');
-      console.warn('Option 1 (Recommended): Use Supabase CLI');
-      console.warn('1. Install Supabase CLI: https://supabase.com/docs/guides/cli');
-      console.warn('2. Run: supabase migration new create_youtube_watchmarker_schema');
-      console.warn('3. Copy the SQL below into the migration file');
-      console.warn('4. Run: supabase db push');
-      console.warn('');
-      console.warn('Option 2: Use Supabase Dashboard SQL Editor');
+      console.warn('Option 1 (Recommended): Use Supabase SQL Editor');
       console.warn('1. Go to your Supabase project dashboard');
       console.warn('2. Open SQL Editor');
       console.warn('3. Copy and run the SQL below');
       console.warn('');
+      console.warn('Option 2: Use Supabase CLI');
+      console.warn('1. Install Supabase CLI: https://supabase.com/docs/guides/cli');
+      console.warn('2. Run: supabase migration new create_youtube_watchmarker_table');
+      console.warn('3. Copy the SQL below into the migration file');
+      console.warn('4. Run: supabase db push');
+      console.warn('');
       console.warn('📋 COPY THIS SQL:');
       console.warn('================================================================================');
       console.warn(`
--- YouTube Watchmarker Schema with Row Level Security
+-- YouTube Watchmarker Table Schema
 -- Run this SQL in your Supabase SQL Editor or via CLI migration
 
--- Create main table with proper structure
+-- Create main table for storing YouTube watch history
 CREATE TABLE IF NOT EXISTS ${this.tableName} (
   str_ident VARCHAR(255) PRIMARY KEY,
   int_timestamp BIGINT NOT NULL,
   str_title TEXT,
-  int_count INTEGER DEFAULT 1,
+  int_count INTEGER DEFAULT 1 NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -194,189 +183,49 @@ ON ${this.tableName} (int_timestamp);
 CREATE INDEX IF NOT EXISTS idx_${this.tableName}_created_at 
 ON ${this.tableName} (created_at);
 
-CREATE INDEX IF NOT EXISTS idx_${this.tableName}_title 
+-- Add full-text search index for video titles
+CREATE INDEX IF NOT EXISTS idx_${this.tableName}_title_search 
 ON ${this.tableName} USING gin(to_tsvector('english', str_title));
 
 -- Add data validation constraints
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'check_positive_count' 
-        AND conrelid = '${this.tableName}'::regclass
-    ) THEN
-        ALTER TABLE ${this.tableName} 
-        ADD CONSTRAINT check_positive_count CHECK (int_count > 0);
-    END IF;
-    
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'check_valid_timestamp' 
-        AND conrelid = '${this.tableName}'::regclass
-    ) THEN
-        ALTER TABLE ${this.tableName} 
-        ADD CONSTRAINT check_valid_timestamp CHECK (int_timestamp > 0);
-    END IF;
-    
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'check_title_length' 
-        AND conrelid = '${this.tableName}'::regclass
-    ) THEN
-        ALTER TABLE ${this.tableName} 
-        ADD CONSTRAINT check_title_length CHECK (char_length(str_title) <= 1000);
-    END IF;
-END $$;
+ALTER TABLE ${this.tableName} 
+ADD CONSTRAINT IF NOT EXISTS check_positive_count CHECK (int_count > 0);
 
--- 🔒 ENABLE ROW LEVEL SECURITY (CRITICAL FOR SECURITY)
-ALTER TABLE ${this.tableName} ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ${this.tableName} 
+ADD CONSTRAINT IF NOT EXISTS check_valid_timestamp CHECK (int_timestamp > 0);
 
--- Create RLS policies for authenticated access
--- These policies ensure only authenticated users can access the data
-CREATE POLICY "Allow authenticated users to view watch history" 
-ON ${this.tableName} FOR SELECT 
-TO authenticated 
-USING (true);
+ALTER TABLE ${this.tableName} 
+ADD CONSTRAINT IF NOT EXISTS check_title_length CHECK (char_length(str_title) <= 1000);
 
-CREATE POLICY "Allow authenticated users to insert watch history" 
-ON ${this.tableName} FOR INSERT 
-TO authenticated 
-WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated users to update watch history" 
-ON ${this.tableName} FOR UPDATE 
-TO authenticated 
-USING (true) 
-WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated users to delete watch history" 
-ON ${this.tableName} FOR DELETE 
-TO authenticated 
-USING (true);
-
--- Create audit table for tracking changes (recommended for security)
-CREATE TABLE IF NOT EXISTS ${this.tableName}_audit (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  table_name TEXT NOT NULL DEFAULT '${this.tableName}',
-  operation TEXT NOT NULL,
-  old_data JSONB,
-  new_data JSONB,
-  user_id UUID,
-  user_email TEXT,
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  ip_address INET,
-  user_agent TEXT
-);
-
--- Enable RLS on audit table
-ALTER TABLE ${this.tableName}_audit ENABLE ROW LEVEL SECURITY;
-
--- Audit table policies
-CREATE POLICY "Users can view audit logs" 
-ON ${this.tableName}_audit FOR SELECT 
-TO authenticated 
-USING (true);
-
-CREATE POLICY "System can insert audit logs" 
-ON ${this.tableName}_audit FOR INSERT 
-TO authenticated 
-WITH CHECK (true);
-
--- Create audit trigger function
-CREATE OR REPLACE FUNCTION audit_${this.tableName}()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    INSERT INTO ${this.tableName}_audit (
-      operation, old_data, user_id, user_email
-    ) VALUES (
-      TG_OP,
-      row_to_json(OLD),
-      auth.uid(),
-      auth.email()
-    );
-    RETURN OLD;
-  ELSIF TG_OP = 'UPDATE' THEN
-    INSERT INTO ${this.tableName}_audit (
-      operation, old_data, new_data, user_id, user_email
-    ) VALUES (
-      TG_OP,
-      row_to_json(OLD),
-      row_to_json(NEW),
-      auth.uid(),
-      auth.email()
-    );
-    RETURN NEW;
-  ELSIF TG_OP = 'INSERT' THEN
-    INSERT INTO ${this.tableName}_audit (
-      operation, new_data, user_id, user_email
-    ) VALUES (
-      TG_OP,
-      row_to_json(NEW),
-      auth.uid(),
-      auth.email()
-    );
-    RETURN NEW;
-  END IF;
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
--- Create audit trigger
-DROP TRIGGER IF EXISTS ${this.tableName}_audit_trigger ON ${this.tableName};
-CREATE TRIGGER ${this.tableName}_audit_trigger
-  AFTER INSERT OR UPDATE OR DELETE ON ${this.tableName}
-  FOR EACH ROW EXECUTE FUNCTION audit_${this.tableName}();
-
--- Create utility functions
-CREATE OR REPLACE FUNCTION get_user_watch_count()
-RETURNS INTEGER AS $$
-BEGIN
-  RETURN (SELECT COUNT(*) FROM ${this.tableName});
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
-CREATE OR REPLACE FUNCTION cleanup_old_watch_history(days_old INTEGER DEFAULT 365)
-RETURNS INTEGER AS $$
-DECLARE
-  deleted_count INTEGER;
-BEGIN
-  DELETE FROM ${this.tableName} 
-  WHERE created_at < NOW() - INTERVAL '1 day' * days_old;
-  
-  GET DIAGNOSTICS deleted_count = ROW_COUNT;
-  RETURN deleted_count;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
--- Verify setup
+-- Verify table creation
 SELECT 
-  t.tablename as table_name,
-  t.rowsecurity as rls_enabled,
-  COUNT(p.policyname) as policy_count
-FROM pg_tables t
-LEFT JOIN pg_policies p ON t.tablename = p.tablename 
-WHERE t.schemaname = 'public' 
-AND t.tablename = '${this.tableName}'
-GROUP BY t.tablename, t.rowsecurity;
+  schemaname,
+  tablename,
+  tableowner,
+  hasindexes,
+  hasrules,
+  hastriggers
+FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename = '${this.tableName}';
       `);
       console.warn('================================================================================');
       console.warn('');
-      console.warn('🛡️  SECURITY FEATURES INCLUDED:');
-      console.warn('✅ Row Level Security (RLS) enabled');
-      console.warn('✅ Authenticated user policies');
+      console.warn('📊 TABLE FEATURES:');
+      console.warn('✅ Primary key on video ID');
+      console.warn('✅ Timestamp indexing for performance');
+      console.warn('✅ Full-text search on video titles');
       console.warn('✅ Data validation constraints');
-      console.warn('✅ Performance indexes');
-      console.warn('✅ Audit logging system');
-      console.warn('✅ Utility functions');
-      console.warn('');
-      console.warn('📚 For advanced security options, see:');
-      console.warn('- supabase-rls-setup.sql (complete setup with all options)');
-      console.warn('- SUPABASE_SECURITY_GUIDE.md (comprehensive security guide)');
+      console.warn('✅ Automatic timestamps');
       console.warn('');
       console.warn('⚠️  IMPORTANT: After running the SQL, refresh this page to verify the setup.');
       
+      throw new Error('Database table does not exist. Please create it using the SQL above.');
+      
     } catch (error) {
+      if (error.message.includes('Database table does not exist')) {
+        throw error;
+      }
       console.error('Failed to ensure schema:', error);
       throw error;
     }
@@ -459,7 +308,7 @@ GROUP BY t.tablename, t.rowsecurity;
           if (response.status === 401) {
             console.error('Authentication failed - check API key');
           } else if (response.status === 403) {
-            console.error('Access forbidden - check permissions and RLS policies');
+            console.error('Access forbidden - check API key and database permissions');
           } else if (response.status === 429) {
             console.error('Rate limit exceeded - too many requests');
           }
@@ -893,108 +742,6 @@ GROUP BY t.tablename, t.rowsecurity;
     } catch (error) {
       console.error('Failed to get statistics:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Check if RLS policies are properly configured
-   * @returns {Promise<Object>} RLS status and recommendations
-   */
-  async checkRLSStatus() {
-    try {
-      if (!this.baseUrl || !this.apiKey) {
-        throw new Error('Database not connected');
-      }
-
-      const checks = {
-        rlsEnabled: false,
-        policies: [],
-        recommendations: [],
-        securityScore: 0
-      };
-
-      // Note: PostgreSQL system tables (pg_tables, pg_policies) are not accessible 
-      // through PostgREST API for security reasons. We'll skip the detailed RLS check
-      // and assume basic security is in place if the table is accessible.
-      
-      // Since we can't directly check RLS status through PostgREST, we'll make
-      // a simple test query to see if the table is accessible
-      try {
-        const testResponse = await this.makeRequest('GET', `/${this.tableName}?select=count&limit=1`);
-        if (testResponse.ok) {
-          // If we can access the table, assume RLS is properly configured
-          // (Supabase enables RLS by default on user tables)
-          checks.rlsEnabled = true;
-          checks.securityScore += 40;
-          
-          // We can't check specific policies, but assume they exist if table is accessible
-          checks.policies = [{ 
-            policyname: 'default_policy', 
-            cmd: 'ALL',
-            roles: ['authenticated']
-          }];
-          checks.securityScore += 30;
-        }
-      } catch (error) {
-        console.warn('Could not verify table access:', error.message);
-        // If we can't access the table, it might be due to RLS blocking access
-        // which is actually good from a security perspective
-        checks.rlsEnabled = true;
-        checks.securityScore += 20;
-      }
-
-      // Generate security recommendations based on simplified checks
-      if (!checks.rlsEnabled) {
-        checks.recommendations.push({
-          severity: 'HIGH',
-          message: 'Could not verify Row Level Security status.',
-          action: 'Ensure RLS is enabled: ALTER TABLE youtube_watch_history ENABLE ROW LEVEL SECURITY;'
-        });
-      }
-
-      if (checks.policies.length === 0) {
-        checks.recommendations.push({
-          severity: 'MEDIUM',
-          message: 'Could not verify RLS policies.',
-          action: 'Ensure proper policies are configured for data access'
-        });
-      } else {
-        // Assume authenticated policies exist if we have policies
-        checks.securityScore += 20;
-      }
-
-      // Add general security recommendations
-      checks.recommendations.push({
-        severity: 'INFO',
-        message: 'Security check completed with limited visibility.',
-        action: 'For detailed security audit, check your Supabase dashboard'
-      });
-
-      // Calculate final security score
-      if (checks.securityScore >= 90) {
-        checks.securityLevel = 'EXCELLENT';
-      } else if (checks.securityScore >= 70) {
-        checks.securityLevel = 'GOOD';
-      } else if (checks.securityScore >= 50) {
-        checks.securityLevel = 'FAIR';
-      } else {
-        checks.securityLevel = 'POOR';
-      }
-
-      return checks;
-    } catch (error) {
-      console.error('Failed to check RLS status:', error);
-      return {
-        rlsEnabled: false,
-        policies: [],
-        recommendations: [{
-          severity: 'HIGH',
-          message: 'Unable to check RLS status: ' + error.message,
-          action: 'Check your database connection and permissions'
-        }],
-        securityScore: 0,
-        securityLevel: 'UNKNOWN'
-      };
     }
   }
 

@@ -95,8 +95,8 @@ Currently, only manual installation of the unpacked source code is supported. Th
 ### Supabase Cloud Database
 - **Optional remote storage**: PostgreSQL database in the cloud
 - **Cross-device sync**: Access your data from multiple devices
-- **Manual setup required**: Users must configure Supabase credentials
-- **Row Level Security**: Secure data isolation per user
+- **Simple setup**: Users configure Supabase credentials and create a table
+- **Direct access**: Direct table access via PostgREST API
 
 ## Data Management
 
@@ -127,7 +127,7 @@ Currently, only manual installation of the unpacked source code is supported. Th
 The extension stores data locally in IndexedDB by default. For additional backup, you can export your data as JSON or optionally configure Supabase for cloud storage.
 
 **How do I set up Supabase sync?**  
-Go to the extension options, configure your Supabase URL and API key, then switch to the Supabase provider. You'll need to create the database schema manually using the provided SQL.
+Go to the extension options, configure your Supabase URL and API key, then switch to the Supabase provider. The extension will provide the SQL code to create the required table in your Supabase database - simply copy and run it in the SQL Editor.
 
 **What's the difference between browser history and YouTube history sync?**  
 Browser history sync extracts YouTube video visits from your browser's history, while YouTube history sync fetches your watch history directly from YouTube's API. Both sources are merged for completeness.

@@ -73,8 +73,8 @@ class OptionsPageManager {
         const elementIds = [
             'theme-toggle', 'theme-icon', 'idDatabase_Size', 'provider_indexeddb',
             'provider_supabase', 'enable_auto_sync', 'supabase-config',
-            'supabase_url', 'supabase_api_key',
-            'search-icon', 'search-spinner', 'successToast', 'errorToast',
+            'supabase_url', 'supabase_api_key', 'supabase-setup-instructions',
+            'copy-sql-button', 'search-icon', 'search-spinner', 'successToast', 'errorToast',
             'successToastMessage', 'errorToastMessage', 'sr-announcements'
         ];
 
@@ -108,6 +108,10 @@ class OptionsPageManager {
         // Supabase configuration elements
         this.supabaseUrl = this.getElementById('supabase_url');
         this.supabaseApiKey = this.getElementById('supabase_api_key');
+        
+        // Supabase setup instructions
+        this.supabaseSetupInstructions = this.getElementById('supabase-setup-instructions');
+        this.copySqlButton = this.getElementById('copy-sql-button');
         
         // Current configuration display elements
         this.currentConfig = this.getElementById('current-config');
@@ -150,6 +154,9 @@ class OptionsPageManager {
             this.getElementById('supabase_save').addEventListener('click', () => this.saveSupabaseConfig());
             this.getElementById('supabase_test').addEventListener('click', () => this.testSupabaseConnection());
             this.getElementById('supabase_clear').addEventListener('click', () => this.clearSupabaseConfig());
+            
+            // Supabase setup instructions
+            this.copySqlButton.addEventListener('click', () => this.copySqlToClipboard());
 
             // Toggle switches for conditions (using new form-switch format)
             this.setupToggleSwitch('idCondition_Brownav');
@@ -606,9 +613,21 @@ class OptionsPageManager {
                     try {
                         await this.actuallySwitchProvider('supabase');
                         this.showSuccess('Successfully switched to Supabase database');
+                        // Hide setup instructions on successful switch
+                        this.hideSetupInstructions();
                     } catch (switchError) {
                         console.error('[OptionsPageManager] Failed to switch to Supabase:', switchError);
-                        this.showError('Failed to switch to Supabase: ' + switchError.message);
+                        const errorMessage = switchError.message;
+                        
+                        // Check if error indicates table doesn't exist
+                        if (this.isTableMissingError(errorMessage)) {
+                            this.showSetupInstructions();
+                            this.showError('Database table setup required. Please follow the instructions below to create the table.');
+                            // Don't revert the UI since we want to keep the configuration panel open
+                            return;
+                        } else {
+                            this.showError('Failed to switch to Supabase: ' + errorMessage);
+                        }
                         
                         // Revert radio button selection on error
                         this.providerIndexedDB.checked = true;
@@ -622,6 +641,8 @@ class OptionsPageManager {
                 }
             } else {
                 this.supabaseConfig.classList.add('d-none');
+                // Hide setup instructions when switching away from Supabase
+                this.hideSetupInstructions();
                 
                 // Switch to IndexedDB immediately since no configuration is needed
                 await this.actuallySwitchProvider('indexeddb');
@@ -792,9 +813,19 @@ class OptionsPageManager {
                 // Now try to switch to Supabase
                 try {
                     await this.actuallySwitchProvider('supabase');
+                    // Hide setup instructions if switch is successful
+                    this.hideSetupInstructions();
                 } catch (switchError) {
                     console.error('Failed to switch to Supabase after configuration:', switchError);
-                    this.showError('Configuration saved but failed to switch to Supabase: ' + switchError.message);
+                    const errorMessage = switchError.message;
+                    
+                    // Check if error indicates table doesn't exist
+                    if (this.isTableMissingError(errorMessage)) {
+                        this.showSetupInstructions();
+                        this.showError('Configuration saved! However, the database table setup is required. Please follow the instructions below.');
+                    } else {
+                        this.showError('Configuration saved but failed to switch to Supabase: ' + errorMessage);
+                    }
                 }
             } else {
                 throw new Error(response?.error || 'Failed to save configuration');
@@ -820,12 +851,30 @@ class OptionsPageManager {
             
             if (response && response.success) {
                 this.showSuccess(response.message || 'Connection successful');
+                // Hide setup instructions if connection is successful
+                this.supabaseSetupInstructions.classList.add('d-none');
             } else {
-                throw new Error(response?.error || 'Connection failed');
+                const errorMessage = response?.error || 'Connection failed';
+                
+                // Check if error indicates table doesn't exist
+                if (this.isTableMissingError(errorMessage)) {
+                    this.showSetupInstructions();
+                    this.showError('Table setup required. Please follow the instructions below to create the database table.');
+                } else {
+                    this.showError('Connection test failed: ' + errorMessage);
+                }
             }
         } catch (error) {
             console.error('Error testing connection:', error);
-            this.showError('Connection test failed: ' + error.message);
+            const errorMessage = error.message;
+            
+            // Check if error indicates table doesn't exist
+            if (this.isTableMissingError(errorMessage)) {
+                this.showSetupInstructions();
+                this.showError('Table setup required. Please follow the instructions below to create the database table.');
+            } else {
+                this.showError('Connection test failed: ' + errorMessage);
+            }
         } finally {
             this.hideButtonLoading(testButton);
         }
@@ -863,6 +912,85 @@ class OptionsPageManager {
             console.error('Error clearing Supabase config:', error);
             this.showError('Failed to clear configuration: ' + error.message);
         }
+    }
+
+    /**
+     * Copy SQL code to clipboard
+     */
+    async copySqlToClipboard() {
+        try {
+            const sqlCode = this.getElementById('supabase-sql-code').textContent;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(sqlCode);
+                this.showSuccess('SQL code copied to clipboard');
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = sqlCode;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                if (document.execCommand('copy')) {
+                    this.showSuccess('SQL code copied to clipboard');
+                } else {
+                    throw new Error('Clipboard not supported');
+                }
+                
+                document.body.removeChild(textArea);
+            }
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            this.showError('Failed to copy to clipboard. Please select and copy the text manually.');
+        }
+    }
+
+    /**
+     * Check if an error message indicates the table doesn't exist
+     * @param {string} errorMessage - Error message to check
+     * @returns {boolean} True if error indicates missing table
+     */
+    isTableMissingError(errorMessage) {
+        const tableNotExistIndicators = [
+            'Database table does not exist',
+            'table does not exist',
+            'relation "youtube_watch_history" does not exist',
+            'HTTP 404',
+            'relation does not exist',
+            'could not find table',
+            'table not found'
+        ];
+        
+        const lowerErrorMessage = errorMessage.toLowerCase();
+        return tableNotExistIndicators.some(indicator => 
+            lowerErrorMessage.includes(indicator.toLowerCase())
+        );
+    }
+
+    /**
+     * Show Supabase setup instructions
+     */
+    showSetupInstructions() {
+        this.supabaseSetupInstructions.classList.remove('d-none');
+        
+        // Scroll to the setup instructions for better visibility
+        setTimeout(() => {
+            this.supabaseSetupInstructions.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest' 
+            });
+        }, 100);
+    }
+
+    /**
+     * Hide Supabase setup instructions
+     */
+    hideSetupInstructions() {
+        this.supabaseSetupInstructions.classList.add('d-none');
     }
 
     /**

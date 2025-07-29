@@ -320,6 +320,90 @@
                     <i class="fas fa-trash me-2"></i>Clear Configuration
                   </button>
                 </div>
+                
+                <!-- Supabase Table Setup Instructions (hidden by default) -->
+                <div id="supabase-setup-instructions" class="mt-4 d-none">
+                  <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                      <i class="fas fa-exclamation-triangle me-2"></i>
+                      Database Table Setup Required
+                    </h6>
+                    <p class="mb-3">
+                      Your Supabase database doesn't have the required table yet. Please follow these simple steps to create it:
+                    </p>
+                    
+                    <div class="mb-3">
+                      <h6>Supabase SQL Editor</h6>
+                      <ol class="mb-2">
+                        <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">Supabase Dashboard</a></li>
+                        <li>Select your project</li>
+                        <li>Open the <strong>SQL Editor</strong> from the sidebar</li>
+                        <li>Copy and paste the SQL code below</li>
+                        <li>Click <strong>Run</strong> to execute the query</li>
+                      </ol>
+                    </div>
+                                        
+                    <div class="mb-3">
+                      <h6>SQL Code to Execute:</h6>
+                      <div class="bg-dark text-light p-3 rounded" style="font-family: 'Courier New', monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto;">
+                        <pre class="mb-0" id="supabase-sql-code">-- YouTube Watchmarker ReloadedTable Schema
+-- Run this SQL in your Supabase SQL Editor
+
+-- Create main table for storing YouTube watch history
+CREATE TABLE IF NOT EXISTS youtube_watch_history (
+  str_ident VARCHAR(255) PRIMARY KEY,
+  int_timestamp BIGINT NOT NULL,
+  str_title TEXT,
+  int_count INTEGER DEFAULT 1 NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add performance indexes
+CREATE INDEX IF NOT EXISTS idx_youtube_watch_history_timestamp 
+ON youtube_watch_history (int_timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_youtube_watch_history_created_at 
+ON youtube_watch_history (created_at);
+
+-- Add full-text search index for video titles
+CREATE INDEX IF NOT EXISTS idx_youtube_watch_history_title_search 
+ON youtube_watch_history USING gin(to_tsvector('english', str_title));
+
+-- Add data validation constraints
+ALTER TABLE youtube_watch_history 
+ADD CONSTRAINT IF NOT EXISTS check_positive_count CHECK (int_count > 0);
+
+ALTER TABLE youtube_watch_history 
+ADD CONSTRAINT IF NOT EXISTS check_valid_timestamp CHECK (int_timestamp > 0);
+
+ALTER TABLE youtube_watch_history 
+ADD CONSTRAINT IF NOT EXISTS check_title_length CHECK (char_length(str_title) <= 1000);
+
+-- Verify table creation
+SELECT 
+  schemaname,
+  tablename,
+  tableowner,
+  hasindexes,
+  hasrules,
+  hastriggers
+FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename = 'youtube_watch_history';</pre>
+                      </div>
+                      <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-sql-button">
+                          <i class="fas fa-copy me-1"></i>Copy SQL Code
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <p class="mb-0">
+                      <strong>⚠️ Important:</strong> After running the SQL, click the "Test Connection" button above to verify the setup.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <!-- Database Status -->
