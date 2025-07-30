@@ -70,6 +70,9 @@ class ExtensionManager {
       await this.setupKeepAliveAlarm();
 
       this.isInitialized = true;
+      
+      // Perform startup sync after initialization
+      await this.performStartupSync();
     } catch (error) {
       console.error("Failed to initialize extension:", error);
       throw error;
@@ -1236,6 +1239,34 @@ class ExtensionManager {
   }
 
   /**
+   * Perform startup synchronization
+   */
+  async performStartupSync() {
+    console.log("Starting startup synchronization...");
+    
+    try {
+      // Check for YouTube history condition - sync on startup if enabled
+      const shouldSyncYoutube = await new Promise((resolve) => {
+        chrome.storage.sync.get(['idCondition_Youhist'], (result) => {
+          resolve(result.idCondition_Youhist === true);
+        });
+      });
+      
+      // Sync YouTube if condition is enabled
+      if (shouldSyncYoutube) {
+        console.log("Syncing YouTube history on startup (YouTube History condition enabled)...");
+        await this.syncYoutube();
+      } else {
+        console.log("YouTube history sync disabled - skipping startup sync");
+      }
+      
+      console.log("Startup synchronization completed successfully");
+    } catch (error) {
+      console.error("Error during startup synchronization:", error);
+    }
+  }
+
+  /**
    * Perform periodic synchronization with enhanced reliability
    */
   async performSynchronization() {
@@ -1926,7 +1957,10 @@ globalThis.extensionManager = extensionManager;
 // Listen for service worker startup to reinitialize
 chrome.runtime.onStartup.addListener(() => {
   console.log("Service worker restarted - reinitializing...");
-  extensionManager.init().catch(error => {
+  extensionManager.init().then(() => {
+    // Perform startup sync after initialization
+    return extensionManager.performStartupSync();
+  }).catch(error => {
     console.error("Reinitialization failed:", error);
   });
 });
