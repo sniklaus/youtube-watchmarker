@@ -511,7 +511,9 @@ class YouTubeWatchMarker {
           }
           
           for (const dateElement of dateElements) {
-            const dateText = dateElement.textContent?.trim() || dateElement.getAttribute('aria-label');
+            // Prefer aria-label over textContent to avoid concatenation issues
+            const dateText = dateElement.getAttribute('aria-label')?.trim() ||
+                             dateElement.textContent?.trim();
             if (dateText && this.isValidDateText(dateText)) {
               publishDate = dateText;
               break;
@@ -534,7 +536,9 @@ class YouTubeWatchMarker {
       try {
         const allSpans = videoElement.querySelectorAll('span');
         for (const span of allSpans) {
-          const text = span.textContent?.trim() || span.getAttribute('aria-label');
+          // Prefer aria-label over textContent to avoid concatenation issues
+          const text = span.getAttribute('aria-label')?.trim() ||
+                       span.textContent?.trim();
           if (text && this.isValidDateText(text)) {
             publishDate = text;
             break;
@@ -625,7 +629,8 @@ class YouTubeWatchMarker {
       // Find the actual video link associated with this title element
       const videoLink = element.closest('a[href*="/watch"]') || 
                        element.closest('[href*="/watch"]') ||
-                       element.parentElement?.querySelector('a[href*="/watch"]');
+                       element.parentElement?.querySelector('a[href*="/watch"]') ||
+                       element.closest('[data-video-id]')?.querySelector('a[href*="/watch"]');
       
       if (videoLink) {
         const currentVideoId = this.extractVideoId(videoLink.href);
@@ -636,6 +641,35 @@ class YouTubeWatchMarker {
           element.removeAttribute('data-publish-date');
           element.removeAttribute('data-video-id');
         }
+      } else {
+        // If we can't find an associated video link, remove the stray publication date
+        element.classList.remove('youwatch-has-publish-date');
+        element.removeAttribute('data-publish-date');
+        element.removeAttribute('data-video-id');
+      }
+    });
+    
+    // Also remove duplicate publication dates for the same video
+    const videoIdGroups = {};
+    elementsWithPublishDate.forEach(element => {
+      const videoId = element.getAttribute('data-video-id');
+      if (videoId) {
+        if (!videoIdGroups[videoId]) {
+          videoIdGroups[videoId] = [];
+        }
+        videoIdGroups[videoId].push(element);
+      }
+    });
+    
+    // For each video ID, keep only the first element and remove publication dates from the rest
+    Object.values(videoIdGroups).forEach(elements => {
+      if (elements.length > 1) {
+        // Remove publication date from all but the first element
+        elements.slice(1).forEach(element => {
+          element.classList.remove('youwatch-has-publish-date');
+          element.removeAttribute('data-publish-date');
+          element.removeAttribute('data-video-id');
+        });
       }
     });
   }
@@ -683,22 +717,36 @@ class YouTubeWatchMarker {
    * @param {string} videoId - Video ID
    */
   addPublishDateToTitle(videoElement, videoId) {
-    // Get or extract publication date
+    // Check if we already have a cached date for this video
     let publishDate = this.publishDates[videoId];
+    
     if (!publishDate) {
+      // Extract publication date from this element
       publishDate = this.extractPublishDate(videoElement);
+      
       if (publishDate) {
-        this.publishDates[videoId] = publishDate;
+        // Format and validate the date before caching
+        const formattedDate = this.formatPublishDate(publishDate);
+        if (formattedDate) {
+          this.publishDates[videoId] = formattedDate;
+          publishDate = formattedDate;
+        } else {
+          // If formatting failed (invalid date), don't cache or display
+          return;
+        }
       }
     }
     
-    // If still no publication date, try delayed extraction
+    // If still no publication date, try delayed extraction once
     if (!publishDate) {
       setTimeout(() => {
         const retryDate = this.extractPublishDate(videoElement);
         if (retryDate) {
-          this.publishDates[videoId] = retryDate;
-          this.updateVideoTitle(videoElement, retryDate);
+          const formattedRetryDate = this.formatPublishDate(retryDate);
+          if (formattedRetryDate) {
+            this.publishDates[videoId] = formattedRetryDate;
+            this.updateVideoTitle(videoElement, formattedRetryDate);
+          }
         }
       }, 100);
       return;
@@ -713,14 +761,29 @@ class YouTubeWatchMarker {
    * @param {string} publishDate - Publication date
    */
   updateVideoTitle(videoElement, publishDate) {
-    const cleanDate = this.formatPublishDate(publishDate);
     const videoId = this.extractVideoId(videoElement.href);
+    
+    // publishDate should already be formatted at this point
+    const cleanDate = publishDate;
+    
+    // Skip if no valid date
+    if (!cleanDate) {
+      return;
+    }
     
     // Find the video title element in the DOM
     const titleElement = this.findVideoTitleElement(videoElement);
     
     if (titleElement && videoId) {
-      // Instead of modifying text content, add a CSS class and data attribute
+      // Check if this title element already has a publication date for any video
+      // If so, only update if it's for the same video ID
+      const existingVideoId = titleElement.getAttribute('data-video-id');
+      if (existingVideoId && existingVideoId !== videoId) {
+        // This title element belongs to a different video, skip
+        return;
+      }
+      
+      // Add CSS class and data attribute
       titleElement.classList.add('youwatch-has-publish-date');
       titleElement.setAttribute('data-publish-date', cleanDate);
       titleElement.setAttribute('data-video-id', videoId);
@@ -1035,15 +1098,23 @@ class YouTubeWatchMarker {
     formatted = formatted.replace(/^[\d,.]+(K|M|B)?\s+views?\s+/i, '');
     formatted = formatted.replace(/^[\d,]+\s+views?\s+/i, '');
     
+    // Remove duration if present (e.g., "31 minutes • ")
+    formatted = formatted.replace(/^\d{1,3}(:\d{2})?\s*(minutes?|hours?|seconds?)\s*(•\s*)?/i, '');
+    
     // Extract just the time ago part if there are multiple pieces of information
     // Look for patterns like "X time ago" and extract only that part
-    const timeAgoMatch = formatted.match(/(\d+\s+(second|minute|hour|day|week|month|year)s?\s+ago)/i);
+    const timeAgoMatch = formatted.match(/(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago/i);
     if (timeAgoMatch) {
-      formatted = timeAgoMatch[1];
+      const num = parseInt(timeAgoMatch[1], 10);
+      // Reject unrealistically large numbers (e.g., >1 million hours ~114 years)
+      if (num > 1000000) {
+        return ''; // Return empty string for invalid dates
+      }
+      formatted = timeAgoMatch[0]; // Use full match to preserve spacing
     }
     
-    // Simplify "X time ago" format
-    formatted = formatted.replace(/(\d+)\s+(year|month|week|day|hour|minute|second)s?\s+ago/i, '$1$2 ago');
+    // Simplify "X time ago" format (preserve spacing better)
+    formatted = formatted.replace(/(\d+)\s+(year|month|week|day|hour|minute|second)s?\s+ago/i, '$1 $2 ago');
     
     // Shorten time units
     formatted = formatted.replace(/years?\s+ago/i, 'y ago');
