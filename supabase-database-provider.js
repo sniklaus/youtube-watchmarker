@@ -92,21 +92,23 @@ export class SupabaseDatabaseProvider {
    */
   async init() {
     try {
+      console.log('🔄 Initializing Supabase provider...');
+      
       // Get stored credentials
       this.credentials = await credentialStorage.getCredentials();
       if (!this.credentials) {
-        console.log('No Supabase credentials found');
+        console.log('ℹ️ No Supabase credentials found - provider will remain uninitialized');
         return false;
       }
 
       // Validate credentials
       if (!this.validateSupabaseUrl(this.credentials.supabaseUrl)) {
-        console.error('Invalid Supabase URL format');
+        console.error('❌ Invalid Supabase URL format:', this.credentials.supabaseUrl);
         return false;
       }
 
       if (!this.validateApiKey(this.credentials.apiKey)) {
-        console.error('Invalid API key format');
+        console.error('❌ Invalid API key format - key appears to be too short or invalid');
         return false;
       }
 
@@ -114,17 +116,46 @@ export class SupabaseDatabaseProvider {
       this.baseUrl = this.credentials.supabaseUrl;
       this.apiKey = this.credentials.apiKey;
 
+      console.log('🔗 Testing Supabase connection...');
+
       // Test connection and ensure schema
       await this.ensureSchema();
       
       this.isInitialized = true;
       this.isConnected = true;
       
+      console.log('✅ Supabase provider initialized successfully');
       return true;
     } catch (error) {
-      console.error('Failed to initialize Supabase provider:', error);
+      console.error('❌ Failed to initialize Supabase provider:', {
+        error: error.message,
+        credentials: this.credentials ? {
+          hasUrl: !!this.credentials.supabaseUrl,
+          hasApiKey: !!this.credentials.apiKey,
+          urlPreview: this.credentials.supabaseUrl ? 
+            this.credentials.supabaseUrl.replace(/https:\/\/([^.]+).*/, 'https://$1...') : null
+        } : 'No credentials available'
+      });
+      
       this.isInitialized = false;
       this.isConnected = false;
+      
+      // Provide specific guidance based on error type
+      if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+        console.error('💡 Troubleshooting tip: This looks like a network/CORS issue. Try:', [
+          '1. Reload the extension completely',
+          '2. Check if your Supabase URL is correct',
+          '3. Verify your API key has the correct permissions',
+          '4. Check if the extension has proper host permissions'
+        ]);
+      } else if (error.message.includes('Database table does not exist')) {
+        console.error('💡 Troubleshooting tip: Database table missing. You need to:', [
+          '1. Open your Supabase SQL Editor',
+          '2. Run the table creation SQL shown in the error above',
+          '3. Refresh this page and try again'
+        ]);
+      }
+      
       return false;
     }
   }
@@ -276,9 +307,22 @@ AND tablename = '${this.tableName}';
    */
   isRetryableError(error) {
     // Retry on network errors or temporary server errors
-    return error.message.includes('NetworkError') || 
-           error.message.includes('HTTP 5') || 
-           error.message.includes('timeout');
+    const retryablePatterns = [
+      'NetworkError',
+      'HTTP 5',
+      'timeout',
+      'Failed to fetch',
+      'Load failed',
+      'ERR_NETWORK',
+      'ERR_INTERNET_DISCONNECTED',
+      'ERR_CONNECTION_TIMED_OUT',
+      'CORS',
+      'blocked by CORS policy'
+    ];
+    
+    return retryablePatterns.some(pattern => 
+      error.message.toLowerCase().includes(pattern.toLowerCase())
+    );
   }
 
   /**
@@ -323,21 +367,77 @@ AND tablename = '${this.tableName}';
         if (!response.ok) {
           const errorText = await response.text();
           
-          // Log security-relevant errors
+          // Log security-relevant errors with more detail
           if (response.status === 401) {
-            console.error('Authentication failed - check API key');
+            console.error('❌ Supabase Authentication failed:', {
+              status: response.status,
+              message: 'Invalid API key or expired token',
+              suggestion: 'Check your API key in the extension settings',
+              url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
+              headers: Object.fromEntries(Object.entries(requestHeaders).map(([k, v]) => 
+                k.toLowerCase().includes('key') || k.toLowerCase().includes('auth') 
+                  ? [k, v.substring(0, 10) + '...'] 
+                  : [k, v]
+              ))
+            });
           } else if (response.status === 403) {
-            console.error('Access forbidden - check API key and database permissions');
+            console.error('❌ Supabase Access forbidden:', {
+              status: response.status,
+              message: 'Insufficient permissions for this operation',
+              suggestion: 'Check your API key permissions and database policies',
+              url: url.replace(/\/rest\/v1.*/, '/rest/v1/...')
+            });
           } else if (response.status === 429) {
-            console.error('Rate limit exceeded - too many requests');
+            console.error('❌ Supabase Rate limit exceeded:', {
+              status: response.status,
+              message: 'Too many requests to Supabase API',
+              suggestion: 'Wait before retrying, or upgrade your Supabase plan'
+            });
+          } else if (response.status >= 500) {
+            console.error('❌ Supabase Server error:', {
+              status: response.status,
+              message: 'Supabase service is experiencing issues',
+              suggestion: 'Check Supabase status page and try again later'
+            });
           }
           
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
+          throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
         }
         
         return response;
       } catch (error) {
-        console.error('Request failed:', error);
+        // Enhanced error logging for network issues
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          console.error('❌ Network error connecting to Supabase:', {
+            error: error.message,
+            url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
+            possibleCauses: [
+              'CORS policy blocking the request',
+              'Network connectivity issues',
+              'Invalid Supabase URL',
+              'Firewall or proxy blocking the connection'
+            ],
+            solutions: [
+              'Check if host permissions are configured in manifest.json',
+              'Verify Supabase URL is correct',
+              'Check network connectivity',
+              'Try reloading the extension'
+            ]
+          });
+        } else if (error.name === 'AbortError') {
+          console.error('❌ Supabase request timed out:', {
+            error: error.message,
+            timeout: '30 seconds',
+            suggestion: 'Check network connectivity and Supabase service status'
+          });
+        } else {
+          console.error('❌ Supabase request failed:', {
+            error: error.message,
+            type: error.name,
+            url: url.replace(/\/rest\/v1.*/, '/rest/v1/...')
+          });
+        }
+        
         throw error;
       }
     };

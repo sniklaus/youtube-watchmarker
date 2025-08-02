@@ -20,7 +20,9 @@
   
   "host_permissions": [
     "https://www.youtube.com/*",
-    "https://m.youtube.com/*"
+    "https://m.youtube.com/*",
+    "https://*.supabase.co/*",
+    "https://*.supabase.in/*"
   ],
   
   "background": {

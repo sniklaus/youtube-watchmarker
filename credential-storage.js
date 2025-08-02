@@ -236,38 +236,93 @@ export class CredentialStorage {
     }
   }
 
-  /**
+    /**
    * Test database connection with stored credentials
    * @returns {Promise<boolean>} True if connection successful
    */
   async testConnection() {
     try {
+      console.log('🔄 Testing Supabase connection...');
+      
       const credentials = await this.getCredentials();
       if (!credentials) {
+        console.log('❌ No credentials found for connection test');
         throw new Error('No credentials found');
       }
 
       if (!credentials.supabaseUrl || !credentials.apiKey) {
+        console.log('❌ Invalid credentials: missing URL or API key');
         throw new Error('Invalid credentials: missing URL or API key');
       }
 
-      // Test connection with a simple request
-      const response = await fetch(`${credentials.supabaseUrl}/rest/v1/`, {
-        method: 'GET',
-        headers: {
-          'apikey': credentials.apiKey,
-          'Authorization': `Bearer ${credentials.apiKey}`
+      console.log('🔗 Connecting to:', credentials.supabaseUrl.replace(/https:\/\/([^.]+).*/, 'https://$1...'));
+
+      // Test connection with a simple request and timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      try {
+        const response = await fetch(`${credentials.supabaseUrl}/rest/v1/`, {
+          method: 'GET',
+          headers: {
+            'apikey': credentials.apiKey,
+            'Authorization': `Bearer ${credentials.apiKey}`,
+            'X-Client-Info': 'youtube-watchmarker-extension'
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok || response.status === 404) {
+          // 404 is expected for root path, but means API is reachable
+          console.log('✅ Supabase connection test successful');
+          return true;
         }
-      });
 
-      if (response.ok || response.status === 404) {
-        // 404 is expected for root path, but means API is reachable
-              return true;
+        const errorText = await response.text();
+        
+        if (response.status === 401) {
+          console.error('❌ Authentication failed: Invalid API key');
+          throw new Error('Invalid API key - check your Supabase service role key');
+        } else if (response.status === 403) {
+          console.error('❌ Access forbidden: Check API key permissions');
+          throw new Error('API key does not have sufficient permissions');
+        }
+
+        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          console.error('❌ Connection test timed out after 15 seconds');
+          throw new Error('Connection timeout - check your network and Supabase URL');
+        }
+        
+        throw fetchError;
       }
-
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     } catch (error) {
-      console.error('Supabase connection test failed:', error);
+      console.error('❌ Supabase connection test failed:', {
+        error: error.message,
+        type: error.name
+      });
+      
+      // Provide helpful error messages based on error type
+      if (error.message.includes('Failed to fetch') || error.message.includes('TypeError')) {
+        console.error('💡 Network error - possible causes:', [
+          'Invalid Supabase URL',
+          'CORS policy blocking the request',
+          'Network connectivity issues',
+          'Extension permissions not configured'
+        ]);
+      } else if (error.message.includes('timeout')) {
+        console.error('💡 Connection timeout - possible causes:', [
+          'Slow network connection',
+          'Supabase service issues',
+          'Firewall blocking the connection'
+        ]);
+      }
+      
       return false;
     }
   }
