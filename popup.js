@@ -202,6 +202,32 @@ class PopupSearchManager {
     }
 
     /**
+     * Safely send message to background script with error handling
+     * @param {Object} message - Message to send
+     * @returns {Promise<Object>} Response from background
+     */
+    async safeSendMessage(message) {
+        try {
+            return await chrome.runtime.sendMessage(message);
+        } catch (error) {
+            if (error.message && (error.message.includes("Extension context invalidated") || 
+                               error.message.includes("context invalidated") ||
+                               error.message.includes("Receiving end does not exist"))) {
+                console.log("Extension context invalidated during sendMessage - retrying once");
+                // Try once more in case it was a temporary issue
+                try {
+                    return await chrome.runtime.sendMessage(message);
+                } catch (retryError) {
+                    console.log("Retry also failed, extension context may be permanently invalidated");
+                    throw new Error("Extension context invalidated");
+                }
+            } else {
+                throw error;
+            }
+        }
+    }
+
+    /**
      * Open full options page
      */
     openFullOptions() {
@@ -224,7 +250,7 @@ class PopupSearchManager {
             
             while (retryCount < maxRetries) {
                 try {
-                    response = await chrome.runtime.sendMessage({
+                    response = await this.safeSendMessage({
                         action: 'search-videos',
                         query: '', // Empty query to show all videos
                         page: 1,
@@ -296,7 +322,7 @@ class PopupSearchManager {
             this.searchButton.disabled = true;
             this.searchResults.classList.add('search-loading');
 
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.safeSendMessage({
                 action: 'search-videos',
                 query: query,
                 page: this.searchState.currentPage,
@@ -538,7 +564,7 @@ class PopupSearchManager {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             
-            const response = await chrome.runtime.sendMessage({
+            const response = await this.safeSendMessage({
                 action: 'search-delete',
                 videoId: videoId
             });

@@ -1879,9 +1879,16 @@ class OptionsPageManager {
       try {
         return await chrome.runtime.sendMessage(message);
       } catch (error) {
-        if (error.message && error.message.includes('Receiving end does not exist')) {
-          console.log('Retrying message due to service worker termination');
-          return await chrome.runtime.sendMessage(message);
+        if (error.message && (error.message.includes('Receiving end does not exist') ||
+                             error.message.includes('Extension context invalidated') ||
+                             error.message.includes('context invalidated'))) {
+          console.log('Retrying message due to service worker termination or context invalidation');
+          try {
+            return await chrome.runtime.sendMessage(message);
+          } catch (retryError) {
+            console.log('Retry also failed, extension context may be permanently invalidated');
+            throw new Error("Extension context invalidated");
+          }
         }
         throw error;
       }

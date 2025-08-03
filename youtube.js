@@ -891,7 +891,7 @@ class YouTubeWatchMarker {
         } else {
           console.error("Port error:", error);
           // Fallback to sendMessage if port fails
-          chrome.runtime.sendMessage({
+          this.safeSendMessage({
             action: "youtube-lookup",
             videoId: videoId,
             title: title,
@@ -905,7 +905,7 @@ class YouTubeWatchMarker {
         return;
       }
       
-      chrome.runtime.sendMessage({
+      this.safeSendMessage({
         action: "youtube-lookup",
         videoId: videoId,
         title: title,
@@ -1323,7 +1323,7 @@ class YouTubeWatchMarker {
           this.backgroundPort = null;
         } else {
           console.error("Port error in rating mark:", error);
-          chrome.runtime.sendMessage(message);
+          this.safeSendMessage(message);
         }
       }
     } else {
@@ -1332,7 +1332,7 @@ class YouTubeWatchMarker {
         return;
       }
       
-      chrome.runtime.sendMessage(message);
+      this.safeSendMessage(message);
     }
   }
 
@@ -1368,7 +1368,7 @@ class YouTubeWatchMarker {
           this.backgroundPort = null;
         } else {
           console.error("Port error in progress hook:", error);
-          chrome.runtime.sendMessage(message);
+          this.safeSendMessage(message);
         }
       }
     } else {
@@ -1377,7 +1377,29 @@ class YouTubeWatchMarker {
         return;
       }
       
+      this.safeSendMessage(message);
+    }
+  }
+
+  /**
+   * Safely send message to background script with error handling
+   * @param {Object} message - Message to send
+   */
+  safeSendMessage(message) {
+    if (!chrome.runtime) {
+      console.log("Chrome runtime not available - skipping message");
+      return;
+    }
+    
+    try {
       chrome.runtime.sendMessage(message);
+    } catch (error) {
+      if (error.message && (error.message.includes("Extension context invalidated") || 
+                           error.message.includes("context invalidated"))) {
+        console.log("Extension context invalidated during sendMessage - ignoring");
+      } else {
+        console.error("Error sending message:", error);
+      }
     }
   }
 
