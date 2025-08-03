@@ -3,7 +3,7 @@
   "name": "Watchmarker for Youtube Reloaded",
   "description": "A fork of the original Youtube Watchmarker, using manifest v3 with supabase remote sync and a new UI",
   "homepage_url": "https://github.com/widike/youtube-watchmarker",
-  "version": "0.9.4",
+  "version": "0.9.5",
   
   "permissions": [
     "storage",
