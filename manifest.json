@@ -3,8 +3,7 @@
   "name": "Watchmarker for Youtube Reloaded",
   "description": "A fork of the original Youtube Watchmarker, using manifest v3 with supabase remote sync and a new UI",
   "homepage_url": "https://github.com/widike/youtube-watchmarker",
-  "version": "0.9.5",
-  
+  "version": "0.9.6",
   "permissions": [
     "storage",
     "alarms",
@@ -17,34 +16,31 @@
     "declarativeNetRequest",
     "notifications"
   ],
-  
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://m.youtube.com/*",
     "https://*.supabase.co/*",
     "https://*.supabase.in/*"
   ],
-  
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  
   "content_scripts": [
     {
       "matches": [
         "*://www.youtube.com/*",
         "*://m.youtube.com/*"
       ],
-      "js": ["youtube.js"]
+      "js": [
+        "youtube.js"
+      ]
     }
   ],
-  
   "options_ui": {
     "page": "content/index.html",
     "open_in_tab": true
   },
-  
   "action": {
     "default_title": "Watchmarker for Youtube Reloaded",
     "default_icon": {
@@ -52,12 +48,10 @@
     },
     "default_popup": "popup.html"
   },
-  
   "icons": {
     "72": "content/icon.png"
   },
-  
-   "browser_specific_settings": {
+  "browser_specific_settings": {
     "gecko": {
       "id": "yourect@coderect.com",
       "strict_min_version": "60.0"
