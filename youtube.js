@@ -31,7 +31,11 @@ class YouTubeWatchMarker {
     this.connectToBackground();
     
     this.safeInit().catch(error => {
-      console.error('Failed to initialize YouTubeWatchMarker:', error);
+      console.error('Failed to initialize YouTubeWatchMarker:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
     });
   }
 
@@ -45,7 +49,13 @@ class YouTubeWatchMarker {
     try {
       await this.init();
     } catch (error) {
-      console.error(`Initialization failed (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error);
+              console.error(`Initialization failed (attempt ${retryCount + 1}/${MAX_RETRIES}):`, JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          attempt: retryCount + 1,
+          maxRetries: MAX_RETRIES
+        }, null, 2));
       if (retryCount < MAX_RETRIES && (error.message?.includes('context invalidated') || error.message?.includes('undefined'))) {
         console.log(`Retrying initialization in ${RETRY_DELAY/1000}s...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
@@ -166,7 +176,11 @@ class YouTubeWatchMarker {
       this.settingsCache = { ...results };
       console.log('Settings cached successfully:', Object.keys(this.settingsCache).length, 'keys');
     } catch (error) {
-      console.error('Failed to cache settings:', error);
+              console.error('Failed to cache settings:', JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
       // Set defaults to false
       keys.forEach(key => {
         this.settingsCache[key] = false;
@@ -199,7 +213,11 @@ class YouTubeWatchMarker {
         console.log("Extension context invalidated during connect - retrying...");
         setTimeout(() => this.connectToBackground(), 2000);
       } else {
-        console.error("Connection error:", error);
+        console.error("Connection error:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
         // Retry with exponential backoff for other errors
         setTimeout(() => this.connectToBackground(), 5000);
       }
@@ -315,7 +333,11 @@ class YouTubeWatchMarker {
 
       this.cssInjected = true;
     } catch (error) {
-      console.error('Error injecting CSS:', error);
+              console.error('Error injecting CSS:', JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
     }
   }
 
@@ -611,7 +633,11 @@ class YouTubeWatchMarker {
       await this.processVideosInBatches(videos);
       
     } catch (error) {
-      console.error("Error during refresh:", error);
+              console.error("Error during refresh:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
     } finally {
       this.isProcessing = false;
     }
@@ -889,7 +915,11 @@ class YouTubeWatchMarker {
           console.log("Context invalidated during postMessage - will reconnect");
           this.backgroundPort = null; // Trigger reconnection
         } else {
-          console.error("Port error:", error);
+          console.error("Port error:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
           // Fallback to sendMessage if port fails
           this.safeSendMessage({
             action: "youtube-lookup",
@@ -1010,7 +1040,14 @@ class YouTubeWatchMarker {
         this.settingsCache[key] = result[key] || false;
         return this.settingsCache[key];
       } catch (error) {
-        console.error(`Storage get error (attempt ${attempts + 1}/${maxRetries}):`, error);
+                  console.error(`Storage get error (attempt ${attempts + 1}/${maxRetries}):`, JSON.stringify({
+            error: error.message,
+            errorName: error.name,
+            errorStack: error.stack,
+            attempt: attempts + 1,
+            maxRetries: maxRetries,
+            key: key
+          }, null, 2));
         attempts++;
         if (attempts < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, retryDelay));
@@ -1162,7 +1199,11 @@ class YouTubeWatchMarker {
           console.warn("Unknown action:", data.action);
       }
     } catch (error) {
-      console.error("Error handling message:", error);
+              console.error("Error handling message:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
     }
     
     sendResponse(null);
@@ -1267,7 +1308,11 @@ class YouTubeWatchMarker {
         }
       }
     } catch (error) {
-      console.error("Error handling rating button change:", error);
+              console.error("Error handling rating button change:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
     }
   }
 
@@ -1322,7 +1367,11 @@ class YouTubeWatchMarker {
           console.log("Context invalidated during rating postMessage");
           this.backgroundPort = null;
         } else {
-          console.error("Port error in rating mark:", error);
+          console.error("Port error in rating mark:", JSON.stringify({
+            error: error.message,
+            errorName: error.name,
+            errorStack: error.stack
+          }, null, 2));
           this.safeSendMessage(message);
         }
       }
@@ -1367,7 +1416,11 @@ class YouTubeWatchMarker {
           console.log("Context invalidated during progress postMessage");
           this.backgroundPort = null;
         } else {
-          console.error("Port error in progress hook:", error);
+          console.error("Port error in progress hook:", JSON.stringify({
+            error: error.message,
+            errorName: error.name,
+            errorStack: error.stack
+          }, null, 2));
           this.safeSendMessage(message);
         }
       }
@@ -1398,7 +1451,11 @@ class YouTubeWatchMarker {
                            error.message.includes("context invalidated"))) {
         console.log("Extension context invalidated during sendMessage - ignoring");
       } else {
-        console.error("Error sending message:", error);
+        console.error("Error sending message:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
       }
     }
   }
@@ -1432,7 +1489,11 @@ class YouTubeWatchMarker {
         // Try to re-cache settings if storage becomes available
         if (this.isStorageAvailable()) {
           this.cacheSettings().catch(error => {
-            console.error("Failed to re-cache settings:", error);
+            console.error("Failed to re-cache settings:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
           });
           reconnectAttempts = 0; // Reset on success
         }

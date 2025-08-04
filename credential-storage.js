@@ -31,7 +31,11 @@ class WebEncryption {
       
       this.initialized = true;
     } catch (error) {
-      console.error('Failed to initialize encryption:', error);
+      console.error('Failed to initialize encryption:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw new Error('Encryption initialization failed');
     }
   }
@@ -113,7 +117,11 @@ class WebEncryption {
       // Return base64 encoded result
       return btoa(String.fromCharCode(...combined));
     } catch (error) {
-      console.error('Encryption failed:', error);
+      console.error('Encryption failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw new Error('Failed to encrypt data');
     }
   }
@@ -153,7 +161,11 @@ class WebEncryption {
       const decoder = new TextDecoder();
       return decoder.decode(decrypted);
     } catch (error) {
-      console.error('Decryption failed:', error);
+      console.error('Decryption failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return '';
     }
   }
@@ -203,7 +215,11 @@ export class CredentialStorage {
 
       return true;
     } catch (error) {
-      console.error('Failed to store credentials:', error);
+      console.error('Failed to store credentials:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -231,7 +247,11 @@ export class CredentialStorage {
 
       return credentials;
     } catch (error) {
-      console.error('Failed to retrieve credentials:', error);
+      console.error('Failed to retrieve credentials:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return null;
     }
   }
@@ -335,7 +355,11 @@ export class CredentialStorage {
       await chrome.storage.local.remove([this.storageKey]);
       return true;
     } catch (error) {
-      console.error('Failed to clear credentials:', error);
+      console.error('Failed to clear credentials:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return false;
     }
   }
@@ -349,7 +373,11 @@ export class CredentialStorage {
       const result = await chrome.storage.local.get([this.storageKey]);
       return !!result[this.storageKey];
     } catch (error) {
-      console.error('Failed to check credentials:', error);
+      console.error('Failed to check credentials:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return false;
     }
   }
@@ -372,7 +400,11 @@ export class CredentialStorage {
       
       return null;
     } catch (error) {
-      console.error('Failed to extract project ref:', error);
+      console.error('Failed to extract project ref:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return null;
     }
   }
@@ -422,7 +454,11 @@ export class CredentialStorage {
         stored_at: credentials.stored_at
       };
     } catch (error) {
-      console.error('Failed to retrieve masked credentials:', error);
+      console.error('Failed to retrieve masked credentials:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return null;
     }
   }
@@ -472,7 +508,11 @@ export class CredentialStorage {
         storedAt: credentials.stored_at ? new Date(credentials.stored_at) : null
       };
     } catch (error) {
-      console.error('Failed to get credential status:', error);
+      console.error('Failed to get credential status:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return {
         configured: false,
         hasUrl: false,

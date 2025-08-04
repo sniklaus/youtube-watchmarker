@@ -200,7 +200,11 @@ export const Youtube = {
         }
         
       } catch (error) {
-        console.error("Error in YouTube history parsing:", error);
+        console.error("Error in YouTube history parsing:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
       }
 
       // Store videos in the current provider
@@ -231,7 +235,12 @@ export const Youtube = {
             });
           }
         } catch (error) {
-          console.error(`Error storing video ${video.strIdent}:`, error);
+          console.error(`Error storing video ${video.strIdent}:`, JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          videoId: video.strIdent
+        }, null, 2));
         }
       }
 
@@ -248,7 +257,11 @@ export const Youtube = {
       funcResponse(result);
 
     } catch (error) {
-      console.error("YouTube synchronization error:", error);
+      console.error("YouTube synchronization error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse(null);
     }
   },
@@ -386,7 +399,11 @@ export const Youtube = {
         }
         
       } catch (error) {
-        console.error("Error in YouTube liked videos parsing:", error);
+        console.error("Error in YouTube liked videos parsing:", JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
       }
 
       // Store videos in the current provider
@@ -417,7 +434,12 @@ export const Youtube = {
             });
           }
         } catch (error) {
-          console.error(`Error storing liked video ${video.strIdent}:`, error);
+          console.error(`Error storing liked video ${video.strIdent}:`, JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          videoId: video.strIdent
+        }, null, 2));
         }
       }
 
@@ -434,7 +456,11 @@ export const Youtube = {
       funcResponse(result);
 
     } catch (error) {
-      console.error("YouTube liked videos synchronization error:", error);
+      console.error("YouTube liked videos synchronization error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse(null);
     }
   },
@@ -471,7 +497,11 @@ export const Youtube = {
       }
       
     } catch (error) {
-      console.error("YouTube lookup error:", error);
+      console.error("YouTube lookup error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse(null);
     }
   },
@@ -540,7 +570,11 @@ export const Youtube = {
       funcResponse(videoToReturn);
       
     } catch (error) {
-      console.error("YouTube ensure error:", error);
+      console.error("YouTube ensure error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse(null);
     }
   },
@@ -608,7 +642,11 @@ export const Youtube = {
       funcResponse(videoToStore);
       
     } catch (error) {
-      console.error("YouTube mark error:", error);
+      console.error("YouTube mark error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse(null);
     }
   },

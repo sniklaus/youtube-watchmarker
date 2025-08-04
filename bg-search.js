@@ -65,7 +65,11 @@ export const Search = {
       funcResponse({ objVideos: paginatedVideos });
       
     } catch (error) {
-      console.error("Search lookup error:", error);
+      console.error("Search lookup error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse({ objVideos: [] });
     }
   },
@@ -134,7 +138,11 @@ export const Search = {
       funcResponse({ success: true });
       
     } catch (error) {
-      console.error("Search delete error:", error);
+      console.error("Search delete error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse({ success: false });
     }
   },

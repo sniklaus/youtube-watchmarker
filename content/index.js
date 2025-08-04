@@ -44,7 +44,11 @@ class OptionsPageManager {
             
             this.isInitialized = true;
         } catch (error) {
-            console.error('Failed to initialize options page:', error);
+            console.error('Failed to initialize options page:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Failed to initialize the options page. Please refresh and try again.');
         }
     }
@@ -87,7 +91,12 @@ class OptionsPageManager {
                     // console.log(`Successfully cached element '${id}'`);
                 }
             } catch (e) {
-                console.error(`Error while trying to get element with ID '${id}':`, e);
+                console.error(`Error while trying to get element with ID '${id}':`, JSON.stringify({
+          error: e.message,
+          errorName: e.name,
+          errorStack: e.stack,
+          elementId: id
+        }, null, 2));
             }
         });
 
@@ -186,7 +195,11 @@ class OptionsPageManager {
             // Keyboard shortcuts
             this.setupKeyboardShortcuts();
                 } catch (error) {
-            console.error('Error setting up event listeners:', error);
+            console.error('Error setting up event listeners:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
         }
     }
 
@@ -259,7 +272,11 @@ class OptionsPageManager {
             // Sync all button
             this.getElementById('sync-all').addEventListener('click', () => this.syncAllSources());
         } catch (error) {
-            console.error('Error setting up synchronization listeners:', error);
+            console.error('Error setting up synchronization listeners:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
         }
     }
 
@@ -320,7 +337,12 @@ class OptionsPageManager {
                 await this.setToggleState(elementId, isEnabled);
                 this.showSuccess(`Setting ${this.getSettingDisplayName(elementId)} ${isEnabled ? 'enabled' : 'disabled'}`);
             } catch (error) {
-                console.error(`Error toggling ${elementId}:`, error);
+                console.error(`Error toggling ${elementId}:`, JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          elementId: elementId
+        }, null, 2));
                 // Revert the switch state on error
                 switchElement.checked = !switchElement.checked;
                 this.showError(`Failed to update ${this.getSettingDisplayName(elementId)} setting`);
@@ -331,7 +353,12 @@ class OptionsPageManager {
         this.getToggleState(elementId).then(isEnabled => {
             switchElement.checked = isEnabled;
         }).catch(error => {
-            console.error(`Error loading initial state for ${elementId}:`, error);
+            console.error(`Error loading initial state for ${elementId}:`, JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          elementId: elementId
+        }, null, 2));
         });
     }
 
@@ -382,7 +409,11 @@ class OptionsPageManager {
                 });
             }
         } catch (error) {
-            console.error('Error initializing theme:', error);
+            console.error('Error initializing theme:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
         }
     }
 
@@ -399,7 +430,11 @@ class OptionsPageManager {
             
             this.showSuccess(`Switched to ${newTheme} theme`);
         } catch (error) {
-            console.error('Error toggling theme:', error);
+            console.error('Error toggling theme:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Failed to change theme');
         }
     }
@@ -426,7 +461,11 @@ class OptionsPageManager {
             const result = await chrome.storage.local.get(['theme']);
             return result.theme || null;
         } catch (error) {
-            console.error('Error getting saved theme:', error);
+            console.error('Error getting saved theme:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             return null;
         }
     }
@@ -439,7 +478,11 @@ class OptionsPageManager {
         try {
             await chrome.storage.local.set({ theme });
         } catch (error) {
-            console.error('Error saving theme:', error);
+            console.error('Error saving theme:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
         }
     }
 
@@ -498,7 +541,11 @@ class OptionsPageManager {
                 this.showError('Failed to export database');
             }
         } catch (error) {
-            console.error('Export error:', error);
+            console.error('Export error:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Export failed: ' + error.message);
         }
     }
@@ -541,7 +588,11 @@ class OptionsPageManager {
                 this.showError(response?.error || 'Failed to import database');
             }
         } catch (error) {
-            console.error('Import error:', error);
+            console.error('Import error:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Import failed: ' + error.message);
         } finally {
             this.hideButtonLoading(importButton);
@@ -583,7 +634,11 @@ class OptionsPageManager {
                 this.showError('Failed to reset database');
             }
         } catch (error) {
-            console.error('Reset error:', error);
+            console.error('Reset error:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Reset failed: ' + error.message);
         }
     }
@@ -625,7 +680,11 @@ class OptionsPageManager {
                             this.showSuccess('Successfully switched to Supabase! However, table setup is required. Please follow the instructions below.');
                         }
                     } catch (switchError) {
-                        console.error('[OptionsPageManager] Failed to switch to Supabase:', switchError);
+                        console.error('[OptionsPageManager] Failed to switch to Supabase:', JSON.stringify({
+          error: switchError.message,
+          errorName: switchError.name,
+          errorStack: switchError.stack
+        }, null, 2));
                         this.showError('Failed to switch to Supabase: ' + switchError.message);
                         
                         // Revert radio button selection on error
@@ -647,7 +706,11 @@ class OptionsPageManager {
                 await this.actuallySwitchProvider('indexeddb');
             }
         } catch (error) {
-            console.error('Error switching provider UI:', error);
+            console.error('Error switching provider UI:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Failed to switch provider: ' + error.message);
             
             // Revert radio button selection
@@ -717,7 +780,11 @@ class OptionsPageManager {
                 }
             }
         } catch (error) {
-            console.error('Error toggling auto sync:', error);
+            console.error('Error toggling auto sync:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Failed to update auto sync setting');
             // Revert checkbox
             event.target.checked = !isEnabled;
@@ -775,7 +842,11 @@ class OptionsPageManager {
                 throw new Error(response?.error || 'Sync failed');
             }
         } catch (error) {
-            console.error('Error syncing databases:', error);
+            console.error('Error syncing databases:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Sync failed: ' + error.message);
         } finally {
             this.hideButtonLoading(syncButton);
@@ -825,14 +896,22 @@ class OptionsPageManager {
                         this.showSuccess('Successfully switched to Supabase! However, table setup is required. Please follow the instructions below.');
                     }
                 } catch (switchError) {
-                    console.error('Failed to switch to Supabase after configuration:', switchError);
+                    console.error('Failed to switch to Supabase after configuration:', JSON.stringify({
+          error: switchError.message,
+          errorName: switchError.name,
+          errorStack: switchError.stack
+        }, null, 2));
                     this.showError('Configuration saved but failed to switch to Supabase: ' + switchError.message);
                 }
             } else {
                 throw new Error(response?.error || 'Failed to save configuration');
             }
         } catch (error) {
-            console.error('Error saving Supabase config:', error);
+            console.error('Error saving Supabase config:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Failed to save configuration: ' + error.message);
         }
     }
@@ -866,7 +945,11 @@ class OptionsPageManager {
                 this.showError('Connection test failed: ' + (response?.error || 'Connection failed'));
             }
         } catch (error) {
-            console.error('Error testing connection:', error);
+            console.error('Error testing connection:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Connection test failed: ' + error.message);
         } finally {
             this.hideButtonLoading(testButton);
@@ -902,7 +985,11 @@ class OptionsPageManager {
                 throw new Error(response?.error || 'Failed to clear configuration');
             }
         } catch (error) {
-            console.error('Error clearing Supabase config:', error);
+            console.error('Error clearing Supabase config:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Failed to clear configuration: ' + error.message);
         }
     }
@@ -937,7 +1024,11 @@ class OptionsPageManager {
                 document.body.removeChild(textArea);
             }
         } catch (error) {
-            console.error('Error copying to clipboard:', error);
+            console.error('Error copying to clipboard:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Failed to copy to clipboard. Please select and copy the text manually.');
         }
     }
@@ -954,7 +1045,11 @@ class OptionsPageManager {
             
             return response && response.success && response.tableExists;
         } catch (error) {
-            console.error('Error checking table existence:', error);
+            console.error('Error checking table existence:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             return false;
         }
     }
@@ -1033,7 +1128,11 @@ class OptionsPageManager {
 
 
         } catch (error) {
-            console.error('Error loading Supabase config:', error);
+            console.error('Error loading Supabase config:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.currentConfig.classList.add('d-none');
         }
     }
@@ -1071,7 +1170,11 @@ class OptionsPageManager {
                 }
             }
         } catch (error) {
-            console.error('Error syncing browser history:', error);
+            console.error('Error syncing browser history:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
@@ -1117,7 +1220,11 @@ class OptionsPageManager {
                 }
             }
         } catch (error) {
-            console.error('Error syncing YouTube history:', error);
+            console.error('Error syncing YouTube history:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
@@ -1163,7 +1270,11 @@ class OptionsPageManager {
                 }
             }
         } catch (error) {
-            console.error('Error syncing YouTube likes:', error);
+            console.error('Error syncing YouTube likes:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
@@ -1198,7 +1309,11 @@ class OptionsPageManager {
                     results.push(`Browser history: ${historyResponse.videoCount || 0} videos`);
                 }
             } catch (error) {
-                console.error('Browser history sync failed:', error);
+                console.error('Browser history sync failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
                 results.push('Browser history: failed');
             }
             
@@ -1212,7 +1327,11 @@ class OptionsPageManager {
                     results.push(`YouTube history: ${youtubeResponse.videoCount || 0} videos`);
                 }
             } catch (error) {
-                console.error('YouTube history sync failed:', error);
+                console.error('YouTube history sync failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
                 results.push('YouTube history: failed');
             }
             
@@ -1226,7 +1345,11 @@ class OptionsPageManager {
                     results.push(`YouTube likes: ${likesResponse.videoCount || 0} videos`);
                 }
             } catch (error) {
-                console.error('YouTube likes sync failed:', error);
+                console.error('YouTube likes sync failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
                 results.push('YouTube likes: failed');
             }
             
@@ -1243,7 +1366,11 @@ class OptionsPageManager {
             this.showSuccess(resultMessage);
             
         } catch (error) {
-            console.error('Error syncing all sources:', error);
+            console.error('Error syncing all sources:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
@@ -1306,7 +1433,11 @@ class OptionsPageManager {
                 searchResults.innerHTML = `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}</div>`;
             }
         } catch (error) {
-            console.error('Search error:', error);
+            console.error('Search error:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             const errorMessage = query 
                 ? 'Search failed. Please try again.' 
                 : 'Failed to load watch history.';
@@ -1348,7 +1479,11 @@ class OptionsPageManager {
                 searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history. Try synchronizing your browser history or YouTube history first.</div>';
             }
         } catch (error) {
-            console.error('Initial search error:', error);
+            console.error('Initial search error:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             // Don't show error toast on initial load
             const searchResults = this.getElementById('idSearch_Results');
             searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history. Try synchronizing your browser history or YouTube history first.</div>';
@@ -1493,7 +1628,11 @@ class OptionsPageManager {
                 this.showError('Failed to delete video');
             }
         } catch (error) {
-            console.error('Delete error:', error);
+            console.error('Delete error:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             this.showError('Delete error: ' + error.message);
         } finally {
             this.hideButtonLoading(deleteButton);
@@ -1540,7 +1679,12 @@ class OptionsPageManager {
             const result = await chrome.storage.sync.get([elementId]);
             return result[elementId] || false;
         } catch (error) {
-            console.error(`Error getting toggle state for ${elementId}:`, error);
+            console.error(`Error getting toggle state for ${elementId}:`, JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          elementId: elementId
+        }, null, 2));
             return false;
         }
     }
@@ -1555,7 +1699,12 @@ class OptionsPageManager {
             // Store in sync storage - now used by both options page and background script
             await chrome.storage.sync.set({ [elementId]: state });
         } catch (error) {
-            console.error(`Error setting toggle state for ${elementId}:`, error);
+            console.error(`Error setting toggle state for ${elementId}:`, JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          elementId: elementId
+        }, null, 2));
         }
     }
 
@@ -1571,7 +1720,11 @@ class OptionsPageManager {
                 
             ]);
         } catch (error) {
-            console.error('Error loading initial data:', error);
+            console.error('Error loading initial data:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
         }
     }
 
@@ -1593,7 +1746,11 @@ class OptionsPageManager {
                 }
             }
         } catch (error) {
-            console.error('Error sending message to update database size:', error);
+            console.error('Error sending message to update database size:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             if (this.databaseSize) {
                 this.databaseSize.textContent = 'Error';
             }
@@ -1862,7 +2019,11 @@ class OptionsPageManager {
                 this.supabaseConfig.classList.add('d-none');
             }
         } catch (error) {
-            console.error('Error updating provider status:', error);
+            console.error('Error updating provider status:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
             // Default to IndexedDB on error
             this.providerIndexedDB.checked = true;
             this.providerSupabase.checked = false;

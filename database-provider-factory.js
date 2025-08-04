@@ -414,7 +414,11 @@ export class DatabaseProviderFactory {
 
       return true;
     } catch (error) {
-      console.error('Failed to switch to IndexedDB:', error);
+              console.error('Failed to switch to IndexedDB:', JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
       throw error;
     }
   }
@@ -498,31 +502,32 @@ export class DatabaseProviderFactory {
       console.log('✅ Successfully switched to Supabase provider');
       return true;
     } catch (error) {
-      console.error('❌ Failed to switch to Supabase:', {
+      console.error('❌ Failed to switch to Supabase:', JSON.stringify({
         error: error.message,
-        type: error.name
-      });
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       
       // Provide specific guidance based on error type
       if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-        console.error('💡 Network/CORS issue detected. Solutions:', [
+        console.error('💡 Network/CORS issue detected. Solutions:', JSON.stringify([
           '1. Reload the extension completely (chrome://extensions)',
           '2. Check if host permissions are configured',
           '3. Verify Supabase URL format',
           '4. Check network connectivity'
-        ]);
+        ], null, 2));
       } else if (error.message.includes('credentials')) {
-        console.error('💡 Credentials issue detected. Solutions:', [
+        console.error('💡 Credentials issue detected. Solutions:', JSON.stringify([
           '1. Re-enter your Supabase URL and API key',
           '2. Verify API key has proper permissions',
           '3. Check if your Supabase project is active'
-        ]);
+        ], null, 2));
       } else if (error.message.includes('table')) {
-        console.error('💡 Database table issue detected. Solutions:', [
+        console.error('💡 Database table issue detected. Solutions:', JSON.stringify([
           '1. Run the table creation SQL in Supabase SQL Editor',
           '2. Check database permissions',
           '3. Verify project is properly configured'
-        ]);
+        ], null, 2));
       }
       
       // If we failed to switch, make sure we fall back to IndexedDB
@@ -532,7 +537,11 @@ export class DatabaseProviderFactory {
           await this.switchToIndexedDB(false); // Don't save preference when falling back
           console.log('✅ Successfully fell back to IndexedDB');
         } catch (fallbackError) {
-          console.error('❌ Fallback to IndexedDB also failed:', fallbackError.message);
+          console.error('❌ Fallback to IndexedDB also failed:', JSON.stringify({
+            error: fallbackError.message,
+            errorName: fallbackError.name,
+            errorStack: fallbackError.stack
+          }, null, 2));
         }
       }
       
@@ -568,13 +577,21 @@ export class DatabaseProviderFactory {
       // Default to IndexedDB (save preference since this is the default)
       return await this.switchToIndexedDB(true);
     } catch (error) {
-      console.error('Failed to initialize database factory:', error);
+      console.error('Failed to initialize database factory:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       
       // Emergency fallback to IndexedDB
       try {
         return await this.switchToIndexedDB(false); // Don't save preference during emergency fallback
       } catch (fallbackError) {
-        console.error('Emergency fallback failed:', fallbackError);
+        console.error('Emergency fallback failed:', JSON.stringify({
+          error: fallbackError.message,
+          errorName: fallbackError.name,
+          errorStack: fallbackError.stack
+        }, null, 2));
         return false;
       }
     }
@@ -701,7 +718,11 @@ export class DatabaseProviderFactory {
       console.log(`Successfully migrated ${sourceData.length} videos from ${sourceProvider} to ${targetProvider}`);
       return true;
     } catch (error) {
-      console.error('Data migration failed:', error);
+      console.error('Data migration failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -747,7 +768,11 @@ export class DatabaseProviderFactory {
 
       return true;
     } catch (error) {
-      console.error('Data sync failed:', error);
+      console.error('Data sync failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }

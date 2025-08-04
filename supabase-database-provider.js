@@ -69,7 +69,11 @@ export class SupabaseDatabaseProvider {
       
       return true;
     } catch (error) {
-      console.error('Invalid URL format:', error);
+              console.error('Invalid URL format:', JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
       return false;
     }
   }
@@ -127,33 +131,35 @@ export class SupabaseDatabaseProvider {
       console.log('✅ Supabase provider initialized successfully');
       return true;
     } catch (error) {
-      console.error('❌ Failed to initialize Supabase provider:', {
+      console.error('❌ Failed to initialize Supabase provider:', JSON.stringify({
         error: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
         credentials: this.credentials ? {
           hasUrl: !!this.credentials.supabaseUrl,
           hasApiKey: !!this.credentials.apiKey,
           urlPreview: this.credentials.supabaseUrl ? 
             this.credentials.supabaseUrl.replace(/https:\/\/([^.]+).*/, 'https://$1...') : null
         } : 'No credentials available'
-      });
+      }, null, 2));
       
       this.isInitialized = false;
       this.isConnected = false;
       
       // Provide specific guidance based on error type
       if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-        console.error('💡 Troubleshooting tip: This looks like a network/CORS issue. Try:', [
+        console.error('💡 Troubleshooting tip: This looks like a network/CORS issue. Try:', JSON.stringify([
           '1. Reload the extension completely',
           '2. Check if your Supabase URL is correct',
           '3. Verify your API key has the correct permissions',
           '4. Check if the extension has proper host permissions'
-        ]);
+        ], null, 2));
       } else if (error.message.includes('Database table does not exist')) {
-        console.error('💡 Troubleshooting tip: Database table missing. You need to:', [
+        console.error('💡 Troubleshooting tip: Database table missing. You need to:', JSON.stringify([
           '1. Open your Supabase SQL Editor',
           '2. Run the table creation SQL shown in the error above',
           '3. Refresh this page and try again'
-        ]);
+        ], null, 2));
       }
       
       return false;
@@ -276,7 +282,11 @@ AND tablename = '${this.tableName}';
       if (error.message.includes('Database table does not exist')) {
         throw error;
       }
-      console.error('Failed to ensure schema:', error);
+              console.error('Failed to ensure schema:', JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack
+        }, null, 2));
       throw error;
     }
   }
@@ -369,7 +379,7 @@ AND tablename = '${this.tableName}';
           
           // Log security-relevant errors with more detail
           if (response.status === 401) {
-            console.error('❌ Supabase Authentication failed:', {
+            console.error('❌ Supabase Authentication failed:', JSON.stringify({
               status: response.status,
               message: 'Invalid API key or expired token',
               suggestion: 'Check your API key in the extension settings',
@@ -379,26 +389,26 @@ AND tablename = '${this.tableName}';
                   ? [k, v.substring(0, 10) + '...'] 
                   : [k, v]
               ))
-            });
+            }, null, 2));
           } else if (response.status === 403) {
-            console.error('❌ Supabase Access forbidden:', {
+            console.error('❌ Supabase Access forbidden:', JSON.stringify({
               status: response.status,
               message: 'Insufficient permissions for this operation',
               suggestion: 'Check your API key permissions and database policies',
               url: url.replace(/\/rest\/v1.*/, '/rest/v1/...')
-            });
+            }, null, 2));
           } else if (response.status === 429) {
-            console.error('❌ Supabase Rate limit exceeded:', {
+            console.error('❌ Supabase Rate limit exceeded:', JSON.stringify({
               status: response.status,
               message: 'Too many requests to Supabase API',
               suggestion: 'Wait before retrying, or upgrade your Supabase plan'
-            });
+            }, null, 2));
           } else if (response.status >= 500) {
-            console.error('❌ Supabase Server error:', {
+            console.error('❌ Supabase Server error:', JSON.stringify({
               status: response.status,
               message: 'Supabase service is experiencing issues',
               suggestion: 'Check Supabase status page and try again later'
-            });
+            }, null, 2));
           }
           
           throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
@@ -408,8 +418,10 @@ AND tablename = '${this.tableName}';
       } catch (error) {
         // Enhanced error logging for network issues
         if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-          console.error('❌ Network error connecting to Supabase:', {
+          console.error('❌ Network error connecting to Supabase:', JSON.stringify({
             error: error.message,
+            errorName: error.name,
+            errorStack: error.stack,
             url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
             possibleCauses: [
               'CORS policy blocking the request',
@@ -423,19 +435,21 @@ AND tablename = '${this.tableName}';
               'Check network connectivity',
               'Try reloading the extension'
             ]
-          });
+          }, null, 2));
         } else if (error.name === 'AbortError') {
-          console.error('❌ Supabase request timed out:', {
+          console.error('❌ Supabase request timed out:', JSON.stringify({
             error: error.message,
+            errorName: error.name,
             timeout: '30 seconds',
             suggestion: 'Check network connectivity and Supabase service status'
-          });
+          }, null, 2));
         } else {
-          console.error('❌ Supabase request failed:', {
+          console.error('❌ Supabase request failed:', JSON.stringify({
             error: error.message,
-            type: error.name,
+            errorName: error.name,
+            errorStack: error.stack,
             url: url.replace(/\/rest\/v1.*/, '/rest/v1/...')
-          });
+          }, null, 2));
         }
         
         throw error;
@@ -461,7 +475,11 @@ AND tablename = '${this.tableName}';
       this.isConnected = response.ok;
       return this.isConnected;
     } catch (error) {
-      console.error('Supabase connection test failed:', error);
+      console.error('Supabase connection test failed:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       this.isConnected = false;
       return false;
     }
@@ -498,7 +516,11 @@ AND tablename = '${this.tableName}';
         intCount: parseInt(row.int_count)
       };
     } catch (error) {
-      console.error('Failed to get video:', error);
+      console.error('Failed to get video:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -535,7 +557,11 @@ AND tablename = '${this.tableName}';
 
       return response.ok;
     } catch (error) {
-      console.error('Failed to put video:', error);
+      console.error('Failed to put video:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -586,7 +612,11 @@ AND tablename = '${this.tableName}';
 
       return allVideos;
     } catch (error) {
-      console.error('Failed to get all videos:', error);
+      console.error('Failed to get all videos:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -621,7 +651,11 @@ AND tablename = '${this.tableName}';
       const data = await response.json();
       return data.length;
     } catch (error) {
-      console.error('Failed to get video count:', error);
+      console.error('Failed to get video count:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -641,7 +675,11 @@ AND tablename = '${this.tableName}';
       console.log('All videos cleared from Supabase');
       return response.ok;
     } catch (error) {
-      console.error('Failed to clear all videos:', error);
+      console.error('Failed to clear all videos:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -665,7 +703,11 @@ AND tablename = '${this.tableName}';
 
       return true;
     } catch (error) {
-      console.error('Failed to delete video:', error);
+      console.error('Failed to delete video:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -701,7 +743,11 @@ AND tablename = '${this.tableName}';
 
       return response.ok;
     } catch (error) {
-      console.error('Failed to import videos:', error);
+      console.error('Failed to import videos:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -733,7 +779,11 @@ AND tablename = '${this.tableName}';
         intCount: parseInt(row.int_count)
       }));
     } catch (error) {
-      console.error('Failed to search videos:', error);
+      console.error('Failed to search videos:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -786,7 +836,11 @@ AND tablename = '${this.tableName}';
 
       return allVideos;
     } catch (error) {
-      console.error('Failed to get videos by date range:', error);
+      console.error('Failed to get videos by date range:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -859,7 +913,11 @@ AND tablename = '${this.tableName}';
         avgViewsPerVideo: totalVideos > 0 ? totalViews / totalVideos : 0
       };
     } catch (error) {
-      console.error('Failed to get statistics:', error);
+      console.error('Failed to get statistics:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       throw error;
     }
   }
@@ -878,7 +936,11 @@ AND tablename = '${this.tableName}';
       console.log('Supabase provider closed');
       return true;
     } catch (error) {
-      console.error('Failed to close Supabase provider:', error);
+      console.error('Failed to close Supabase provider:', JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       return false;
     }
   }

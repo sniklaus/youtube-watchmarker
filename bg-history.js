@@ -166,7 +166,11 @@ export const History = {
       funcResponse(result);
 
     } catch (error) {
-      console.error("History synchronization error:", error);
+      console.error("History synchronization error:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       funcResponse(null);
     }
   },

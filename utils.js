@@ -332,7 +332,12 @@ export class AsyncSeries {
       try {
         await functions[functionNames[0]](workspace, executeNext);
       } catch (error) {
-        console.error("Error in series step:", functionNames[0], error);
+        console.error("Error in series step:", functionNames[0], JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          functionName: functionNames[0]
+        }, null, 2));
         callback(null);
       }
     };
@@ -340,7 +345,12 @@ export class AsyncSeries {
     try {
       await functions[functionNames[0]](workspace, executeNext);
     } catch (error) {
-      console.error("Error in initial series step:", functionNames[0], error);
+              console.error("Error in initial series step:", functionNames[0], JSON.stringify({
+          error: error.message,
+          errorName: error.name,
+          errorStack: error.stack,
+          functionName: functionNames[0]
+        }, null, 2));
       callback(null);
     }
   }

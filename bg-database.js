@@ -73,7 +73,11 @@ export class DatabaseManager {
         }, response)
       );
     } catch (error) {
-      console.error("Failed to initialize database:", error);
+      console.error("Failed to initialize database:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response(null);
     }
   }
@@ -126,7 +130,10 @@ export class DatabaseManager {
     };
 
     openRequest.onerror = () => {
-      console.error("Failed to open database:", openRequest.error);
+              console.error("Failed to open database:", JSON.stringify({
+          error: openRequest.error?.message || 'Unknown database error',
+          errorName: openRequest.error?.name || 'DatabaseError'
+        }, null, 2));
       this.database = null;
       callback(null);
     };
@@ -174,7 +181,11 @@ export class DatabaseManager {
 
       response({ success: true, data: exportData });
     } catch (error) {
-      console.error("Failed to export data:", error);
+      console.error("Failed to export data:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -201,7 +212,11 @@ export class DatabaseManager {
       await provider.importVideos(data.data);
       response({ success: true, message: `Imported ${data.data.length} videos` });
     } catch (error) {
-      console.error("Failed to import data:", error);
+      console.error("Failed to import data:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -222,7 +237,11 @@ export class DatabaseManager {
       await provider.clearAllVideos();
       response({ success: true, message: 'Database reset successfully' });
     } catch (error) {
-      console.error("Failed to reset database:", error);
+      console.error("Failed to reset database:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -238,7 +257,11 @@ export class DatabaseManager {
       await this.syncManager.enableSync(provider, interval);
       response({ success: true, message: 'Sync enabled' });
     } catch (error) {
-      console.error("Failed to enable sync:", error);
+      console.error("Failed to enable sync:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -253,7 +276,11 @@ export class DatabaseManager {
       await this.syncManager.disableSync();
       response({ success: true, message: 'Sync disabled' });
     } catch (error) {
-      console.error("Failed to disable sync:", error);
+      console.error("Failed to disable sync:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -268,7 +295,11 @@ export class DatabaseManager {
       await this.syncManager.syncNow();
       response({ success: true, message: 'Sync completed' });
     } catch (error) {
-      console.error("Failed to sync:", error);
+      console.error("Failed to sync:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -283,7 +314,11 @@ export class DatabaseManager {
       const status = await this.syncManager.getStatus();
       response({ success: true, data: status });
     } catch (error) {
-      console.error("Failed to get sync status:", error);
+      console.error("Failed to get sync status:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -304,7 +339,11 @@ export class DatabaseManager {
         response({ success: false, error: 'Failed to switch provider' });
       }
     } catch (error) {
-      console.error("Failed to switch provider:", error);
+      console.error("Failed to switch provider:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -319,7 +358,11 @@ export class DatabaseManager {
       const status = this.providerFactory.getProviderStatus();
       response({ success: true, status: status });
     } catch (error) {
-      console.error("Failed to get provider status:", error);
+      console.error("Failed to get provider status:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -334,7 +377,11 @@ export class DatabaseManager {
       const providers = this.providerFactory.getAvailableProviders();
       response({ success: true, data: providers });
     } catch (error) {
-      console.error("Failed to get available providers:", error);
+      console.error("Failed to get available providers:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -355,7 +402,11 @@ export class DatabaseManager {
         response({ success: false, error: 'Migration failed' });
       }
     } catch (error) {
-      console.error("Failed to migrate data:", error);
+      console.error("Failed to migrate data:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -374,7 +425,11 @@ export class DatabaseManager {
       });
       response({ success: true, message: 'Supabase configured successfully' });
     } catch (error) {
-      console.error("Failed to configure Supabase:", error);
+      console.error("Failed to configure Supabase:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -393,7 +448,11 @@ export class DatabaseManager {
         response({ success: false, error: ERRORS.CONNECTION_FAILED });
       }
     } catch (error) {
-      console.error("Failed to test Supabase:", error);
+      console.error("Failed to test Supabase:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -408,7 +467,11 @@ export class DatabaseManager {
       const exists = await supabaseDatabaseProvider.checkTableExists();
       response({ success: true, tableExists: exists });
     } catch (error) {
-      console.error("Failed to check Supabase table:", error);
+      console.error("Failed to check Supabase table:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -423,7 +486,11 @@ export class DatabaseManager {
       await credentialStorage.clearSupabaseCredentials();
       response({ success: true, message: 'Supabase credentials cleared' });
     } catch (error) {
-      console.error("Failed to clear Supabase credentials:", error);
+      console.error("Failed to clear Supabase credentials:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -438,7 +505,11 @@ export class DatabaseManager {
       const credentials = await credentialStorage.getMaskedCredentials();
       response({ success: true, credentials: credentials });
     } catch (error) {
-      console.error("Failed to get Supabase credentials:", error);
+      console.error("Failed to get Supabase credentials:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }
@@ -471,7 +542,11 @@ export class DatabaseManager {
         } 
       });
     } catch (error) {
-      console.error("Failed to get Supabase status:", error);
+      console.error("Failed to get Supabase status:", JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack
+      }, null, 2));
       response({ success: false, error: error.message });
     }
   }

@@ -140,13 +140,28 @@ export class ErrorHandler {
     if (error instanceof ValidationError) {
       console.warn(logMessage, { error, context });
     } else if (error instanceof NetworkError) {
-      console.error(logMessage, { error, context });
+      console.error(logMessage, JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        context: context
+      }, null, 2));
     } else if (error instanceof DatabaseError) {
-      console.error(logMessage, { error, context });
+      console.error(logMessage, JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        context: context
+      }, null, 2));
     } else if (error instanceof SyncError) {
       console.warn(logMessage, { error, context });
     } else {
-      console.error(logMessage, { error, context });
+      console.error(logMessage, JSON.stringify({
+        error: error.message,
+        errorName: error.name,
+        errorStack: error.stack,
+        context: context
+      }, null, 2));
     }
   }
 
@@ -170,7 +185,11 @@ export class ErrorHandler {
         chrome.storage.local.set({ errorReports: reports });
       });
     } catch (storageError) {
-      console.error('Failed to store error report:', storageError);
+      console.error('Failed to store error report:', JSON.stringify({
+        error: storageError.message,
+        errorName: storageError.name,
+        errorStack: storageError.stack
+      }, null, 2));
     }
   }
 
