@@ -20,6 +20,44 @@ export class SupabaseDatabaseProvider {
     this.apiKey = null;
     this.maxRetries = 3;
     this.retryDelay = 1000;
+    this.activeControllers = new Set(); // Track active AbortControllers for cleanup
+  }
+
+  /**
+   * Create an AbortSignal with timeout for better compatibility
+   * @param {number} timeoutMs - Timeout in milliseconds
+   * @returns {AbortSignal} AbortSignal that will abort after timeout
+   */
+  createTimeoutSignal(timeoutMs) {
+    const controller = new AbortController();
+    this.activeControllers.add(controller);
+    
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      this.activeControllers.delete(controller);
+    }, timeoutMs);
+    
+    // Clean up when the signal is used
+    controller.signal.addEventListener('abort', () => {
+      clearTimeout(timeoutId);
+      this.activeControllers.delete(controller);
+    });
+    
+    return controller.signal;
+  }
+
+  /**
+   * Cleanup all active AbortControllers
+   */
+  cleanup() {
+    for (const controller of this.activeControllers) {
+      try {
+        controller.abort();
+      } catch (error) {
+        // Ignore errors during cleanup
+      }
+    }
+    this.activeControllers.clear();
   }
 
   /**
@@ -292,19 +330,32 @@ AND tablename = '${this.tableName}';
   }
 
   /**
-   * Retry mechanism for failed requests
+   * Retry mechanism for failed requests with exponential backoff
    * @param {Function} requestFn - Function to retry
    * @param {number} retries - Number of retries remaining
+   * @param {number} attempt - Current attempt number (for backoff calculation)
    * @returns {Promise<Response>} Response from successful request
    */
-  async retryRequest(requestFn, retries = this.maxRetries) {
+  async retryRequest(requestFn, retries = this.maxRetries, attempt = 1) {
     try {
       return await requestFn();
     } catch (error) {
       if (retries > 0 && this.isRetryableError(error)) {
-        console.log(`Request failed, retrying... (${retries} attempts left)`);
-        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
-        return this.retryRequest(requestFn, retries - 1);
+        // Exponential backoff: base delay * 2^(attempt-1)
+        const backoffDelay = this.retryDelay * Math.pow(2, attempt - 1);
+        // Add jitter to prevent thundering herd
+        const jitter = Math.random() * 1000;
+        const delay = Math.min(backoffDelay + jitter, 30000); // Cap at 30 seconds
+        
+        console.log(`🔄 Request failed, retrying in ${Math.round(delay)}ms... (${retries} attempts left)`, {
+          error: error.name,
+          message: error.message,
+          attempt,
+          delay: Math.round(delay)
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.retryRequest(requestFn, retries - 1, attempt + 1);
       }
       throw error;
     }
@@ -321,6 +372,10 @@ AND tablename = '${this.tableName}';
       'NetworkError',
       'HTTP 5',
       'timeout',
+      'TimeoutError',
+      'signal timed out',
+      'signal aborted',
+      'AbortError',
       'Failed to fetch',
       'Load failed',
       'ERR_NETWORK',
@@ -362,8 +417,8 @@ AND tablename = '${this.tableName}';
     const config = {
       method,
       headers: requestHeaders,
-      // Add timeout for security
-      signal: AbortSignal.timeout(30000) // 30 second timeout
+          // Add timeout for better reliability - using manual AbortController for better compatibility
+    signal: this.createTimeoutSignal(60000) // 60 second timeout
     };
 
     if (body && (method === 'POST' || method === 'PATCH')) {
@@ -436,19 +491,32 @@ AND tablename = '${this.tableName}';
               'Try reloading the extension'
             ]
           }, null, 2));
-        } else if (error.name === 'AbortError') {
+        } else if (error.name === 'AbortError' || error.name === 'TimeoutError' || error.message.includes('timeout')) {
           console.error('❌ Supabase request timed out:', JSON.stringify({
             error: error.message,
             errorName: error.name,
-            timeout: '30 seconds',
-            suggestion: 'Check network connectivity and Supabase service status'
+            timeout: '60 seconds',
+            url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
+            suggestion: 'Check network connectivity and Supabase service status',
+            troubleshooting: [
+              'Try a different network connection',
+              'Check if Supabase is experiencing issues',
+              'Verify your API key is still valid',
+              'Check browser developer tools Network tab for more details'
+            ]
           }, null, 2));
         } else {
           console.error('❌ Supabase request failed:', JSON.stringify({
             error: error.message,
             errorName: error.name,
             errorStack: error.stack,
-            url: url.replace(/\/rest\/v1.*/, '/rest/v1/...')
+            url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
+            possibleReasons: [
+              error.message.includes('signal') ? 'Request aborted or timed out' : 'Unknown error',
+              'Network connectivity issues',
+              'Supabase server error',
+              'CORS or security policy issues'
+            ]
           }, null, 2));
         }
         

@@ -28,6 +28,9 @@ class ExtensionManager {
     this.isInitialized = false;
     this.providerFactory = databaseProviderFactory;
     
+    // Setup cleanup on service worker shutdown
+    self.addEventListener('beforeunload', () => this.cleanup());
+    
     this.init();
   }
 
@@ -76,6 +79,23 @@ class ExtensionManager {
     } catch (error) {
       console.error("Failed to initialize extension:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Cleanup resources when extension shuts down
+   */
+  cleanup() {
+    try {
+      // Cleanup active Supabase connections
+      const currentProvider = this.providerFactory.getCurrentProvider();
+      if (currentProvider && typeof currentProvider.cleanup === 'function') {
+        currentProvider.cleanup();
+      }
+      
+      console.log("Extension cleanup completed");
+    } catch (error) {
+      console.error("Error during cleanup:", error);
     }
   }
 
@@ -825,6 +845,14 @@ class ExtensionManager {
     chrome.runtime.onConnect.addListener((port) => {
       if (port.name === "youtube-watchmarker") {
         
+        // Add disconnect handler to properly clean up
+        port.onDisconnect.addListener(() => {
+          // Clear the runtime.lastError to prevent console warnings
+          if (chrome.runtime.lastError) {
+            console.log("Port disconnected due to back/forward cache or page navigation:", chrome.runtime.lastError.message);
+          }
+        });
+        
         port.onMessage.addListener((message) => {
           try {
             const { action, videoId, title } = message;
@@ -837,8 +865,15 @@ class ExtensionManager {
               }
               
               Youtube.lookup(messageRequest, (response) => {
-                if (port && !port.disconnected) {
-                  port.postMessage(response);
+                try {
+                  if (port && !port.disconnected) {
+                    port.postMessage(response);
+                  }
+                } catch (error) {
+                  // Ignore port communication errors (page might be in back/forward cache)
+                  if (error.message && !error.message.includes("Receiving end does not exist")) {
+                    console.warn("Error sending port message:", error);
+                  }
                 }
               });
             } else if (action === "youtube-ensure") {
@@ -848,8 +883,15 @@ class ExtensionManager {
               }
               
               Youtube.ensure(messageRequest, (response) => {
-                if (port && !port.disconnected) {
-                  port.postMessage(response);
+                try {
+                  if (port && !port.disconnected) {
+                    port.postMessage(response);
+                  }
+                } catch (error) {
+                  // Ignore port communication errors (page might be in back/forward cache)
+                  if (error.message && !error.message.includes("Receiving end does not exist")) {
+                    console.warn("Error sending port message:", error);
+                  }
                 }
               });
             }

@@ -256,9 +256,27 @@ class BackgroundManager {
       console.log("Connected to background script");
 
       this.port.onDisconnect.addListener(() => {
-        console.log("Disconnected from background - reconnecting...");
+        // Clear the lastError to prevent console warnings
+        if (chrome.runtime.lastError) {
+          console.log("Port disconnected:", chrome.runtime.lastError.message);
+        } else {
+          console.log("Port disconnected - page may be in back/forward cache");
+        }
         this.port = null;
-        setTimeout(() => this.connect(), 1000);
+        
+        // Only reconnect if the page is still active
+        if (document.visibilityState === 'visible') {
+          setTimeout(() => this.connect(), 1000);
+        } else {
+          // If page is not visible, wait for it to become visible again
+          const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+              document.removeEventListener('visibilitychange', handleVisibilityChange);
+              setTimeout(() => this.connect(), 1000);
+            }
+          };
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
       });
 
       this.port.onMessage.addListener((response) => {
