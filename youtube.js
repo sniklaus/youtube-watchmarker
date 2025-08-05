@@ -4,440 +4,29 @@
  * YouTube Watch Marker Content Script
  * Handles marking watched videos on YouTube pages
  */
-class YouTubeWatchMarker {
-  constructor() {
-    this.lastChange = null;
-    this.watchDates = {};
-    this.publishDates = {}; // Store publication dates
-    this.publishDatesCacheTime = {}; // Store when each date was cached
-    this.observers = new WeakMap();
-    this.isProcessing = false;
-    this.cssInjected = false; // Track if CSS is injected
-    
-    // Settings cache
-    this.settingsCache = {};
-    
-    // Bind methods to preserve 'this' context
-    this.refresh = this.refresh.bind(this);
-    this.markVideo = this.markVideo.bind(this);
-    this.observeVideo = this.observeVideo.bind(this);
-    this.handleMessage = this.handleMessage.bind(this);
-    this.handleProgressHookEvent = this.handleProgressHookEvent.bind(this);
-    this.setupTooltips = this.setupTooltips.bind(this);
-    this.extractPublishDate = this.extractPublishDate.bind(this);
-    this.injectCSS = this.injectCSS.bind(this);
-    
-    // Long-lived port for background communication
-    this.backgroundPort = null;
-    this.connectToBackground();
-    
-    this.safeInit().catch(error => {
-      console.error('Failed to initialize YouTubeWatchMarker:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
-    });
-  }
 
+// =====================================================================================
+// UTILITY FUNCTIONS
+// =====================================================================================
+
+/**
+ * Utility functions for common operations
+ */
+const Utils = {
   /**
-   * Safe initialization with error handling and retry
-   */
-  async safeInit(retryCount = 0) {
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 2000;
-    
-    try {
-      await this.init();
-    } catch (error) {
-              console.error(`Initialization failed (attempt ${retryCount + 1}/${MAX_RETRIES}):`, JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack,
-          attempt: retryCount + 1,
-          maxRetries: MAX_RETRIES
-        }, null, 2));
-      if (retryCount < MAX_RETRIES && (error.message?.includes('context invalidated') || error.message?.includes('undefined'))) {
-        console.log(`Retrying initialization in ${RETRY_DELAY/1000}s...`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        await this.safeInit(retryCount + 1);
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  /**
-   * Initialize the extension
-   */
-  async init() {
-    // Check runtime validity before proceeding - but be more lenient
-    if (!chrome.runtime) {
-      throw new Error("Chrome runtime not available during init");
-    }
-    
-    // Fetch and cache settings (with fallbacks)
-    await this.cacheSettings();
-    
-    await this.injectCSS();
-    this.setupPeriodicRefresh();
-    this.setupRatingObserver();
-    await this.setupTooltips();
-    this.refresh();
-    
-    // Listen for messages from background script
-    chrome.runtime.onMessage.addListener(this.handleMessage);
-    
-    // Listen for progress hook events
-    document.addEventListener('youwatch-progresshook', (event) => {
-      this.handleProgressHookEvent(event);
-    });
-    
-    // Listen for storage changes to update tooltip settings and cache
-    if (this.isStorageAvailable()) {
-      chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === 'sync') {
-          // Update cache
-          for (const [key, {newValue}] of Object.entries(changes)) {
-            this.settingsCache[key] = newValue;
-          }
-          
-          // Handle CSS changes
-          const cssKeys = ['stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge', 'stylesheet_Showdate', 'stylesheet_Hideprogress'];
-          const visualKeys = ['idVisualization_Fadeout', 'idVisualization_Grayout', 'idVisualization_Showbadge', 'idVisualization_Showdate', 'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'];
-          
-          if (cssKeys.some(key => changes[key]) || visualKeys.some(key => changes[key])) {
-            // Reset CSS injection flag and re-inject
-            this.cssInjected = false;
-            this.injectCSS();
-          }
-          
-          // Handle tooltip changes
-          if (changes.idVisualization_Showpublishdate) {
-            this.handleTooltipSettingChange(changes.idVisualization_Showpublishdate.newValue);
-          }
-        }
-      });
-    } else {
-      console.warn('Storage not available - skipping storage change listener');
-    }
-    
-    // Setup periodic runtime check
-    this.setupRuntimeCheck();
-  }
-
-  /**
-   * Check if Chrome storage API is available
-   * @returns {boolean} True if storage is available
-   */
-  isStorageAvailable() {
-    try {
-      // More comprehensive check for Manifest V3
-      if (!chrome || !chrome.storage || !chrome.storage.sync) {
-        return false;
-      }
-      
-      // Check if runtime is available, but don't require runtime.id
-      // as it can be temporarily undefined during service worker transitions
-      if (!chrome.runtime) {
-        return false;
-      }
-      
-      // Try to access storage to verify it's actually working
-      // This is a more reliable test than just checking for the existence
-      return true;
-    } catch (error) {
-      console.warn("Storage availability check failed:", error);
-      return false;
-    }
-  }
-
-  /**
-   * Fetch and cache all required settings
-   */
-  async cacheSettings() {
-    const keys = [
-      'stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge',
-      'stylesheet_Showdate', 'stylesheet_Hideprogress',
-      'idVisualization_Fadeout', 'idVisualization_Grayout',
-      'idVisualization_Showbadge', 'idVisualization_Showdate',
-      'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'
-    ];
-    
-    if (!this.isStorageAvailable()) {
-      console.warn('Storage not available during cacheSettings - using defaults');
-      keys.forEach(key => {
-        this.settingsCache[key] = false;
-      });
-      return;
-    }
-    
-    try {
-      const results = await chrome.storage.sync.get(keys);
-      this.settingsCache = { ...results };
-      console.log('Settings cached successfully:', Object.keys(this.settingsCache).length, 'keys');
-    } catch (error) {
-              console.error('Failed to cache settings:', JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
-      // Set defaults to false
-      keys.forEach(key => {
-        this.settingsCache[key] = false;
-      });
-    }
-  }
-
-  /**
-   * Establish long-lived connection to background
-   */
-  connectToBackground() {
-    // Don't create multiple connections
-    if (this.backgroundPort) {
-      return;
-    }
-    
-    // Basic runtime check - but don't require runtime.id
-    if (!chrome.runtime) {
-      console.log("Runtime not available - delaying connection...");
-      setTimeout(() => this.connectToBackground(), 1000);
-      return;
-    }
-    
-    try {
-      this.backgroundPort = chrome.runtime.connect({ name: "youtube-watchmarker" });
-      console.log("Successfully connected to background script");
-    } catch (error) {
-      if (error.message.includes("context invalidated") || 
-          error.message.includes("Extension context invalidated")) {
-        console.log("Extension context invalidated during connect - retrying...");
-        setTimeout(() => this.connectToBackground(), 2000);
-      } else {
-        console.error("Connection error:", JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
-        // Retry with exponential backoff for other errors
-        setTimeout(() => this.connectToBackground(), 5000);
-      }
-      return;
-    }
-      
-    this.backgroundPort.onDisconnect.addListener(() => {
-      console.log("Disconnected from background - reconnecting...");
-      this.backgroundPort = null;
-      
-      // Check for common disconnect reasons
-      if (chrome.runtime.lastError) {
-        console.log("Disconnect reason:", chrome.runtime.lastError.message);
-      }
-      
-      setTimeout(() => this.connectToBackground(), 1000);
-    });
-    
-    this.backgroundPort.onMessage.addListener((response) => {
-      if (response && response.strIdent) {
-        this.watchDates[response.strIdent] = response.intTimestamp;
-        
-        // Mark all videos with this ID
-        const videosWithId = this.findVideos(response.strIdent);
-        videosWithId.forEach(video => this.markVideo(video, response.strIdent));
-      }
-    });
-  }
-
-  /**
-   * Inject CSS styles for custom tooltips and stored stylesheet settings
-   */
-  async injectCSS() {
-    if (this.cssInjected) return;
-    
-    try {
-      // Get all settings from cache/storage
-      const settings = {};
-      const keys = [
-        'stylesheet_Fadeout',
-        'stylesheet_Grayout', 
-        'stylesheet_Showbadge',
-        'stylesheet_Showdate',
-        'stylesheet_Hideprogress',
-        'idVisualization_Fadeout',
-        'idVisualization_Grayout',
-        'idVisualization_Showbadge',
-        'idVisualization_Showdate',
-        'idVisualization_Hideprogress'
-      ];
-      
-      for (const key of keys) {
-        settings[key] = await this.getSettingValue(key);
-      }
-
-      // Remove any existing injected styles to prevent duplicates
-      const existingStyle = document.getElementById('youwatch-injected-styles');
-      if (existingStyle) {
-        existingStyle.remove();
-      }
-
-      // Build CSS string based on enabled settings
-      let cssContent = '';
-      
-      // Add youwatch-mark styles based on enabled visualizations
-      if (settings.idVisualization_Fadeout && settings.stylesheet_Fadeout) {
-        cssContent += settings.stylesheet_Fadeout + '\n';
-      }
-      
-      if (settings.idVisualization_Grayout && settings.stylesheet_Grayout) {
-        cssContent += settings.stylesheet_Grayout + '\n';
-      }
-      
-      if (settings.idVisualization_Showbadge && settings.stylesheet_Showbadge) {
-        cssContent += settings.stylesheet_Showbadge + '\n';
-      }
-      
-      if (settings.idVisualization_Showdate && settings.stylesheet_Showdate) {
-        cssContent += settings.stylesheet_Showdate + '\n';
-      }
-      
-      if (settings.idVisualization_Hideprogress && settings.stylesheet_Hideprogress) {
-        cssContent += settings.stylesheet_Hideprogress + '\n';
-      }
-
-      // Add publication date CSS
-      cssContent += `
-        /* Publication Date Display */
-        .youwatch-has-publish-date::after {
-          content: " • Published: " attr(data-publish-date);
-          color: #aaa;
-          font-weight: normal;
-        }
-        
-        /* Explicitly exclude video player page elements */
-        ytd-watch-flexy .youwatch-has-publish-date::after,
-        #watch .youwatch-has-publish-date::after {
-          display: none !important;
-        }
-        
-        /* Dark theme adjustments */
-        [data-bs-theme="dark"] .youwatch-has-publish-date::after {
-          color: #ccc;
-        }
-        
-        /* Light theme adjustments */
-        [data-bs-theme="light"] .youwatch-has-publish-date::after {
-          color: #606060;
-        }
-      `;
-
-      // Inject CSS if there's content
-      if (cssContent.trim()) {
-        const style = document.createElement('style');
-        style.id = 'youwatch-injected-styles';
-        style.textContent = cssContent;
-        document.head.appendChild(style);
-      }
-
-      this.cssInjected = true;
-    } catch (error) {
-              console.error('Error injecting CSS:', JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
-    }
-  }
-
-  /**
-   * Sets up periodic refresh to catch dynamically loaded content
-   */
-  setupPeriodicRefresh() {
-    // Use MutationObserver for better performance than polling
-    const observer = new MutationObserver((mutations) => {
-      let shouldRefresh = false;
-      
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          // Check if any video thumbnails were added
-          const hasVideoThumbnails = Array.from(mutation.addedNodes).some(node => 
-            node.nodeType === Node.ELEMENT_NODE && 
-            (node.matches?.(this.getVideoSelectors().join(', ')) || 
-             node.querySelector?.(this.getVideoSelectors().join(', ')))
-          );
-          
-          if (hasVideoThumbnails) {
-            shouldRefresh = true;
-          }
-        }
-      });
-      
-      if (shouldRefresh && !this.isProcessing) {
-        // Debounce refresh calls
-        clearTimeout(this.refreshTimeout);
-        this.refreshTimeout = setTimeout(() => {
-          this.refresh();
-          this.setupTooltips(); // Re-setup publication date display for new content
-        }, 100);
-      }
-    });
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  /**
-   * Gets CSS selectors for video elements
-   * @returns {string[]} Array of CSS selectors
-   */
-  getVideoSelectors() {
-    return [
-      'a.ytd-thumbnail[href^="/watch?v="]', // regular videos
-      'a.yt-lockup-view-model-wiz__content-image[href^="/watch?v="]', // regular videos
-      'ytd-compact-video-renderer a.yt-simple-endpoint[href^="/watch?v="]', // compact videos
-      'a.ytp-ce-covering-overlay[href*="/watch?v="]', // video overlays
-      'a.ytp-videowall-still[href*="/watch?v="]', // video wall
-      'a.ytd-thumbnail[href^="/shorts/"]', // shorts
-      'a.ShortsLockupViewModelHostEndpoint[href^="/shorts/"]', // shorts
-      'a.reel-item-endpoint[href^="/shorts/"]', // shorts
-      'a.media-item-thumbnail-container[href^="/watch?v="]', // mobile
-    ];
-  }
-
-  /**
-   * Finds all video elements on the page
-   * @param {string} [videoId] - Optional video ID to filter by
-   * @returns {Element[]} Array of video elements
-   */
-  findVideos(videoId = "") {
-    const selectors = videoId 
-      ? this.getVideoSelectors().map(selector => 
-          selector.replace('"/watch?v="', `"/watch?v=${videoId}"`).replace('"/shorts/"', `"/shorts/${videoId}"`))
-      : this.getVideoSelectors();
-    
-    return Array.from(document.querySelectorAll(selectors.join(", ")));
-  }
-
-  /**
-   * Extracts video ID from URL
-   * @param {string} url - Video URL
-   * @returns {string} Video ID
+   * Extract video ID from URL
    */
   extractVideoId(url) {
     return url.split("&")[0].slice(-11);
-  }
+  },
 
   /**
-   * Extracts video title from video element
-   * @param {Element} videoElement - Video element
-   * @returns {string} Video title
+   * Extract video title from video element
    */
   extractVideoTitle(videoElement) {
     let title = "";
     let currentElement = videoElement.parentNode;
     
-    // Search up the DOM tree for title element
     for (let i = 0; i < 5 && currentElement; i++) {
       const titleElement = currentElement.querySelector("#video-title");
       if (titleElement) {
@@ -448,19 +37,15 @@ class YouTubeWatchMarker {
     }
     
     return title;
-  }
+  },
 
   /**
-   * Extract publication date from a video element
-   * @param {Element} videoElement - Video element to extract date from
-   * @returns {string|null} Publication date or null if not found
+   * Extract publication date from video element
    */
   extractPublishDate(videoElement) {
     let currentElement = videoElement.parentNode;
     
-    // Search up the DOM tree for publication date
     for (let i = 0; i < 5 && currentElement; i++) {
-      // Find all spans that contain "ago"
       const spans = currentElement.querySelectorAll('span');
       for (const span of spans) {
         const text = span.getAttribute('aria-label')?.trim() || span.textContent?.trim();
@@ -472,384 +57,417 @@ class YouTubeWatchMarker {
     }
     
     return null;
-  }
-
-
+  },
 
   /**
-   * Refreshes the page to mark watched videos
+   * Get video selectors for finding video elements
    */
-  async refresh() {
-    if (this.isProcessing) return;
+  getVideoSelectors() {
+    return [
+      'a.ytd-thumbnail[href^="/watch?v="]',
+      'a.yt-lockup-view-model-wiz__content-image[href^="/watch?v="]',
+      'ytd-compact-video-renderer a.yt-simple-endpoint[href^="/watch?v="]',
+      'a.ytp-ce-covering-overlay[href*="/watch?v="]',
+      'a.ytp-videowall-still[href*="/watch?v="]',
+      'a.ytd-thumbnail[href^="/shorts/"]',
+      'a.ShortsLockupViewModelHostEndpoint[href^="/shorts/"]',
+      'a.reel-item-endpoint[href^="/shorts/"]',
+      'a.media-item-thumbnail-container[href^="/watch?v="]'
+    ];
+  },
+
+  /**
+   * Find all video elements on page
+   */
+  findVideos(videoId = "") {
+    const selectors = videoId 
+      ? this.getVideoSelectors().map(selector => 
+          selector.replace('"/watch?v="', `"/watch?v=${videoId}"`).replace('"/shorts/"', `"/shorts/${videoId}"`))
+      : this.getVideoSelectors();
     
-    // Check runtime validity - but be more lenient about runtime.id
-    if (!chrome.runtime) {
-      console.error("Chrome runtime not available during refresh - skipping");
+    return Array.from(document.querySelectorAll(selectors.join(", ")));
+  },
+
+  /**
+   * Debounce function calls
+   */
+  debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  },
+
+  /**
+   * Check if Chrome runtime is available and extension context is valid
+   */
+  isRuntimeAvailable() {
+    try {
+      // Check if chrome and chrome.runtime exist
+      if (!chrome || !chrome.runtime) {
+        return false;
+      }
+      
+      // Check if extension context is still valid by accessing chrome.runtime.id
+      // This will throw if the extension context has been invalidated
+      return !!chrome.runtime.id;
+    } catch (error) {
+      // Extension context has been invalidated
+      return false;
+    }
+  },
+
+  /**
+   * Safe error logging
+   */
+  logError(message, error) {
+    console.error(message, {
+      error: error.message,
+      errorName: error.name,
+      stack: error.stack
+    });
+  }
+};
+
+// =====================================================================================
+// SETTINGS MANAGER
+// =====================================================================================
+
+/**
+ * Manages Chrome storage settings with caching
+ */
+class SettingsManager {
+  constructor() {
+    this.cache = {};
+    this.settingKeys = [
+      'stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge',
+      'stylesheet_Showdate', 'stylesheet_Hideprogress',
+      'idVisualization_Fadeout', 'idVisualization_Grayout',
+      'idVisualization_Showbadge', 'idVisualization_Showdate',
+      'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'
+    ];
+  }
+
+  /**
+   * Check if Chrome storage is available
+   */
+  isStorageAvailable() {
+    try {
+      return !!(chrome && chrome.storage && chrome.storage.sync && Utils.isRuntimeAvailable());
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Load all settings into cache
+   */
+  async loadSettings() {
+    if (!this.isStorageAvailable()) {
+      console.warn('Storage not available - using default settings');
+      this.settingKeys.forEach(key => this.cache[key] = false);
+      return;
+    }
+
+    try {
+      const results = await chrome.storage.sync.get(this.settingKeys);
+      this.cache = { ...results };
+      console.log('Settings loaded:', Object.keys(this.cache).length, 'keys');
+    } catch (error) {
+      Utils.logError('Failed to load settings:', error);
+      this.settingKeys.forEach(key => this.cache[key] = false);
+    }
+  }
+
+  /**
+   * Get setting value from cache or storage
+   */
+  async getSetting(key) {
+    if (this.cache.hasOwnProperty(key)) {
+      return this.cache[key] || false;
+    }
+
+    if (!this.isStorageAvailable()) {
+        return false;
+      }
+      
+    try {
+      const result = await chrome.storage.sync.get([key]);
+      this.cache[key] = result[key] || false;
+      return this.cache[key];
+    } catch (error) {
+      Utils.logError(`Failed to get setting ${key}:`, error);
+      this.cache[key] = false;
+      return false;
+    }
+  }
+
+  /**
+   * Update cache when settings change
+   */
+  updateCache(changes) {
+    for (const [key, {newValue}] of Object.entries(changes)) {
+      this.cache[key] = newValue;
+    }
+  }
+
+  /**
+   * Setup storage change listener
+   */
+  setupChangeListener(callback) {
+    if (!this.isStorageAvailable()) return;
+
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'sync') {
+        this.updateCache(changes);
+        callback(changes);
+      }
+    });
+  }
+}
+
+// =====================================================================================
+// BACKGROUND COMMUNICATION MANAGER
+// =====================================================================================
+
+/**
+ * Manages communication with background script
+ */
+class BackgroundManager {
+  constructor() {
+    this.port = null;
+    this.messageCallbacks = [];
+    this.connect();
+  }
+
+  /**
+   * Establish connection to background script
+   */
+  connect() {
+    if (this.port || !Utils.isRuntimeAvailable()) return;
+
+    try {
+      this.port = chrome.runtime.connect({ name: "youtube-watchmarker" });
+      console.log("Connected to background script");
+
+      this.port.onDisconnect.addListener(() => {
+        console.log("Disconnected from background - reconnecting...");
+        this.port = null;
+        setTimeout(() => this.connect(), 1000);
+      });
+
+      this.port.onMessage.addListener((response) => {
+        this.messageCallbacks.forEach(callback => callback(response));
+      });
+    } catch (error) {
+      // Check if this is an extension context invalidation error
+      if (error.message && (error.message.includes("Extension context invalidated") ||
+                           error.message.includes("context invalidated") ||
+                           error.message.includes("Receiving end does not exist"))) {
+        Utils.logError("Extension context invalidated during connection:", error);
+        console.log("Extension context invalidated - attempting reconnection with longer delay");
+        // Use longer delay for context invalidation as it might need more time to recover
+        setTimeout(() => this.connect(), 10000);
+      } else {
+        Utils.logError("Connection error:", error);
+        setTimeout(() => this.connect(), 5000);
+      }
+    }
+  }
+
+  /**
+   * Send message to background script
+   */
+  sendMessage(message) {
+    if (!Utils.isRuntimeAvailable()) {
+      console.log("Runtime not available - skipping message");
       return;
     }
     
-    this.isProcessing = true;
-    
-    try {
-      // Clean up any stray publication dates from previous refreshes
-      this.cleanupStrayPublishDates();
-      
-      const videos = this.findVideos();
-      const currentState = `${window.location.href}:${document.title}:${videos.length}`;
-      
-      // Skip if nothing changed
-      if (this.lastChange === currentState) {
-        return;
+    if (this.port) {
+      try {
+        this.port.postMessage(message);
+      } catch (error) {
+        if (error.message && (error.message.includes("Extension context invalidated") ||
+                             error.message.includes("context invalidated") ||
+                             error.message.includes("Receiving end does not exist"))) {
+          console.log("Extension context invalidated during postMessage - clearing port");
+          this.port = null;
+        } else {
+          Utils.logError("Port error:", error);
+        }
+        this.fallbackSendMessage(message);
       }
-      
-      this.lastChange = currentState;
-      
-      // Process videos in batches to avoid blocking the UI
-      await this.processVideosInBatches(videos);
-      
-    } catch (error) {
-              console.error("Error during refresh:", JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
-    } finally {
-      this.isProcessing = false;
+    } else {
+      this.fallbackSendMessage(message);
     }
   }
 
   /**
-   * Clean up stray publication dates that might be on wrong videos
+   * Fallback message sending with retry logic for extension context invalidation
    */
-  cleanupStrayPublishDates() {
-    const elementsWithPublishDate = document.querySelectorAll('.youwatch-has-publish-date');
-    
-    elementsWithPublishDate.forEach(element => {
-      const storedVideoId = element.getAttribute('data-video-id');
-      
-      // Find the actual video link associated with this title element
-      const videoLink = element.closest('a[href*="/watch"]') || 
-                       element.closest('[href*="/watch"]') ||
-                       element.parentElement?.querySelector('a[href*="/watch"]') ||
-                       element.closest('[data-video-id]')?.querySelector('a[href*="/watch"]');
-      
-      if (videoLink) {
-        const currentVideoId = this.extractVideoId(videoLink.href);
-        
-        // If the stored video ID doesn't match the current video, remove the publication date
-        if (storedVideoId !== currentVideoId) {
-          element.classList.remove('youwatch-has-publish-date');
-          element.removeAttribute('data-publish-date');
-          element.removeAttribute('data-video-id');
+  async fallbackSendMessage(message) {
+    try {
+      await chrome.runtime.sendMessage(message);
+    } catch (error) {
+      if (error.message && (error.message.includes("Extension context invalidated") ||
+                           error.message.includes("context invalidated") ||
+                           error.message.includes("Receiving end does not exist"))) {
+        console.log("Extension context invalidated during sendMessage - retrying once");
+        // Try once more in case it was a temporary issue
+        try {
+          await chrome.runtime.sendMessage(message);
+        } catch (retryError) {
+          console.log("Retry also failed, extension context may be permanently invalidated");
+          // Don't log this as an error since it's expected when extension is reloaded
         }
       } else {
-        // If we can't find an associated video link, remove the stray publication date
-        element.classList.remove('youwatch-has-publish-date');
-        element.removeAttribute('data-publish-date');
-        element.removeAttribute('data-video-id');
-      }
-    });
-    
-    // Also remove duplicate publication dates for the same video
-    const videoIdGroups = {};
-    elementsWithPublishDate.forEach(element => {
-      const videoId = element.getAttribute('data-video-id');
-      if (videoId) {
-        if (!videoIdGroups[videoId]) {
-          videoIdGroups[videoId] = [];
-        }
-        videoIdGroups[videoId].push(element);
-      }
-    });
-    
-    // For each video ID, keep only the first element and remove publication dates from the rest
-    Object.values(videoIdGroups).forEach(elements => {
-      if (elements.length > 1) {
-        // Remove publication date from all but the first element
-        elements.slice(1).forEach(element => {
-          element.classList.remove('youwatch-has-publish-date');
-          element.removeAttribute('data-publish-date');
-          element.removeAttribute('data-video-id');
-        });
-      }
-    });
-  }
-
-  /**
-   * Processes videos in batches to improve performance
-   * @param {Element[]} videos - Array of video elements
-   */
-  async processVideosInBatches(videos) {
-    const BATCH_SIZE = 10;
-    const BATCH_DELAY = 10; // ms
-    
-    // Check if publication date display is enabled from cache
-    const showPublishDate = await this.getSettingValue('idVisualization_Showpublishdate');
-    
-    for (let i = 0; i < videos.length; i += BATCH_SIZE) {
-      const batch = videos.slice(i, i + BATCH_SIZE);
-      
-      batch.forEach(video => {
-        const videoId = this.extractVideoId(video.href);
-        this.markVideo(video, videoId);
-        this.observeVideo(video);
-        
-        // Add publication date to title if enabled
-        if (showPublishDate) {
-          this.addPublishDateToTitle(video, videoId);
-        }
-        
-        // Check if we already have watch date for this video
-        if (!this.watchDates[videoId]) {
-          this.requestVideoData(video, videoId);
-        }
-      });
-      
-      // Small delay between batches to prevent blocking
-      if (i + BATCH_SIZE < videos.length) {
-        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        Utils.logError("Error sending message:", error);
       }
     }
   }
 
   /**
-   * Add publication date to video title attribute
-   * @param {Element} videoElement - Video element
-   * @param {string} videoId - Video ID
+   * Add message callback
    */
-  addPublishDateToTitle(videoElement, videoId) {
-    
-    console.log('DEBUG: Processing publish date for video:', videoId, 'on page:', window.location.pathname);
-    
-    // Check if we already have a cached date for this video
-    let publishDate = this.publishDates[videoId];
-    console.log('DEBUG: Cached publishDate for', videoId, ':', JSON.stringify(publishDate));
-    
-    // Check if cached date is stale (older than 5 minutes)
-    const cacheTime = this.publishDatesCacheTime[videoId];
-    const now = Date.now();
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-    const shouldForceRefresh = publishDate && cacheTime && (now - cacheTime > CACHE_DURATION);
-    
-    if (!publishDate || shouldForceRefresh) {
-      if (shouldForceRefresh) {
-        console.log('DEBUG: Cache expired for video', videoId, 'cached:', new Date(cacheTime), 'age:', (now - cacheTime) / 1000 / 60, 'minutes');
-        delete this.publishDates[videoId]; // Clear cached date
-        delete this.publishDatesCacheTime[videoId]; // Clear cache time
-      }
-      
-      // Extract publication date from this element
-      publishDate = this.extractPublishDate(videoElement);
-      console.log('DEBUG: Extracted raw publishDate:', JSON.stringify(publishDate));
-      
-      if (publishDate) {
-        // Cache the extracted date directly
-        this.publishDates[videoId] = publishDate;
-        this.publishDatesCacheTime[videoId] = now;
-        console.log('DEBUG: Cached date for', videoId, ':', JSON.stringify(publishDate));
-      }
-    } else {
-      console.log('DEBUG: Using cached publishDate for', videoId, ':', JSON.stringify(publishDate));
-    }
-    
-    // If still no publication date, try delayed extraction once
-    if (!publishDate) {
-      setTimeout(() => {
-        const retryDate = this.extractPublishDate(videoElement);
-        if (retryDate) {
-          this.publishDates[videoId] = retryDate;
-          this.publishDatesCacheTime[videoId] = Date.now();
-          this.updateVideoTitle(videoElement, retryDate);
-        }
-      }, 100);
-      return;
-    }
-    
-    this.updateVideoTitle(videoElement, publishDate);
+  onMessage(callback) {
+    this.messageCallbacks.push(callback);
+  }
+}
+
+// =====================================================================================
+// CSS MANAGER
+// =====================================================================================
+
+/**
+ * Manages dynamic CSS injection
+ */
+class CSSManager {
+  constructor(settingsManager) {
+    this.settingsManager = settingsManager;
+    this.injected = false;
+    this.styleElementId = 'youwatch-injected-styles';
   }
 
   /**
-   * Update video element title with publication date
-   * @param {Element} videoElement - Video element
-   * @param {string} publishDate - Publication date
+   * Inject CSS based on current settings
    */
-  updateVideoTitle(videoElement, publishDate) {
-    const videoId = this.extractVideoId(videoElement.href);
+  async injectCSS() {
+    if (this.injected) return;
     
-    // publishDate should already be formatted at this point
-    const cleanDate = publishDate;
-    
-    // Skip if no valid date or if date is just whitespace/empty
-    if (!cleanDate || !cleanDate.trim()) {
-      return;
-    }
-    
-    // Additional validation - reject invalid date formats
-    const trimmedDate = cleanDate.trim();
-    if (trimmedDate === 'ago' || trimmedDate.length < 3) {
-      console.warn('Invalid date format detected:', JSON.stringify(cleanDate));
-      return;
-    }
-    
-    // Find the video title element in the DOM
-    const titleElement = this.findVideoTitleElement(videoElement);
-    
-    if (titleElement && videoId) {
-      // Check if this title element already has a publication date for any video
-      // If so, only update if it's for the same video ID
-      const existingVideoId = titleElement.getAttribute('data-video-id');
-      if (existingVideoId && existingVideoId !== videoId) {
-        // This title element belongs to a different video, skip
-        return;
-      }
-      
-      // Add CSS class and data attribute
-      titleElement.classList.add('youwatch-has-publish-date');
-      titleElement.setAttribute('data-publish-date', cleanDate);
-      titleElement.setAttribute('data-video-id', videoId);
-    }
-    
-    // Also update the hover tooltip for accessibility
-    const originalTitle = videoElement.getAttribute('aria-label') || 
-                         videoElement.getAttribute('title') || 
-                         this.extractVideoTitle(videoElement);
-    
-    if (originalTitle && !originalTitle.includes('Published:')) {
-      const newTitle = `${originalTitle}\nPublished: ${cleanDate}`;
-      videoElement.setAttribute('title', newTitle);
-      
-      // Also update aria-label if it exists
-      if (videoElement.getAttribute('aria-label')) {
-        videoElement.setAttribute('aria-label', newTitle);
-      }
-    }
-  }
-
-  /**
-   * Find the video title element within a video container
-   * @param {Element} videoElement - Video element
-   * @returns {Element|null} Title element or null if not found
-   */
-  findVideoTitleElement(videoElement) {
-    let currentElement = videoElement;
-    
-    // Search up the DOM tree to find the video container
-    for (let i = 0; i < 10 && currentElement; i++) {
-      // Look for various title selectors - YouTube uses different layouts
-      const titleSelectors = [
-        // Common title selectors
-        '#video-title',
-        '.ytd-video-meta-block #video-title',
-        '.ytd-video-meta-block h3 a',
-        '.ytd-video-meta-block h3',
-        '#video-title-link',
-        '.video-title',
-        
-        // Grid and list view selectors
-        'h3 a[href*="/watch"]',
-        'h3 span[role="text"]',
-        'h3 .ytd-video-meta-block',
-        
-        // Shorts selectors
-        '.ytd-shorts-video-meta-block h3',
-        '.shorts-video-meta h3',
-        
-        // Search result selectors
-        '.ytd-video-meta-block .style-scope h3',
-        '.ytd-channel-video-player-renderer h3',
-        
-        // Generic selectors
-        'h3[class*="title"]',
-        'span[class*="title"]',
-        'a[class*="title"]'
+    try {
+      const settings = {};
+      const keys = [
+        'stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge',
+        'stylesheet_Showdate', 'stylesheet_Hideprogress',
+        'idVisualization_Fadeout', 'idVisualization_Grayout',
+        'idVisualization_Showbadge', 'idVisualization_Showdate',
+        'idVisualization_Hideprogress'
       ];
       
-      for (const selector of titleSelectors) {
-        try {
-          const titleElement = currentElement.querySelector(selector);
-          if (titleElement && titleElement.textContent && titleElement.textContent.trim()) {
-            return titleElement;
-          }
-        } catch (e) {
-          // Ignore selector errors and continue
-          continue;
-        }
+      for (const key of keys) {
+        settings[key] = await this.settingsManager.getSetting(key);
       }
-      
-      currentElement = currentElement.parentNode;
+
+      this.removeExistingStyles();
+      const cssContent = this.buildCSS(settings);
+
+      if (cssContent.trim()) {
+        const style = document.createElement('style');
+        style.id = this.styleElementId;
+        style.textContent = cssContent;
+        document.head.appendChild(style);
+      }
+
+      this.injected = true;
+    } catch (error) {
+      Utils.logError('Error injecting CSS:', error);
     }
-    
-    return null;
   }
 
   /**
-   * Requests video data from background script
-   * @param {Element} videoElement - Video element
-   * @param {string} videoId - Video ID
+   * Remove existing injected styles
    */
-  requestVideoData(videoElement, videoId) {
-    const title = this.extractVideoTitle(videoElement);
-    
-    // Use long-lived port if available, fallback to sendMessage
-    if (this.backgroundPort) {
-      // Check runtime validity
-      if (!chrome.runtime) {
-        console.log("Chrome runtime not available - skipping message");
-        return;
-      }
-      
-      try {
-        this.backgroundPort.postMessage({
-          action: "youtube-lookup",
-          videoId: videoId,
-          title: title,
-        });
-      } catch (error) {
-        if (error.message.includes("context invalidated")) {
-          console.log("Context invalidated during postMessage - will reconnect");
-          this.backgroundPort = null; // Trigger reconnection
-        } else {
-          console.error("Port error:", JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
-          // Fallback to sendMessage if port fails
-          this.safeSendMessage({
-            action: "youtube-lookup",
-            videoId: videoId,
-            title: title,
-          });
-        }
-      }
-    } else {
-      // Fallback if port not connected
-      if (!chrome.runtime) {
-        console.log("Chrome runtime not available - skipping fallback message");
-        return;
-      }
-      
-      this.safeSendMessage({
-        action: "youtube-lookup",
-        videoId: videoId,
-        title: title,
-      });
+  removeExistingStyles() {
+    const existingStyle = document.getElementById(this.styleElementId);
+      if (existingStyle) {
+        existingStyle.remove();
     }
+      }
+
+  /**
+   * Build CSS content based on settings
+   */
+  buildCSS(settings) {
+      let cssContent = '';
+      
+      if (settings.idVisualization_Fadeout && settings.stylesheet_Fadeout) {
+        cssContent += settings.stylesheet_Fadeout + '\n';
+      }
+      if (settings.idVisualization_Grayout && settings.stylesheet_Grayout) {
+        cssContent += settings.stylesheet_Grayout + '\n';
+      }
+      if (settings.idVisualization_Showbadge && settings.stylesheet_Showbadge) {
+        cssContent += settings.stylesheet_Showbadge + '\n';
+      }
+      if (settings.idVisualization_Showdate && settings.stylesheet_Showdate) {
+        cssContent += settings.stylesheet_Showdate + '\n';
+      }
+      if (settings.idVisualization_Hideprogress && settings.stylesheet_Hideprogress) {
+        cssContent += settings.stylesheet_Hideprogress + '\n';
+      }
+
+      // Publication dates are now added directly to title text, no CSS needed
+
+    return cssContent;
   }
 
   /**
-   * Marks a video element as watched or unwatched
-   * @param {Element} videoElement - Video element to mark
-   * @param {string} videoId - Video ID
+   * Reinject CSS (for settings changes)
+   */
+  async reinjectCSS() {
+    this.injected = false;
+    await this.injectCSS();
+  }
+}
+
+// =====================================================================================
+// VIDEO MARKER MANAGER
+// =====================================================================================
+
+/**
+ * Manages video marking and watch date tracking
+ */
+class VideoMarkerManager {
+  constructor(backgroundManager) {
+    this.backgroundManager = backgroundManager;
+    this.watchDates = {};
+    this.observers = new WeakMap();
+
+    // Listen for watch date updates from background
+    this.backgroundManager.onMessage((response) => {
+      if (response && response.strIdent) {
+        this.watchDates[response.strIdent] = response.intTimestamp;
+        this.markVideosWithId(response.strIdent);
+      }
+    });
+  }
+
+  /**
+   * Mark video as watched or unwatched
    */
   markVideo(videoElement, videoId) {
     const isWatched = this.watchDates.hasOwnProperty(videoId);
     const hasWatchedClass = videoElement.classList.contains("youwatch-mark");
-    
+
     if (isWatched && !hasWatchedClass) {
       videoElement.classList.add("youwatch-mark");
       
-      // Add watch date attribute if timestamp exists
       if (this.watchDates[videoId] !== 0) {
         const watchDate = new Date(this.watchDates[videoId])
           .toISOString()
@@ -859,7 +477,6 @@ class YouTubeWatchMarker {
       }
     } else if (!isWatched && hasWatchedClass) {
       videoElement.classList.remove("youwatch-mark");
-      
       if (videoElement.hasAttribute("watchdate")) {
         videoElement.removeAttribute("watchdate");
       }
@@ -867,216 +484,305 @@ class YouTubeWatchMarker {
   }
 
   /**
-   * Sets up observation for a video element to detect href changes
-   * @param {Element} videoElement - Video element to observe
+   * Mark all videos with specific ID
+   */
+  markVideosWithId(videoId) {
+    const videos = Utils.findVideos(videoId);
+    videos.forEach(video => this.markVideo(video, videoId));
+  }
+
+  /**
+   * Observe video element for changes
    */
   observeVideo(videoElement) {
-    if (this.observers.has(videoElement)) {
-      return;
-    }
+    if (this.observers.has(videoElement)) return;
 
     const observer = new MutationObserver(() => {
-      const videoId = this.extractVideoId(videoElement.href);
+      const videoId = Utils.extractVideoId(videoElement.href);
       this.markVideo(videoElement, videoId);
     });
 
     observer.observe(videoElement, {
       attributes: true,
-      attributeFilter: ["href"],
+      attributeFilter: ["href"]
     });
 
     this.observers.set(videoElement, observer);
   }
 
   /**
-   * Sets up publication date display for video elements
+   * Request video data from background
    */
-  async setupTooltips() {
-    // Check if publication date display is enabled from cache
-    const isEnabled = await this.getSettingValue('idVisualization_Showpublishdate');
-    if (!isEnabled) {
-      return;
-    }
-    
-    const videos = this.findVideos();
-    
-    videos.forEach(videoElement => {
-      const videoId = this.extractVideoId(videoElement.href);
-      
-      // Add publication date to title
-      this.addPublishDateToTitle(videoElement, videoId);
+  requestVideoData(videoElement, videoId) {
+    if (this.watchDates[videoId]) return; // Already have data
+
+    const title = Utils.extractVideoTitle(videoElement);
+    this.backgroundManager.sendMessage({
+      action: "youtube-lookup",
+      videoId: videoId,
+      title: title
     });
   }
 
   /**
-   * Get a setting value from cache, fallback to storage if not cached
-   * @param {string} key - Setting key
-   * @returns {Promise<boolean>} Setting value
+   * Mark video as watched from user interaction
    */
-  async getSettingValue(key, maxRetries = 2, retryDelay = 1000) {
-    if (this.settingsCache.hasOwnProperty(key)) {
-      return this.settingsCache[key] || false;
+  markAsWatchedFromInteraction(videoId, title) {
+    this.backgroundManager.sendMessage({
+      action: "youtube-ensure",
+      videoId: videoId,
+      title: title
+    });
+  }
+
+  /**
+   * Process videos in batches
+   */
+  async processVideos(videos) {
+    const BATCH_SIZE = 10;
+    const BATCH_DELAY = 10;
+    
+    for (let i = 0; i < videos.length; i += BATCH_SIZE) {
+      const batch = videos.slice(i, i + BATCH_SIZE);
+      
+      batch.forEach(video => {
+        const videoId = Utils.extractVideoId(video.href);
+        this.markVideo(video, videoId);
+        this.observeVideo(video);
+          this.requestVideoData(video, videoId);
+      });
+      
+      if (i + BATCH_SIZE < videos.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      }
+    }
+  }
+}
+
+// =====================================================================================
+// PUBLICATION DATE MANAGER
+// =====================================================================================
+
+/**
+ * Manages publication date display for videos
+ */
+class PublicationDateManager {
+  constructor(settingsManager) {
+    this.settingsManager = settingsManager;
+    this.publishDates = {};
+    this.publishDatesCacheTime = {};
+    this.CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  }
+
+  /**
+   * Add publication date to video if enabled
+   */
+  async addPublishDateToVideo(videoElement, videoId) {
+    const showPublishDate = await this.settingsManager.getSetting('idVisualization_Showpublishdate');
+    if (!showPublishDate) return;
+
+    let publishDate = this.getOrExtractPublishDate(videoElement, videoId);
+    
+    if (!publishDate) {
+      // Retry with progressive delays for better reliability
+      const retryDelays = [100, 300, 500];
+      
+      for (const delay of retryDelays) {
+        setTimeout(() => {
+          // Check if we already found and processed this video
+          if (this.publishDates[videoId]) {
+            this.updateVideoWithPublishDate(videoElement, videoId, this.publishDates[videoId]);
+            return;
+          }
+          
+          const retryDate = Utils.extractPublishDate(videoElement);
+          if (retryDate) {
+            this.cachePublishDate(videoId, retryDate);
+            this.updateVideoWithPublishDate(videoElement, videoId, retryDate);
+          }
+        }, delay);
+      }
+      return;
     }
     
-    // If not cached, try to fetch with retry
-    let attempts = 0;
-    
-    while (attempts < maxRetries) {
-      if (!this.isStorageAvailable()) {
-        console.log(`Storage not available (attempt ${attempts + 1}/${maxRetries}) - retrying in ${retryDelay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        attempts++;
-        continue;
+    this.updateVideoWithPublishDate(videoElement, videoId, publishDate);
+  }
+
+  /**
+   * Get cached or extract fresh publication date
+   */
+  getOrExtractPublishDate(videoElement, videoId) {
+    let publishDate = this.publishDates[videoId];
+    const cacheTime = this.publishDatesCacheTime[videoId];
+    const now = Date.now();
+
+    // Check if cache is stale
+    if (publishDate && cacheTime && (now - cacheTime > this.CACHE_DURATION)) {
+      delete this.publishDates[videoId];
+      delete this.publishDatesCacheTime[videoId];
+      publishDate = null;
+    }
+
+    if (!publishDate) {
+      publishDate = Utils.extractPublishDate(videoElement);
+      if (publishDate) {
+        this.cachePublishDate(videoId, publishDate);
       }
+    }
+
+    return publishDate;
+  }
+
+  /**
+   * Cache publication date
+   */
+  cachePublishDate(videoId, publishDate) {
+    this.publishDates[videoId] = publishDate;
+    this.publishDatesCacheTime[videoId] = Date.now();
+  }
+
+  /**
+   * Update video element with publication date
+   */
+  updateVideoWithPublishDate(videoElement, videoId, publishDate) {
+    const cleanDate = publishDate.trim();
+    if (!cleanDate || cleanDate === 'ago' || cleanDate.length < 3) return;
+
+    const titleElement = this.findVideoTitleElement(videoElement);
+    if (titleElement) {
+      const existingVideoId = titleElement.getAttribute('data-video-id');
       
-      try {
-        const result = await chrome.storage.sync.get([key]);
-        this.settingsCache[key] = result[key] || false;
-        return this.settingsCache[key];
-      } catch (error) {
-                  console.error(`Storage get error (attempt ${attempts + 1}/${maxRetries}):`, JSON.stringify({
-            error: error.message,
-            errorName: error.name,
-            errorStack: error.stack,
-            attempt: attempts + 1,
-            maxRetries: maxRetries,
-            key: key
-          }, null, 2));
-        attempts++;
-        if (attempts < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          retryDelay *= 1.5;
+      // If this title already has a video ID (same or different), skip processing
+      if (existingVideoId) return;
+      
+      titleElement.classList.add('youwatch-has-publish-date');
+      titleElement.setAttribute('data-publish-date', cleanDate);
+      titleElement.setAttribute('data-video-id', videoId);
+      
+      // Update title text with publication date
+      this.updateVideoTitle(titleElement, cleanDate);
+    }
+  }
+
+  /**
+   * Find video title element
+   */
+  findVideoTitleElement(videoElement) {
+    // Find the immediate container that holds both the video link and title
+    // Look for common container patterns in YouTube's videowall
+    const containerSelectors = [
+      '.ytp-videowall-still',
+      '.ytp-ce-element',
+      '.ytp-ce-video',
+      '.ytp-ce-element-content'
+    ];
+    
+    for (const containerSelector of containerSelectors) {
+      const container = videoElement.closest(containerSelector);
+      if (container) {
+        const titleElement = container.querySelector('.ytp-videowall-still-info-title');
+        if (titleElement && titleElement.textContent && titleElement.textContent.trim()) {
+          return titleElement;
         }
       }
     }
     
-    console.error(`Failed to get setting ${key} after ${maxRetries} attempts - using default`);
-    this.settingsCache[key] = false;
-    return false;
-  }
-
-  /**
-   * Handle tooltip setting change
-   * @param {boolean} isEnabled - Whether publication date display is enabled
-   */
-  async handleTooltipSettingChange(isEnabled) {
-    if (isEnabled) {
-      // Enable publication date display for existing videos
-      await this.setupTooltips();
-    } else {
-      // Remove publication dates from video titles
-      this.removePublishDatesFromTitles();
+    // Fallback: traverse parents looking for the title, but be more specific
+    let currentElement = videoElement.parentNode;
+    for (let i = 0; i < 5 && currentElement; i++) {
+      // Only look in immediate children to avoid grabbing titles from other videos
+      const titleElement = currentElement.querySelector(':scope > .ytp-videowall-still-info-title');
+      if (titleElement && titleElement.textContent && titleElement.textContent.trim()) {
+        return titleElement;
+      }
+      
+      currentElement = currentElement.parentNode;
     }
+    
+    return null;
   }
 
   /**
-   * Remove publication dates from all video titles
+   * Update video title text with publication date
    */
-  removePublishDatesFromTitles() {
-    // Clear caches
+  updateVideoTitle(titleElement, publishDate) {
+    if (!titleElement) return;
+    
+    const currentText = titleElement.textContent?.trim() || '';
+    
+    // Don't add if already present (check for the exact format we add)
+    if (currentText.includes(' ago')) return;
+    
+    // Add published date to the title text
+    const newText = `${currentText} • ${publishDate}`;
+    titleElement.textContent = newText;
+  }
+
+
+
+
+
+  /**
+   * Remove all publication dates
+   */
+  removeAllPublishDates() {
     this.publishDates = {};
     this.publishDatesCacheTime = {};
-    console.log('DEBUG: Cleared publish date cache in removePublishDatesFromTitles');
     
-    const videos = this.findVideos();
-    
-    videos.forEach(videoElement => {
-      // Clean up hover tooltip attributes
-      const currentTitle = videoElement.getAttribute('title');
-      const currentAriaLabel = videoElement.getAttribute('aria-label');
-      
-      if (currentTitle && currentTitle.includes('Published:')) {
-        const cleanTitle = currentTitle.split('\nPublished:')[0];
-        videoElement.setAttribute('title', cleanTitle);
+    // Clean all title elements with the specific YouTube class
+    const allTitleElements = document.querySelectorAll('.ytp-videowall-still-info-title');
+    allTitleElements.forEach(titleElement => {
+      const currentText = titleElement.textContent?.trim() || '';
+      if (currentText.includes(' • Published:')) {
+        const cleanText = currentText.split(' • Published:')[0];
+        titleElement.textContent = cleanText;
       }
       
-      if (currentAriaLabel && currentAriaLabel.includes('Published:')) {
-        const cleanAriaLabel = currentAriaLabel.split('\nPublished:')[0];
-        videoElement.setAttribute('aria-label', cleanAriaLabel);
-      }
-      
-      // Clean up visible title display using CSS classes
-      const titleElement = this.findVideoTitleElement(videoElement);
-      if (titleElement) {
-        titleElement.classList.remove('youwatch-has-publish-date');
-        titleElement.removeAttribute('data-publish-date');
-        titleElement.removeAttribute('data-video-id');
-      }
+      // Clean attributes
+      titleElement.classList.remove('youwatch-has-publish-date');
+      titleElement.removeAttribute('data-publish-date');
+      titleElement.removeAttribute('data-video-id');
     });
     
-    // Also clean up any stray elements that might have the class
-    const allTitleElements = document.querySelectorAll('.youwatch-has-publish-date');
-    allTitleElements.forEach(element => {
+    // Clean any remaining elements
+    document.querySelectorAll('.youwatch-has-publish-date').forEach(element => {
       element.classList.remove('youwatch-has-publish-date');
       element.removeAttribute('data-publish-date');
       element.removeAttribute('data-video-id');
     });
   }
 
-
-
   /**
-   * Escape HTML characters in text
-   * @param {string} text - Text to escape
-   * @returns {string} Escaped text
+   * Process videos for publication dates
    */
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  /**
-   * Handles messages from background script
-   * @param {Object} data - Message data
-   * @param {Object} sender - Message sender
-   * @param {Function} sendResponse - Response function
-   */
-  handleMessage(data, sender, sendResponse) {
-    try {
-      switch (data.action) {
-        case "youtube-refresh":
-          this.refresh();
-          break;
-          
-        case "youtube-mark":
-          this.watchDates[data.videoId] = data.timestamp;
-          const videos = this.findVideos(data.videoId);
-          videos.forEach(video => this.markVideo(video, data.videoId));
-          break;
-          
-        default:
-          console.warn("Unknown action:", data.action);
-      }
-    } catch (error) {
-              console.error("Error handling message:", JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
+  async processVideos(videos) {
+    for (const video of videos) {
+      const videoId = Utils.extractVideoId(video.href);
+      await this.addPublishDateToVideo(video, videoId);
     }
-    
-    sendResponse(null);
+  }
+}
+
+// =====================================================================================
+// INTERACTION MANAGER
+// =====================================================================================
+
+/**
+ * Manages user interaction detection (rating, progress)
+ */
+class InteractionManager {
+  constructor(videoMarkerManager) {
+    this.videoMarkerManager = videoMarkerManager;
+    this.setupRatingObserver();
+    this.setupProgressListener();
   }
 
   /**
-   * Get current video ID from URL
-   * @returns {string} Current video ID
-   */
-  getCurrentVideoId() {
-    const url = window.location.href;
-    const match = url.match(/[?&]v=([^&]+)/);
-    return match ? match[1] : null;
-  }
-
-  /**
-   * Set up observer for rating button interactions
+   * Setup rating button observer
    */
   setupRatingObserver() {
-    // Use event delegation to catch dynamically loaded content
     document.addEventListener('click', this.handleRatingClick.bind(this), true);
     
-    // Also observe for button state changes via MutationObserver
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && 
@@ -1098,36 +804,28 @@ class YouTubeWatchMarker {
   }
 
   /**
-   * Handle click events on rating buttons
-   * @param {Event} event - Click event
+   * Handle rating button clicks
    */
   handleRatingClick(event) {
     const target = event.target.closest('button, [role="button"]');
     if (target && this.isRatingButton(target)) {
-      // Small delay to ensure state has updated
-      setTimeout(() => {
-        this.handleRatingButtonChange(target);
-      }, 100);
+      setTimeout(() => this.handleRatingButtonChange(target), 100);
     }
   }
 
   /**
-   * Check if element is a like or dislike button
-   * @param {Element} element - Element to check
-   * @returns {boolean} Whether element is a rating button
+   * Check if element is a rating button
    */
   isRatingButton(element) {
     if (!element) return false;
     
-    // Check various selectors for like/dislike buttons
     const ratingSelectors = [
       'ytd-toggle-button-renderer[target-id="watch-like"]',
       'ytd-toggle-button-renderer[target-id="watch-dislike"]',
       '#segmented-like-button button',
       '#segmented-dislike-button button',
       'button[aria-label*="like"]',
-      'button[aria-label*="dislike"]',
-      '.ytd-video-primary-info-renderer button[aria-pressed]'
+      'button[aria-label*="dislike"]'
     ];
     
     return ratingSelectors.some(selector => {
@@ -1141,34 +839,48 @@ class YouTubeWatchMarker {
 
   /**
    * Handle rating button state change
-   * @param {Element} button - Rating button element
    */
   handleRatingButtonChange(button) {
     try {
-      // Check if button is now pressed/active
       const isPressed = button.getAttribute('aria-pressed') === 'true' || 
                        button.classList.contains('style-default-active');
       
       if (isPressed) {
-        // Get current video ID from URL
         const videoId = this.getCurrentVideoId();
         if (videoId) {
           const title = this.getCurrentVideoTitle();
-          this.markVideoAsWatchedFromRating(videoId, title);
+          this.videoMarkerManager.markAsWatchedFromInteraction(videoId, title);
         }
       }
     } catch (error) {
-              console.error("Error handling rating button change:", JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
+      Utils.logError("Error handling rating button change:", error);
     }
   }
 
   /**
-   * Get current video title from page
-   * @returns {string} Current video title
+   * Setup progress hook listener
+   */
+  setupProgressListener() {
+    document.addEventListener('youwatch-progresshook', (event) => {
+      const { strIdent, strTitle } = event.detail;
+      
+      if (strIdent && strIdent.length === 11) {
+        this.videoMarkerManager.markAsWatchedFromInteraction(strIdent, strTitle);
+      }
+    });
+  }
+
+  /**
+   * Get current video ID from URL
+   */
+  getCurrentVideoId() {
+    const url = window.location.href;
+    const match = url.match(/[?&]v=([^&]+)/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Get current video title
    */
   getCurrentVideoTitle() {
     const titleSelectors = [
@@ -1190,180 +902,193 @@ class YouTubeWatchMarker {
     
     return document.title.replace(' - YouTube', '') || '';
   }
+}
 
-  /**
-   * Mark video as watched when user rates it
-   * @param {string} videoId - Video ID
-   * @param {string} title - Video title
-   */
-  markVideoAsWatchedFromRating(videoId, title) {
-    // Use long-lived port if available, fallback to sendMessage
-    const message = {
-      action: "youtube-ensure",
-      videoId: videoId,
-      title: title,
-    };
-    
-    if (this.backgroundPort) {
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.log("Runtime invalid - skipping rating mark");
-        return;
-      }
-      
-      try {
-        this.backgroundPort.postMessage(message);
-      } catch (error) {
-        if (error.message.includes("context invalidated")) {
-          console.log("Context invalidated during rating postMessage");
-          this.backgroundPort = null;
-        } else {
-          console.error("Port error in rating mark:", JSON.stringify({
-            error: error.message,
-            errorName: error.name,
-            errorStack: error.stack
-          }, null, 2));
-          this.safeSendMessage(message);
-        }
-      }
-    } else {
-      if (!chrome.runtime || !chrome.runtime.id) {
-        console.log("Runtime invalid - skipping fallback rating mark");
-        return;
-      }
-      
-      this.safeSendMessage(message);
-    }
+// =====================================================================================
+// PAGE OBSERVER MANAGER
+// =====================================================================================
+
+/**
+ * Manages page observation for dynamic content
+ */
+class PageObserverManager {
+  constructor(refreshCallback) {
+    this.refreshCallback = refreshCallback;
+    this.setupMutationObserver();
   }
 
   /**
-   * Handle progress hook events from injected script
-   * @param {CustomEvent} event - Progress hook event
+   * Setup mutation observer for dynamic content
    */
-  handleProgressHookEvent(event) {
-    const { strIdent, strTitle } = event.detail;
+  setupMutationObserver() {
+    const debouncedRefresh = Utils.debounce(this.refreshCallback, 100);
     
-    if (!strIdent || strIdent.length !== 11) {
-      return;
-    }
-    
-    // Use long-lived port if available, fallback to sendMessage
-    const message = {
-      action: "youtube-ensure",
-      videoId: strIdent,
-      title: strTitle,
-    };
-    
-    if (this.backgroundPort) {
-      if (!chrome.runtime) {
-        console.log("Chrome runtime not available - skipping progress hook");
-        return;
-      }
+    const observer = new MutationObserver((mutations) => {
+      let shouldRefresh = false;
       
-      try {
-        this.backgroundPort.postMessage(message);
-      } catch (error) {
-        if (error.message.includes("context invalidated")) {
-          console.log("Context invalidated during progress postMessage");
-          this.backgroundPort = null;
-        } else {
-          console.error("Port error in progress hook:", JSON.stringify({
-            error: error.message,
-            errorName: error.name,
-            errorStack: error.stack
-          }, null, 2));
-          this.safeSendMessage(message);
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          const hasVideoThumbnails = Array.from(mutation.addedNodes).some(node => 
+            node.nodeType === Node.ELEMENT_NODE && 
+            (node.matches?.(Utils.getVideoSelectors().join(', ')) || 
+             node.querySelector?.(Utils.getVideoSelectors().join(', ')))
+          );
+          
+          if (hasVideoThumbnails) {
+            shouldRefresh = true;
+          }
         }
-      }
-    } else {
-      if (!chrome.runtime) {
-        console.log("Chrome runtime not available - skipping fallback progress hook");
-        return;
-      }
+      });
       
-      this.safeSendMessage(message);
-    }
-  }
-
-  /**
-   * Safely send message to background script with error handling
-   * @param {Object} message - Message to send
-   */
-  safeSendMessage(message) {
-    if (!chrome.runtime) {
-      console.log("Chrome runtime not available - skipping message");
-      return;
-    }
+      if (shouldRefresh) {
+        debouncedRefresh();
+      }
+    });
     
-    try {
-      chrome.runtime.sendMessage(message);
-    } catch (error) {
-      if (error.message && (error.message.includes("Extension context invalidated") || 
-                           error.message.includes("context invalidated"))) {
-        console.log("Extension context invalidated during sendMessage - ignoring");
-      } else {
-        console.error("Error sending message:", JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
-      }
-    }
-  }
-
-  /**
-   * Setup periodic check for runtime validity
-   */
-  setupRuntimeCheck() {
-    let lastValidState = true;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 3;
-    
-    setInterval(() => {
-      const isCurrentlyValid = this.isStorageAvailable();
-      
-      // Only log and attempt reconnection if state changed from valid to invalid
-      if (lastValidState && !isCurrentlyValid) {
-        console.warn("Runtime/Storage became invalid - attempting reconnect");
-        reconnectAttempts = 0;
-      }
-      
-      if (!isCurrentlyValid && reconnectAttempts < maxReconnectAttempts) {
-        reconnectAttempts++;
-        console.log(`Reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
-        
-        // Only attempt background reconnection if we don't have a valid port
-        if (!this.backgroundPort) {
-          this.connectToBackground();
-        }
-        
-        // Try to re-cache settings if storage becomes available
-        if (this.isStorageAvailable()) {
-          this.cacheSettings().catch(error => {
-            console.error("Failed to re-cache settings:", JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack
-        }, null, 2));
-          });
-          reconnectAttempts = 0; // Reset on success
-        }
-      } else if (isCurrentlyValid && !lastValidState) {
-        console.log("Runtime/Storage connection restored");
-        reconnectAttempts = 0;
-      }
-      
-      lastValidState = isCurrentlyValid;
-    }, 15000); // Check every 15 seconds
-  }
-
-  /**
-   * Cleanup method to remove observers
-   */
-  cleanup() {
-    this.observers.forEach(observer => observer.disconnect());
-    this.observers = new WeakMap();
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
   }
 }
+
+// =====================================================================================
+// MAIN YOUTUBE WATCH MARKER CLASS
+// =====================================================================================
+
+/**
+ * Main coordinator class for YouTube Watch Marker
+ */
+class YouTubeWatchMarker {
+  constructor() {
+    this.isProcessing = false;
+    this.lastChange = null;
+    
+    // Initialize managers
+    this.settingsManager = new SettingsManager();
+    this.backgroundManager = new BackgroundManager();
+    this.cssManager = new CSSManager(this.settingsManager);
+    this.videoMarkerManager = new VideoMarkerManager(this.backgroundManager);
+    this.publicationDateManager = new PublicationDateManager(this.settingsManager);
+    this.interactionManager = new InteractionManager(this.videoMarkerManager);
+    this.pageObserverManager = new PageObserverManager(() => this.refresh());
+    
+    this.init().catch(error => {
+      Utils.logError('Failed to initialize YouTubeWatchMarker:', error);
+    });
+  }
+
+  /**
+   * Initialize the extension
+   */
+  async init() {
+    if (!Utils.isRuntimeAvailable()) {
+      throw new Error("Chrome runtime not available");
+    }
+
+    await this.settingsManager.loadSettings();
+    await this.cssManager.injectCSS();
+    
+    this.setupMessageListener();
+    this.setupSettingsListener();
+    
+    this.refresh();
+  }
+
+  /**
+   * Setup message listener
+   */
+  setupMessageListener() {
+    chrome.runtime.onMessage.addListener((data, sender, sendResponse) => {
+      try {
+        switch (data.action) {
+          case "youtube-refresh":
+            this.refresh();
+            break;
+          case "youtube-mark":
+            this.videoMarkerManager.watchDates[data.videoId] = data.timestamp;
+            this.videoMarkerManager.markVideosWithId(data.videoId);
+            break;
+          default:
+            console.warn("Unknown action:", data.action);
+        }
+      } catch (error) {
+        Utils.logError("Error handling message:", error);
+      }
+      sendResponse(null);
+    });
+  }
+
+  /**
+   * Setup settings change listener
+   */
+  setupSettingsListener() {
+    this.settingsManager.setupChangeListener((changes) => {
+      // Handle CSS changes
+      const cssKeys = ['stylesheet_Fadeout', 'stylesheet_Grayout', 'stylesheet_Showbadge', 
+                       'stylesheet_Showdate', 'stylesheet_Hideprogress'];
+      const visualKeys = ['idVisualization_Fadeout', 'idVisualization_Grayout', 
+                         'idVisualization_Showbadge', 'idVisualization_Showdate', 
+                         'idVisualization_Hideprogress', 'idVisualization_Showpublishdate'];
+      
+      if (cssKeys.some(key => changes[key]) || visualKeys.some(key => changes[key])) {
+        this.cssManager.reinjectCSS();
+      }
+      
+      // Handle publication date setting changes
+      if (changes.idVisualization_Showpublishdate) {
+        this.handlePublishDateSettingChange(changes.idVisualization_Showpublishdate.newValue);
+      }
+    });
+  }
+
+  /**
+   * Handle publication date setting change
+   */
+  async handlePublishDateSettingChange(isEnabled) {
+    if (isEnabled) {
+      const videos = Utils.findVideos();
+      await this.publicationDateManager.processVideos(videos);
+      } else {
+      this.publicationDateManager.removeAllPublishDates();
+    }
+  }
+
+  /**
+   * Main refresh function
+   */
+  async refresh() {
+    if (this.isProcessing || !Utils.isRuntimeAvailable()) return;
+    
+    this.isProcessing = true;
+    
+    try {
+      const videos = Utils.findVideos();
+      const currentState = `${window.location.href}:${document.title}:${videos.length}`;
+      
+      if (this.lastChange === currentState) {
+        return;
+      }
+      
+      this.lastChange = currentState;
+      
+      // Process videos with both managers
+      await Promise.all([
+        this.videoMarkerManager.processVideos(videos),
+        this.publicationDateManager.processVideos(videos)
+      ]);
+      
+    } catch (error) {
+      Utils.logError("Error during refresh:", error);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+}
+
+// =====================================================================================
+// INITIALIZATION
+// =====================================================================================
 
 // Initialize when DOM is ready
 let youtubeWatchMarker;
@@ -1375,13 +1100,13 @@ if (document.readyState === 'loading') {
   youtubeWatchMarker = new YouTubeWatchMarker();
 }
 
-// Debug function to manually clear publish date cache
+// Debug function
 window.clearPublishDateCache = function() {
   if (youtubeWatchMarker) {
-    youtubeWatchMarker.publishDates = {};
-    youtubeWatchMarker.publishDatesCacheTime = {};
+    youtubeWatchMarker.publicationDateManager.publishDates = {};
+    youtubeWatchMarker.publicationDateManager.publishDatesCacheTime = {};
     console.log('DEBUG: Manually cleared publish date cache');
-    youtubeWatchMarker.removePublishDatesFromTitles();
+    youtubeWatchMarker.publicationDateManager.removeAllPublishDates();
     youtubeWatchMarker.refresh();
   }
 };
