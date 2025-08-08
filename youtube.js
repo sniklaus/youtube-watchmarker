@@ -686,37 +686,38 @@ class PublicationDateManager {
    * Find video title element
    */
   findVideoTitleElement(videoElement) {
-    // Find the immediate container that holds both the video link and title
-    // Look for common container patterns in YouTube's videowall
-    const containerSelectors = [
-      '.ytp-videowall-still',
-      '.ytp-ce-element',
-      '.ytp-ce-video',
-      '.ytp-ce-element-content'
-    ];
-    
-    for (const containerSelector of containerSelectors) {
-      const container = videoElement.closest(containerSelector);
-      if (container) {
-        const titleElement = container.querySelector('.ytp-videowall-still-info-title');
-        if (titleElement && titleElement.textContent && titleElement.textContent.trim()) {
-          return titleElement;
+    // Scope strictly to the videowall tile that contains this link
+    // Many pages nest tiles inside containers like .ytp-ce-element which
+    // hold multiple tiles. Using those containers leads to selecting the
+    // first title on the wall. We therefore always resolve the closest
+    // .ytp-videowall-still tile first and query within it only.
+
+    // 1) Prefer the nearest videowall tile
+    const tile =
+      videoElement.closest('.ytp-videowall-still') ||
+      videoElement.parentElement?.closest?.('.ytp-videowall-still');
+
+    if (tile) {
+      const titleInTile = tile.querySelector('.ytp-videowall-still-info-title');
+      if (titleInTile && titleInTile.textContent && titleInTile.textContent.trim()) {
+        return titleInTile;
+      }
+    }
+
+    // 2) If the link isn’t inside a .ytp-videowall-still (end screens can vary),
+    // walk up a few levels and only search within the closest element that also
+    // contains this link to avoid leaking into sibling tiles.
+    let currentElement = videoElement.parentElement;
+    for (let i = 0; i < 5 && currentElement; i++) {
+      if (currentElement.querySelector && currentElement.contains(videoElement)) {
+        const scopedTitle = currentElement.querySelector('.ytp-videowall-still-info-title');
+        if (scopedTitle && scopedTitle.textContent && scopedTitle.textContent.trim()) {
+          return scopedTitle;
         }
       }
+      currentElement = currentElement.parentElement;
     }
-    
-    // Fallback: traverse parents looking for the title, but be more specific
-    let currentElement = videoElement.parentNode;
-    for (let i = 0; i < 5 && currentElement; i++) {
-      // Only look in immediate children to avoid grabbing titles from other videos
-      const titleElement = currentElement.querySelector(':scope > .ytp-videowall-still-info-title');
-      if (titleElement && titleElement.textContent && titleElement.textContent.trim()) {
-        return titleElement;
-      }
-      
-      currentElement = currentElement.parentNode;
-    }
-    
+
     return null;
   }
 
