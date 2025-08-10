@@ -20,37 +20,7 @@
         <script type="text/javascript" src="index.js"></script>
     </head>
     <body style="cursor:default; line-height:1.1; padding:20px 20px 0px 20px;">
-        <div style="margin:0px auto 20px auto; max-width:700px;">
-            <ul class="nav nav-tabs" id="myTab" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="true">Watch History</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab" aria-controls="settings" aria-selected="false">Settings</button>
-                </li>
-            </ul>
-            <div class="tab-content" id="myTabContent">
-                <div class="tab-pane fade show active" id="history" role="tabpanel" aria-labelledby="history-tab">
-                    <div class="card" style="margin:20px 0px 20px 0px;">
-                        <div class="card-header">
-                            Search
-                        </div>
-
-                        <div class="card-body">
-                            <div class="input-group" style="margin:0px 0px 17px 0px;">
-                                <input class="form-control" id="idSearch_Query" type="text" placeholder="..." />
-                                <button class="btn btn-primary" id="idSearch_Lookup">
-                                    <i class="fa-solid fa-magnifying-glass" style="display:inline;"></i>
-                                    <i class="fa-solid fa-gear fa-spin" style="display:none;"></i>
-                                </button>
-                            </div>
-
-                            <div id="idSearch_Results" style="font-size:14px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
-        <div class="card" style="margin:20px 0px 20px 0px;">
+        <div class="card" style="margin:0px auto 20px auto; max-width:700px;">
             <div class="card-header">
                 Database
             </div>
@@ -208,7 +178,22 @@
                 </div>
             </div>
         </div>
+
+        <div class="card" style="margin:0px auto 20px auto; max-width:700px;">
+            <div class="card-header">
+                Search
+            </div>
+
+            <div class="card-body">
+                <div class="input-group" style="margin:0px 0px 17px 0px;">
+                    <input class="form-control" id="idSearch_Query" type="text" placeholder="..." />
+                    <button class="btn btn-primary" id="idSearch_Lookup">
+                        <i class="fa-solid fa-magnifying-glass" style="display:inline;"></i>
+                        <i class="fa-solid fa-gear fa-spin" style="display:none;"></i>
+                    </button>
                 </div>
+
+                <div id="idSearch_Results" style="font-size:14px;"></div>
             </div>
         </div>
 
