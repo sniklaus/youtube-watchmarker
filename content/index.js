@@ -70,6 +70,33 @@ jQuery(window.document).ready(function() {
                     .text('finished exporting database')
                 ;
 
+                // Special handling for Android, which doesn't support the Download API
+                const isAndroid = navigator.userAgent.toLowerCase().indexOf('android') > -1;
+                if (isAndroid) {
+                    // localStorage was set in background.js
+                    const blobUrl = localStorage.getItem(CONSTANTS.LOCALHOST_KEY_EXPORT_URL);
+                    localStorage.removeItem(CONSTANTS.LOCALHOST_KEY_EXPORT_URL);
+                    
+                    const filename = localStorage.getItem(CONSTANTS.LOCALHOST_KEY_EXPORT_FILENAME);
+                    localStorage.removeItem(CONSTANTS.LOCALHOST_KEY_EXPORT_FILENAME);
+                    
+                    if (blobUrl && filename) {
+                        // Create or update download button
+                        let downloadBtn = jQuery('#idLoading_Download');
+                        if (downloadBtn.length === 0) {
+                            downloadBtn = jQuery('<button class="btn btn-success" id="idLoading_Download" style="margin-right: 10px;">Download</button>')
+                                .insertBefore('#idLoading_Close');
+                        }
+                        
+                        downloadBtn.off('click').on('click', function() {
+                            const link = jQuery('<a>').attr({
+                                href: blobUrl,
+                                download: filename
+                            })[0];
+                            link.click();
+                        }).show();
+                    }
+                }
             }
 
             jQuery('#idLoading_Close')

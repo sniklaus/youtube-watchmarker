@@ -170,10 +170,10 @@ let Database = {
 
                     if (objQuery.result.value.intTimestamp === undefined) {
                         objStore.put({
-                            'strIdent': objQuery.result.value.strIdent,
-                            'intTimestamp': objQuery.result.value.longTimestamp,
-                            'strTitle': objQuery.result.value.strTitle,
-                            'intCount': objQuery.result.value.intCount
+                            'strIdent': objQuery.result.value.strIdent,           // Video ID
+                            'intTimestamp': objQuery.result.value.longTimestamp,  // Unix timestamp
+                            'strTitle': objQuery.result.value.strTitle,           // Video title
+                            'intCount': objQuery.result.value.intCount            // Watch count
                         });
                     }
 
@@ -266,13 +266,20 @@ let Database = {
                 };
             },
             'objDownload': function(objArgs, funcCallback) {
-                chrome.downloads.download({
+                const downloadArgs = {
                     'url' : URL.createObjectURL(new Blob([btoa(unescape(encodeURIComponent(JSON.stringify(objArgs.objGet))))], {
                         'type': 'application/octet-stream'
                     })),
                     'filename': new Date().getFullYear() + '.' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '.' + ('0' + new Date().getDate()).slice(-2) + '.database',
                     'saveAs': true
-                });
+                };
+
+                // Downloads API (works on Desktop only)
+                chrome.downloads.download(downloadArgs);
+
+                // For Android, store the download info to localStorage; will be retrieved later in index.js
+                localStorage.setItem(CONSTANTS.LOCALHOST_KEY_EXPORT_URL, downloadArgs.url);
+                localStorage.setItem(CONSTANTS.LOCALHOST_KEY_EXPORT_FILENAME, downloadArgs.filename);
 
                 return funcCallback({});
             }
