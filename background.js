@@ -1352,13 +1352,13 @@ class ExtensionManager {
   /**
    * Synchronize browser history
    */
-  async syncHistory() {
+  async syncHistory(options) {
     return new Promise(async (resolve, reject) => {
       try {
         console.log("Starting history sync (processing all history)");
         
         History.synchronize(
-          { intTimestamp: 0 },
+          { intTimestamp: 0, skipExisting: options?.skipExisting === true },
           (response) => {
             if (response === null) {
               console.error("History synchronization failed - null response");
@@ -1562,7 +1562,7 @@ class ExtensionManager {
       // Check if database is available - wait up to 5 seconds for initialization
       await this.waitForDatabaseInitialization(5000);
       
-      const response = await this.syncHistory();
+      const response = await this.syncHistory({ skipExisting: true });
       
 
       

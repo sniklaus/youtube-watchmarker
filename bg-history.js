@@ -122,10 +122,16 @@ export const History = {
 
         // Check if video already exists in the database
         const existingVideo = await currentProvider.getVideo(videoId);
-        
+
+        // If manual sync requests skipping existing entries, just continue
+        if (objRequest.skipExisting === true && existingVideo) {
+          skippedCount++;
+          continue;
+        }
+
         let videoToStore;
         if (existingVideo) {
-          // Update existing video with latest timestamp and count
+          // Update existing video with latest timestamp and count (automatic/periodic sync)
           videoToStore = {
             strIdent: videoId,
             intTimestamp: Math.max(existingVideo.intTimestamp || 0, historyResult.lastVisitTime || 0),

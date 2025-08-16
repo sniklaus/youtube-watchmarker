@@ -58,6 +58,32 @@
       [data-bs-theme="dark"] .search-result-item:hover {
         background-color: var(--color-bg-tertiary);
       }
+
+      /* Dark theme for Supabase setup instructions */
+      [data-bs-theme="dark"] #supabase-setup-instructions .alert-info {
+        background-color: var(--color-bg-card) !important;
+        color: var(--color-text-primary) !important;
+        border-color: var(--color-border) !important;
+      }
+      [data-bs-theme="dark"] #supabase-setup-instructions .alert-info .text-dark,
+      [data-bs-theme="dark"] #supabase-setup-instructions h6,
+      [data-bs-theme="dark"] #supabase-setup-instructions p,
+      [data-bs-theme="dark"] #supabase-setup-instructions ol,
+      [data-bs-theme="dark"] #supabase-setup-instructions li {
+        color: var(--color-text-primary) !important;
+      }
+      [data-bs-theme="dark"] #supabase-setup-instructions a {
+        color: var(--color-primary) !important;
+      }
+      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark {
+        background-color: #0f172a !important;
+        border-color: var(--color-border) !important;
+      }
+      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark,
+      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark pre,
+      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark code {
+        color: #ffffff !important;
+      }
       
       /* Enhanced dark theme body styling */
       [data-bs-theme="dark"] .bg-body-tertiary {
@@ -117,6 +143,14 @@
         cursor: not-allowed;
         background-color: var(--color-bg-tertiary);
         color: var(--color-text-muted);
+      }
+
+      /* Ensure visible border for Test Connection button */
+      #supabase_test.btn-outline-secondary {
+        border: 1px solid var(--color-border) !important;
+      }
+      #supabase_test.btn-outline-secondary:disabled {
+        border: 1px solid var(--color-border) !important;
       }
       
       /* Animation for search results */
@@ -212,7 +246,7 @@
             <div class="card-body">
               <!-- Database Provider Selection -->
               <div class="mb-4">
-                <h3 class="h6 mb-3">Database Provider</h3>
+                <h3 class="h6 mb-3">Primary Database</h3>
                 <div class="row g-3 mb-3">
                   <div class="col-12 col-md-6">
                     <div class="form-check">
@@ -245,7 +279,8 @@
                 <div class="form-check form-switch mb-3">
                   <input class="form-check-input" type="checkbox" id="enable_auto_sync">
                   <label class="form-check-label" for="enable_auto_sync">
-                    Enable automatic synchronization between local and remote storage
+                    Keep both databases in sync (requires Supabase setup)
+
                   </label>
                 </div>             
               
@@ -309,6 +344,12 @@
                   </div>
                 </div>
                 
+                <!-- Supabase status strip (dynamic) -->
+                <div id="supabase-status" class="alert alert-secondary d-none mt-3" role="status" aria-live="polite" aria-atomic="true">
+                  <span id="supabase-status-icon" class="me-2"><i class="fas fa-info-circle"></i></span>
+                  <span id="supabase-status-text">Checking saved credentials…</span>
+                </div>
+                
                 <div class="mt-3">
                   <button type="button" class="btn btn-outline-primary me-2" id="supabase_save">
                     <i class="fas fa-save me-2"></i>Save Configuration
@@ -329,7 +370,7 @@
                       Database Table Setup Required
                     </h6>
                     <p class="mb-3 text-dark">
-                      Your Supabase database doesn't have the required table yet. Please follow these simple steps to create it:
+                      If this is your first time using Supabase, your Supabase database does not have the required table to store the videos yet. Please follow these simple steps to create it:
                     </p>
                     
                     <div class="mb-3">

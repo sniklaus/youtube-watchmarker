@@ -117,6 +117,9 @@ class OptionsPageManager {
         // Supabase configuration elements
         this.supabaseUrl = this.getElementById('supabase_url');
         this.supabaseApiKey = this.getElementById('supabase_api_key');
+        this.supabaseStatus = document.getElementById('supabase-status');
+        this.supabaseStatusIcon = document.getElementById('supabase-status-icon');
+        this.supabaseStatusText = document.getElementById('supabase-status-text');
         
         // Supabase setup instructions
         this.supabaseSetupInstructions = this.getElementById('supabase-setup-instructions');
@@ -657,45 +660,41 @@ class OptionsPageManager {
                 // Load existing configuration if available
                 await this.loadSupabaseConfig();
                 
-                // Check if credentials already exist
-                const statusResponse = await this.sendMessageWithRetry({
-                    action: 'supabase-get-status'
-                });
-                
-                
-                if (statusResponse && statusResponse.success && statusResponse.status && statusResponse.status.configured) {
-                    // Credentials exist, switch to Supabase immediately
-                    try {
-                        await this.actuallySwitchProvider('supabase');
-                        
-                        // Check if table exists after successful switch
-                        const tableExists = await this.checkTableExists();
-                        
-                        if (tableExists) {
-                            this.showSuccess('Successfully switched to Supabase database');
-                            // Hide setup instructions on successful switch with table
-                            this.hideSetupInstructions();
+                // Smart auto-switch: if saved credentials exist, test and switch automatically with clear status feedback
+                try {
+                    const statusResponse = await this.sendMessageWithRetry({ action: 'supabase-get-status' });
+                    const hasConfigured = !!(statusResponse && statusResponse.success && statusResponse.status && statusResponse.status.configured);
+
+                    if (hasConfigured) {
+                        this.updateSupabaseStatus('info', 'Checking saved credentials…');
+                        const testResponse = await this.sendMessageWithRetry({ action: 'supabase-test' });
+                        if (testResponse && testResponse.success) {
+                            this.updateSupabaseStatus('success', 'Credentials valid. Switching to Supabase…');
+                            try {
+                                await this.actuallySwitchProvider('supabase');
+                                const tableExists = await this.checkTableExists();
+                                if (tableExists) {
+                                    this.updateSupabaseStatus('success', 'Connected to Supabase. Table is ready.');
+                                    this.hideSetupInstructions();
+                                } else {
+                                    this.updateSupabaseStatus('warning', 'Connected to Supabase. Table setup required (see instructions below).');
+                                    this.showSetupInstructions();
+                                }
+                            } catch (switchError) {
+                                this.updateSupabaseStatus('danger', `Switch failed: ${switchError.message}`);
+                            }
                         } else {
-                            this.showSetupInstructions();
-                            this.showSuccess('Successfully switched to Supabase! However, table setup is required. Please follow the instructions below.');
+                            this.updateSupabaseStatus('danger', `Saved credentials failed: ${testResponse?.error || 'Connection failed'}`);
                         }
-                    } catch (switchError) {
-                        console.error('[OptionsPageManager] Failed to switch to Supabase:', JSON.stringify({
-          error: switchError.message,
-          errorName: switchError.name,
-          errorStack: switchError.stack
-        }, null, 2));
-                        this.showError('Failed to switch to Supabase: ' + switchError.message);
-                        
-                        // Revert radio button selection on error
-                        this.providerIndexedDB.checked = true;
-                        this.providerSupabase.checked = false;
-                        this.supabaseConfig.classList.add('d-none');
-                        return;
+                    } else {
+                        // No credentials yet: guide the user, show setup instructions
+                        this.updateSupabaseStatus('secondary', 'Enter your Supabase URL and Service Role key, then click Save or Test.');
+                        this.showSetupInstructions();
                     }
-                } else {
-                    // No credentials exist, show configuration instructions
-                    this.showSuccess('Supabase configuration panel opened. Please configure your database credentials below.');
+                } catch (e) {
+                    // On any unexpected error, keep the panel open and show neutral guidance
+                    this.updateSupabaseStatus('secondary', 'Enter your Supabase URL and Service Role key, then click Save or Test.');
+                    this.showSetupInstructions();
                 }
             } else {
                 this.supabaseConfig.classList.add('d-none');
@@ -715,9 +714,10 @@ class OptionsPageManager {
             
             // Revert radio button selection
             if (provider === 'supabase') {
-                this.providerIndexedDB.checked = true;
-                this.providerSupabase.checked = false;
-                this.supabaseConfig.classList.add('d-none');
+                // Keep Supabase panel open so the user can input credentials
+                this.providerIndexedDB.checked = false;
+                this.providerSupabase.checked = true;
+                this.supabaseConfig.classList.remove('d-none');
             } else {
                 this.providerIndexedDB.checked = false;
                 this.providerSupabase.checked = true;
@@ -880,28 +880,31 @@ class OptionsPageManager {
                 // Clear sensitive fields for security
                 this.supabaseApiKey.value = '';
                 
-                // Now try to switch to Supabase
-                try {
-                    await this.actuallySwitchProvider('supabase');
-                    
-                    // Check if table exists after successful switch
-                    const tableExists = await this.checkTableExists();
-                    
-                    if (tableExists) {
-                        // Hide setup instructions if switch and table are both OK
-                        this.hideSetupInstructions();
-                        this.showSuccess('Successfully switched to Supabase database - ready to use!');
-                    } else {
-                        this.showSetupInstructions();
-                        this.showSuccess('Successfully switched to Supabase! However, table setup is required. Please follow the instructions below.');
-                    }
-                } catch (switchError) {
-                    console.error('Failed to switch to Supabase after configuration:', JSON.stringify({
+                // Now test and switch with clear status feedback
+                this.updateSupabaseStatus('info', 'Testing credentials…');
+                const testResponse = await this.sendMessageWithRetry({ action: 'supabase-test' });
+                if (testResponse && testResponse.success) {
+                    this.updateSupabaseStatus('success', 'Credentials valid. Switching to Supabase…');
+                    try {
+                        await this.actuallySwitchProvider('supabase');
+                        const tableExists = await this.checkTableExists();
+                        if (tableExists) {
+                            this.updateSupabaseStatus('success', 'Connected to Supabase. Table is ready.');
+                            this.hideSetupInstructions();
+                        } else {
+                            this.updateSupabaseStatus('warning', 'Connected to Supabase. Table setup required (see instructions below).');
+                            this.showSetupInstructions();
+                        }
+                    } catch (switchError) {
+                        console.error('Failed to switch to Supabase after configuration:', JSON.stringify({
           error: switchError.message,
           errorName: switchError.name,
           errorStack: switchError.stack
         }, null, 2));
-                    this.showError('Configuration saved but failed to switch to Supabase: ' + switchError.message);
+                        this.updateSupabaseStatus('danger', 'Configuration saved but failed to switch: ' + switchError.message);
+                    }
+                } else {
+                    this.updateSupabaseStatus('danger', 'Configuration saved, but connection test failed: ' + (testResponse?.error || 'Connection failed'));
                 }
             } else {
                 throw new Error(response?.error || 'Failed to save configuration');
@@ -934,15 +937,15 @@ class OptionsPageManager {
                 const tableExists = await this.checkTableExists();
                 
                 if (tableExists) {
-                    this.showSuccess(response.message || 'Connection successful - table is ready!');
+                    this.updateSupabaseStatus('success', response.message || 'Connection successful - table is ready!');
                     // Hide setup instructions if connection and table are both OK
                     this.hideSetupInstructions();
                 } else {
+                    this.updateSupabaseStatus('warning', 'Connection successful, but table setup is required. See instructions below.');
                     this.showSetupInstructions();
-                    this.showSuccess('Connection successful, but table setup is required. Please follow the instructions below.');
                 }
             } else {
-                this.showError('Connection test failed: ' + (response?.error || 'Connection failed'));
+                this.updateSupabaseStatus('danger', 'Connection test failed: ' + (response?.error || 'Connection failed'));
             }
         } catch (error) {
             console.error('Error testing connection:', JSON.stringify({
@@ -950,7 +953,7 @@ class OptionsPageManager {
         errorName: error.name,
         errorStack: error.stack
       }, null, 2));
-            this.showError('Connection test failed: ' + error.message);
+            this.updateSupabaseStatus('danger', 'Connection test failed: ' + error.message);
         } finally {
             this.hideButtonLoading(testButton);
         }
@@ -1052,6 +1055,28 @@ class OptionsPageManager {
       }, null, 2));
             return false;
         }
+    }
+
+    /**
+     * Update the Supabase status strip in the UI
+     * @param {('secondary'|'info'|'success'|'warning'|'danger')} level
+     * @param {string} text
+     */
+    updateSupabaseStatus(level, text) {
+        if (!this.supabaseStatus || !this.supabaseStatusText || !this.supabaseStatusIcon) return;
+        // Map level to icon
+        const iconMap = {
+            secondary: 'fas fa-info-circle',
+            info: 'fas fa-info-circle',
+            success: 'fas fa-check-circle',
+            warning: 'fas fa-exclamation-triangle',
+            danger: 'fas fa-times-circle'
+        };
+        // Reset classes
+        this.supabaseStatus.className = `alert alert-${level} mt-3`;
+        this.supabaseStatusIcon.innerHTML = `<i class="${iconMap[level] || iconMap.secondary}"></i>`;
+        this.supabaseStatusText.textContent = text;
+        this.supabaseStatus.classList.remove('d-none');
     }
 
     /**
