@@ -21,5 +21,18 @@ I would like to express my gratitude to [XP1](https://github.com/XP1) who has be
 * 2025.01 - this [project](https://github.com/serossi/YT2Grayjay) to import from takeout and export to grayjay by [serossi](https://github.com/serossi)
 * 2021.05 - this [project](https://github.com/janpaul123/youtube-takeout-to-watchmarker) to import from takeout by [janpaul123](https://github.com/janpaul123)
 
+## contributors
+* [0xva](https://github.com/0xva)
+* [JeffBuckles](https://github.com/JeffBuckles)
+* [JGKle](https://github.com/JGKle)
+* [johan456789](https://github.com/johan456789)
+* [Johni0702](https://github.com/Johni0702)
+* [lbmaian](https://github.com/lbmaian)
+* [ngoclong19](https://github.com/ngoclong19)
+* [shoaibshakeel381](https://github.com/shoaibshakeel381)
+* [TotalCaesar659](https://github.com/TotalCaesar659)
+* [XP1](https://github.com/XP1)
+* [Yentis](https://github.com/Yentis)
+
 ## license
 Please refer to the appropriate file within this repository.
