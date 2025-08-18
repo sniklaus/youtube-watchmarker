@@ -43,19 +43,74 @@ const Utils = {
    * Extract publication date from video element
    */
   extractPublishDate(videoElement) {
-    let currentElement = videoElement.parentNode;
-    
+    // Scope strictly to the corresponding videowall tile to avoid
+    // accidentally reading labels from sibling tiles.
+    const tile =
+      videoElement.closest('.ytp-videowall-still') ||
+      videoElement.parentElement?.closest?.('.ytp-videowall-still') ||
+      null;
+
+    // Helper to extract only the "… ago" phrase from any text
+    const extractAgo = (text) => {
+      if (!text) return null;
+      const trimmed = text.trim();
+      // Common forms: "2 days ago", "1 hour ago", etc.
+      const m1 = trimmed.match(/(\d+\s+(?:second|minute|hour|day|week|month|year)s?\s+ago)/i);
+      if (m1) return m1[1];
+      // Some labels include prefixes like "Streamed 2 days ago" or "Premiered 3 years ago"
+      const m2 = trimmed.match(/(?:Streamed|Premiered)\s+(\d+\s+(?:second|minute|hour|day|week|month|year)s?\s+ago)/i);
+      if (m2) return m2[1];
+      // Fallback: if it contains 'ago', attempt to take the last segment ending in 'ago'
+      if (trimmed.includes('ago')) {
+        const idx = trimmed.toLowerCase().lastIndexOf('ago');
+        const before = trimmed.slice(0, idx).trim();
+        // Take up to three tokens before 'ago' to form something like "2 days"
+        const tokens = before.split(/[^a-z0-9]+/i).filter(Boolean);
+        const slice = tokens.slice(-2).join(' ');
+        if (slice) return `${slice} ago`;
+        return 'ago';
+      }
+      return null;
+    };
+
+    // Prefer signals inside the same tile
+    if (tile) {
+      // 1) aria-label/title on the link itself often contains the time info
+      const selfTexts = [
+        tile.getAttribute?.('aria-label'),
+        tile.getAttribute?.('title'),
+        videoElement.getAttribute?.('aria-label'),
+        videoElement.getAttribute?.('title')
+      ];
+      for (const t of selfTexts) {
+        const ago = extractAgo(t);
+        if (ago) return ago;
+      }
+
+      // 2) Look for elements within the tile that include an 'ago' phrase
+      const candidates = tile.querySelectorAll('span, div, a');
+      for (const el of candidates) {
+        const text = el.getAttribute('aria-label')?.trim() || el.textContent?.trim();
+        const ago = extractAgo(text);
+        if (ago) return ago;
+      }
+    }
+
+    // Fallback: walk up a few ancestors but ensure they still contain this link,
+    // and parse only the '… ago' portion.
+    let currentElement = videoElement.parentElement;
     for (let i = 0; i < 5 && currentElement; i++) {
-      const spans = currentElement.querySelectorAll('span');
-      for (const span of spans) {
-        const text = span.getAttribute('aria-label')?.trim() || span.textContent?.trim();
-        if (text && text.includes('ago')) {
-          return text;
+      if (currentElement.contains(videoElement)) {
+        const spans = currentElement.querySelectorAll('span, div, a');
+        for (const span of spans) {
+          const text = span.getAttribute('aria-label')?.trim() || span.textContent?.trim();
+          const ago = extractAgo(text);
+          if (ago) return ago;
         }
       }
-      currentElement = currentElement.parentNode;
+      currentElement = currentElement.parentElement;
     }
-    
+
     return null;
   },
 
@@ -752,6 +807,12 @@ class PublicationDateManager {
     const allTitleElements = document.querySelectorAll('.ytp-videowall-still-info-title');
     allTitleElements.forEach(titleElement => {
       const currentText = titleElement.textContent?.trim() || '';
+      // Remove our appended " • … ago" if present
+      if (/\s•\s.+\sago$/i.test(currentText)) {
+        const cleaned = currentText.replace(/\s•\s.+\sago$/i, '');
+        titleElement.textContent = cleaned;
+      }
+      // Backward-compat: old format with "Published:" marker
       if (currentText.includes(' • Published:')) {
         const cleanText = currentText.split(' • Published:')[0];
         titleElement.textContent = cleanText;
