@@ -481,9 +481,13 @@ class CSSManager {
       
       if (settings.idVisualization_Fadeout && settings.stylesheet_Fadeout) {
         cssContent += settings.stylesheet_Fadeout + '\n';
+        // Ensure new A/B tested thumbnail model is also targeted
+        cssContent += '.youwatch-mark yt-thumbnail-view-model img { opacity:0.3; }\n';
       }
       if (settings.idVisualization_Grayout && settings.stylesheet_Grayout) {
         cssContent += settings.stylesheet_Grayout + '\n';
+        // Ensure new A/B tested thumbnail model is also targeted
+        cssContent += '.youwatch-mark yt-thumbnail-view-model img { filter:grayscale(1.0); }\n';
       }
       if (settings.idVisualization_Showbadge && settings.stylesheet_Showbadge) {
         cssContent += settings.stylesheet_Showbadge + '\n';

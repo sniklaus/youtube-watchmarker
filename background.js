@@ -211,11 +211,11 @@ class ExtensionManager {
       const stylesheetSettings = [
         {
           key: "stylesheet_Fadeout",
-          defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { opacity:0.3; }",
+          defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image, .youwatch-mark yt-thumbnail-view-model img { opacity:0.3; }",
         },
         {
           key: "stylesheet_Grayout",
-          defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image { filter:grayscale(1.0); }",
+          defaultValue: ".youwatch-mark yt-img-shadow img, .youwatch-mark yt-image img, .youwatch-mark .ytp-videowall-still-image, .youwatch-mark img.yt-core-image, .youwatch-mark yt-thumbnail-view-model img { filter:grayscale(1.0); }",
         },
         {
           key: "stylesheet_Showbadge",
