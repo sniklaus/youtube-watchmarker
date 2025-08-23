@@ -8,7 +8,8 @@ import {
   getSyncStorageAsync,
   setSyncStorageAsync,
   setDefaultInSyncStorageIfNull,
-  isValidVideoTitle
+  isValidVideoTitle,
+  decodeHtmlEntitiesAndFixEncoding
 } from "./utils.js";
 
 import { Database } from "./bg-database.js";
@@ -968,6 +969,9 @@ class ExtensionManager {
       title = title.slice(0, -10);
     }
 
+    // Normalize encoding to avoid mojibake before validation and saving
+    title = decodeHtmlEntitiesAndFixEncoding(title);
+
     // Don't save videos with generic or invalid titles
     if (!isValidVideoTitle(title)) {
       console.debug("Skipping video with invalid/generic title:", title);
@@ -981,6 +985,8 @@ class ExtensionManager {
             if (retryTitle.endsWith(" - YouTube")) {
               retryTitle = retryTitle.slice(0, -10);
             }
+            // Normalize encoding on retry as well
+            retryTitle = decodeHtmlEntitiesAndFixEncoding(retryTitle);
             
             // Only proceed if we now have a valid title
             if (isValidVideoTitle(retryTitle)) {
