@@ -847,7 +847,7 @@ jQuery(window.document).ready(function() {
 
                                 jQuery('#idSearch_Lookup').triggerHandler('click');
                             }
-                        }).observe(this)
+                        }).observe(this);
                     })
                 ;
             }
