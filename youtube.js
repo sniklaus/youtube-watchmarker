@@ -16,8 +16,56 @@ const Utils = {
   /**
    * Extract video ID from URL
    */
-  extractVideoId(url) {
-    return url.split("&")[0].slice(-11);
+  extractVideoId(input) {
+    const parseFromUrl = (url) => {
+      if (!url || typeof url !== 'string') return null;
+      // Standard watch URLs
+      const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+      if (watchMatch) return watchMatch[1];
+      // Shorts URLs
+      const shortsMatch = url.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+      if (shortsMatch) return shortsMatch[1];
+      // Redirected URLs (e.g., /redirect? ... q=https://www.youtube.com/watch?v=ID)
+      const redirectParam = url.match(/[?&]q=([^&]+)/);
+      if (redirectParam) {
+        try {
+          const decoded = decodeURIComponent(redirectParam[1]);
+          const nested = parseFromUrl(decoded);
+          if (nested) return nested;
+        } catch (_) {}
+      }
+      // Thumbnails domain
+      const thumbMatch = url.match(/\/vi\/([a-zA-Z0-9_-]{11})\//);
+      if (thumbMatch) return thumbMatch[1];
+      // Fallback to last 11 if it looks like an ID
+      const tail = url.split('&')[0].slice(-11);
+      return /^[a-zA-Z0-9_-]{11}$/.test(tail) ? tail : null;
+    };
+
+    // If a string was provided, parse directly
+    if (typeof input === 'string') {
+      return parseFromUrl(input);
+    }
+
+    // If a DOM element was provided, try various strategies
+    const element = input;
+    if (element && typeof element === 'object') {
+      // 1) Direct href on the element
+      const idFromSelf = parseFromUrl(element.href);
+      if (idFromSelf) return idFromSelf;
+
+      // 2) Any descendant link with a usable href
+      const link = element.querySelector?.('a[href]');
+      const idFromLink = parseFromUrl(link?.getAttribute?.('href')) || parseFromUrl(link?.href);
+      if (idFromLink) return idFromLink;
+
+      // 3) Thumbnail image URL (e.g., https://i.ytimg.com/vi/ID/hqdefault.jpg)
+      const img = element.querySelector?.('img[src*="/vi/"]');
+      const idFromImg = parseFromUrl(img?.getAttribute?.('src'));
+      if (idFromImg) return idFromImg;
+    }
+
+    return null;
   },
 
   /**
@@ -129,10 +177,8 @@ const Utils = {
       'a.reel-item-endpoint[href^="/shorts/"]',
       'a.media-item-thumbnail-container[href^="/watch?v="]',
       // Notification panel entries
-      'ytd-notification-renderer > a[href^="/watch?v="]',
-      'ytd-notification-renderer a[href^="/watch?v="]',
-      'ytd-notification-renderer > a[href^="/shorts/"]',
-      'ytd-notification-renderer a[href^="/shorts/"]'
+      'ytd-notification-renderer a',
+      'ytd-notification-renderer .thumbnail-container img'
     ];
   },
 
@@ -545,22 +591,43 @@ class VideoMarkerManager {
    */
   markVideo(videoElement, videoId) {
     const isWatched = this.watchDates.hasOwnProperty(videoId);
-    const hasWatchedClass = videoElement.classList.contains("youwatch-mark");
+
+    // Prefer marking only the thumbnail within notifications
+    let markTarget = videoElement;
+    try {
+      const notification = videoElement.closest && videoElement.closest('ytd-notification-renderer');
+      if (notification) {
+        markTarget =
+          notification.querySelector('.thumbnail-container') ||
+          notification.querySelector('yt-img-shadow') ||
+          notification.querySelector('img') ||
+          videoElement;
+        // Ensure we don't keep the class on the outer notification link
+        if (markTarget !== videoElement && videoElement.classList?.contains('youwatch-mark')) {
+          videoElement.classList.remove('youwatch-mark');
+          if (videoElement.hasAttribute && videoElement.hasAttribute('watchdate')) {
+            videoElement.removeAttribute('watchdate');
+          }
+        }
+      }
+    } catch (_) {}
+
+    const hasWatchedClass = markTarget.classList.contains("youwatch-mark");
 
     if (isWatched && !hasWatchedClass) {
-      videoElement.classList.add("youwatch-mark");
+      markTarget.classList.add("youwatch-mark");
       
       if (this.watchDates[videoId] !== 0) {
         const watchDate = new Date(this.watchDates[videoId])
           .toISOString()
           .split("T")[0]
           .replace(/-/g, ".");
-        videoElement.setAttribute("watchdate", ` - ${watchDate}`);
+        markTarget.setAttribute("watchdate", ` - ${watchDate}`);
       }
     } else if (!isWatched && hasWatchedClass) {
-      videoElement.classList.remove("youwatch-mark");
-      if (videoElement.hasAttribute("watchdate")) {
-        videoElement.removeAttribute("watchdate");
+      markTarget.classList.remove("youwatch-mark");
+      if (markTarget.hasAttribute("watchdate")) {
+        markTarget.removeAttribute("watchdate");
       }
     }
   }
@@ -580,7 +647,7 @@ class VideoMarkerManager {
     if (this.observers.has(videoElement)) return;
 
     const observer = new MutationObserver(() => {
-      const videoId = Utils.extractVideoId(videoElement.href);
+      const videoId = Utils.extractVideoId(videoElement);
       this.markVideo(videoElement, videoId);
     });
 
@@ -628,7 +695,7 @@ class VideoMarkerManager {
       const batch = videos.slice(i, i + BATCH_SIZE);
       
       batch.forEach(video => {
-        const videoId = Utils.extractVideoId(video.href);
+        const videoId = Utils.extractVideoId(video);
         this.markVideo(video, videoId);
         this.observeVideo(video);
           this.requestVideoData(video, videoId);
