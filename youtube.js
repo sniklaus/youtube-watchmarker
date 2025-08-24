@@ -127,7 +127,12 @@ const Utils = {
       'a.ytd-thumbnail[href^="/shorts/"]',
       'a.ShortsLockupViewModelHostEndpoint[href^="/shorts/"]',
       'a.reel-item-endpoint[href^="/shorts/"]',
-      'a.media-item-thumbnail-container[href^="/watch?v="]'
+      'a.media-item-thumbnail-container[href^="/watch?v="]',
+      // Notification panel entries
+      'ytd-notification-renderer > a[href^="/watch?v="]',
+      'ytd-notification-renderer a[href^="/watch?v="]',
+      'ytd-notification-renderer > a[href^="/shorts/"]',
+      'ytd-notification-renderer a[href^="/shorts/"]'
     ];
   },
 
