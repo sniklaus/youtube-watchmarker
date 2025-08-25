@@ -7,7 +7,7 @@ class OptionsPageManager {
         this.isInitialized = false;
         this.themeToggle = null;
         this.bootstrap = null;
-        
+
         // Initialize when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.initialize());
@@ -24,31 +24,31 @@ class OptionsPageManager {
         try {
             // Wait for Bootstrap to be available
             await this.waitForBootstrap();
-            
+
             // Cache DOM elements
             this.cacheElements();
-            
+
             // Set up event listeners
             this.setupEventListeners();
-            
+
             // Initialize theme
             await this.initializeTheme();
-            
+
             // Load initial data
             await this.loadInitialData();
-            
+
             // Add page animations
             this.addPageAnimations();
-            
-            
-            
+
+
+
             this.isInitialized = true;
         } catch (error) {
             console.error('Failed to initialize options page:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Failed to initialize the options page. Please refresh and try again.');
         }
     }
@@ -92,11 +92,11 @@ class OptionsPageManager {
                 }
             } catch (e) {
                 console.error(`Error while trying to get element with ID '${id}':`, JSON.stringify({
-          error: e.message,
-          errorName: e.name,
-          errorStack: e.stack,
-          elementId: id
-        }, null, 2));
+                    error: e.message,
+                    errorName: e.name,
+                    errorStack: e.stack,
+                    elementId: id
+                }, null, 2));
             }
         });
 
@@ -104,42 +104,42 @@ class OptionsPageManager {
         // Theme toggle
         this.themeToggle = this.getElementById('theme-toggle');
         this.themeIcon = this.getElementById('theme-icon');
-        
+
         // Database elements
         this.databaseSize = this.getElementById('idDatabase_Size');
-        
+
         // Database provider elements
         this.providerIndexedDB = this.getElementById('provider_indexeddb');
         this.providerSupabase = this.getElementById('provider_supabase');
         this.enableAutoSync = this.getElementById('enable_auto_sync');
         this.supabaseConfig = this.getElementById('supabase-config');
-        
+
         // Supabase configuration elements
         this.supabaseUrl = this.getElementById('supabase_url');
         this.supabaseApiKey = this.getElementById('supabase_api_key');
         this.supabaseStatus = document.getElementById('supabase-status');
         this.supabaseStatusIcon = document.getElementById('supabase-status-icon');
         this.supabaseStatusText = document.getElementById('supabase-status-text');
-        
+
         // Supabase setup instructions
         this.supabaseSetupInstructions = this.getElementById('supabase-setup-instructions');
         this.copySqlButton = this.getElementById('copy-sql-button');
-        
+
         // Current configuration display elements
         this.currentConfig = this.getElementById('current-config');
         this.currentUrl = this.getElementById('current-url');
         this.currentApiKey = this.getElementById('current-api-key');
-        
+
         // Search elements
         this.searchIcon = this.getElementById('search-icon');
         this.searchSpinner = this.getElementById('search-spinner');
-        
+
         // Toast elements
         this.successToast = new this.bootstrap.Toast(this.getElementById('successToast'));
         this.errorToast = new this.bootstrap.Toast(this.getElementById('errorToast'));
         this.successToastMessage = this.getElementById('successToastMessage');
         this.errorToastMessage = this.getElementById('errorToastMessage');
-        
+
         // Screen reader announcements
         this.srAnnouncements = this.getElementById('sr-announcements');
     }
@@ -161,12 +161,12 @@ class OptionsPageManager {
             this.enableAutoSync.addEventListener('change', (event) => this.toggleAutoSync(event));
             // YouTube Auto Sync removed - this functionality is now handled by Watch Detection Conditions - YouTube History
             // this.getElementById('enable_youtube_auto_sync').addEventListener('change', (event) => this.toggleYouTubeAutoSync(event));
-            
+
             // Supabase Configuration
             this.getElementById('supabase_save').addEventListener('click', () => this.saveSupabaseConfig());
             this.getElementById('supabase_test').addEventListener('click', () => this.testSupabaseConnection());
             this.getElementById('supabase_clear').addEventListener('click', () => this.clearSupabaseConfig());
-            
+
             // Supabase setup instructions
             this.copySqlButton.addEventListener('click', () => this.copySqlToClipboard());
 
@@ -197,12 +197,12 @@ class OptionsPageManager {
 
             // Keyboard shortcuts
             this.setupKeyboardShortcuts();
-                } catch (error) {
+        } catch (error) {
             console.error('Error setting up event listeners:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
         }
     }
 
@@ -224,7 +224,7 @@ class OptionsPageManager {
 
         // Search button click
         searchButton.addEventListener('click', () => this.performSearch());
-        
+
         // Enter key search
         searchQuery.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
@@ -232,19 +232,19 @@ class OptionsPageManager {
                 this.performSearch();
             }
         });
-        
+
         // Auto-search with debounce (1 second delay)
         let searchTimeout;
         searchQuery.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            
+
             searchTimeout = setTimeout(() => {
                 const query = searchQuery.value.trim();
-                
+
                 // Reset to first page when query changes
                 this.searchState.currentPage = 1;
                 this.searchState.currentQuery = query;
-                
+
                 // Always search (empty query shows all videos)
                 this.performSearch();
             }, 1000);
@@ -254,7 +254,7 @@ class OptionsPageManager {
         searchQuery.addEventListener('focus', (event) => {
             event.target.style.width = 'auto';
         });
-        
+
         searchQuery.addEventListener('blur', (event) => {
             event.target.style.width = 'auto';
         });
@@ -269,17 +269,17 @@ class OptionsPageManager {
             this.getElementById('sync-history').addEventListener('click', () => this.syncBrowserHistory());
             this.getElementById('sync-youtube').addEventListener('click', () => this.syncYouTubeHistory());
             this.getElementById('sync-youtube-likes').addEventListener('click', () => this.syncYouTubeLikes());
-            
 
-            
+
+
             // Sync all button
             this.getElementById('sync-all').addEventListener('click', () => this.syncAllSources());
         } catch (error) {
             console.error('Error setting up synchronization listeners:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
         }
     }
 
@@ -293,13 +293,13 @@ class OptionsPageManager {
                 event.preventDefault();
                 this.getElementById('idSearch_Query').focus();
             }
-            
+
             // Ctrl/Cmd + E to export database
             if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
                 event.preventDefault();
                 this.exportDatabase();
             }
-            
+
             // Ctrl/Cmd + T to toggle theme
             if ((event.ctrlKey || event.metaKey) && event.key === 't') {
                 event.preventDefault();
@@ -328,7 +328,7 @@ class OptionsPageManager {
      */
     setupToggleSwitch(elementId) {
         const switchElement = this.getElementById(elementId);
-        
+
         if (!switchElement) {
             console.warn(`Toggle switch ${elementId} not found`);
             return;
@@ -341,11 +341,11 @@ class OptionsPageManager {
                 this.showSuccess(`Setting ${this.getSettingDisplayName(elementId)} ${isEnabled ? 'enabled' : 'disabled'}`);
             } catch (error) {
                 console.error(`Error toggling ${elementId}:`, JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack,
-          elementId: elementId
-        }, null, 2));
+                    error: error.message,
+                    errorName: error.name,
+                    errorStack: error.stack,
+                    elementId: elementId
+                }, null, 2));
                 // Revert the switch state on error
                 switchElement.checked = !switchElement.checked;
                 this.showError(`Failed to update ${this.getSettingDisplayName(elementId)} setting`);
@@ -357,11 +357,11 @@ class OptionsPageManager {
             switchElement.checked = isEnabled;
         }).catch(error => {
             console.error(`Error loading initial state for ${elementId}:`, JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack,
-          elementId: elementId
-        }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack,
+                elementId: elementId
+            }, null, 2));
         });
     }
 
@@ -396,15 +396,15 @@ class OptionsPageManager {
             // Get saved theme preference
             const savedTheme = await this.getSavedTheme();
             let theme = savedTheme;
-            
+
             // If no saved theme, use system preference
             if (!theme) {
                 const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
                 theme = isDarkMode ? 'dark' : 'light';
             }
-            
+
             this.setTheme(theme);
-            
+
             // Listen for system theme changes only if no saved preference
             if (!savedTheme && window.matchMedia) {
                 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
@@ -413,10 +413,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error initializing theme:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
         }
     }
 
@@ -427,17 +427,17 @@ class OptionsPageManager {
         try {
             const currentTheme = document.documentElement.getAttribute('data-bs-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
+
             this.setTheme(newTheme);
             await this.saveTheme(newTheme);
-            
+
             this.showSuccess(`Switched to ${newTheme} theme`);
         } catch (error) {
             console.error('Error toggling theme:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Failed to change theme');
         }
     }
@@ -448,7 +448,7 @@ class OptionsPageManager {
      */
     setTheme(theme) {
         document.documentElement.setAttribute('data-bs-theme', theme === 'dark' ? 'dark' : 'light');
-        
+
         // Update theme toggle icon
         if (this.themeIcon) {
             this.themeIcon.className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
@@ -465,10 +465,10 @@ class OptionsPageManager {
             return result.theme || null;
         } catch (error) {
             console.error('Error getting saved theme:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             return null;
         }
     }
@@ -482,10 +482,10 @@ class OptionsPageManager {
             await chrome.storage.local.set({ theme });
         } catch (error) {
             console.error('Error saving theme:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
         }
     }
 
@@ -538,17 +538,17 @@ class OptionsPageManager {
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                
+
                 this.showSuccess('Database exported successfully');
             } else {
                 this.showError('Failed to export database');
             }
         } catch (error) {
             console.error('Export error:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Export failed: ' + error.message);
         }
     }
@@ -563,22 +563,22 @@ class OptionsPageManager {
 
         // Find the import button (it's a label wrapping the file input)
         const importButton = event.target.closest('label');
-        
+
         try {
             this.showButtonLoading(importButton, 'Reading file...');
-            
+
             const fileContent = await this.readFileAsText(file);
-            
+
             // Check file size and warn user about large files
             const fileSizeMB = file.size / (1024 * 1024);
             if (fileSizeMB > 1) {
                 this.showButtonLoading(importButton, `Processing large file (${fileSizeMB.toFixed(1)}MB)...`);
                 console.log(`Large file detected: ${fileSizeMB.toFixed(1)}MB`);
-                
+
                 // Add a small delay to show the loading message
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
-            
+
             const response = await this.sendMessageWithRetry({
                 action: 'database-import',
                 data: fileContent
@@ -592,10 +592,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Import error:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Import failed: ' + error.message);
         } finally {
             this.hideButtonLoading(importButton);
@@ -638,10 +638,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Reset error:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Reset failed: ' + error.message);
         }
     }
@@ -652,14 +652,14 @@ class OptionsPageManager {
      */
     async switchDatabaseProvider(provider) {
         try {
-            
+
             if (provider === 'supabase') {
                 // Show Supabase configuration panel
                 this.supabaseConfig.classList.remove('d-none');
-                
+
                 // Load existing configuration if available
                 await this.loadSupabaseConfig();
-                
+
                 // Smart auto-switch: if saved credentials exist, test and switch automatically with clear status feedback
                 try {
                     const statusResponse = await this.sendMessageWithRetry({ action: 'supabase-get-status' });
@@ -700,18 +700,18 @@ class OptionsPageManager {
                 this.supabaseConfig.classList.add('d-none');
                 // Hide setup instructions when switching away from Supabase
                 this.hideSetupInstructions();
-                
+
                 // Switch to IndexedDB immediately since no configuration is needed
                 await this.actuallySwitchProvider('indexeddb');
             }
         } catch (error) {
             console.error('Error switching provider UI:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Failed to switch provider: ' + error.message);
-            
+
             // Revert radio button selection
             if (provider === 'supabase') {
                 // Keep Supabase panel open so the user can input credentials
@@ -750,11 +750,11 @@ class OptionsPageManager {
      */
     async toggleAutoSync(event) {
         const isEnabled = event.target.checked;
-        
+
         try {
             // Store the auto-sync preference in sync storage for persistence across devices
             await chrome.storage.sync.set({ auto_sync_enabled: isEnabled });
-            
+
             // Also notify the background script about the change
             if (isEnabled) {
                 const response = await this.sendMessageWithRetry({
@@ -781,10 +781,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error toggling auto sync:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Failed to update auto sync setting');
             // Revert checkbox
             event.target.checked = !isEnabled;
@@ -796,46 +796,46 @@ class OptionsPageManager {
      */
     async syncDatabases() {
         const syncButton = this.getElementById('idDatabase_Sync');
-        
+
         try {
             this.showButtonLoading(syncButton, 'Syncing...');
-            
+
             // Get current provider status
             const statusResponse = await this.sendMessageWithRetry({
                 action: 'database-provider-status'
             });
-            
+
             if (!statusResponse || !statusResponse.success) {
                 throw new Error('Failed to get provider status');
             }
-            
+
             // Get available providers
             const providersResponse = await this.sendMessageWithRetry({
                 action: 'database-provider-list'
             });
-            
+
             if (!providersResponse || !providersResponse.success) {
                 throw new Error('Failed to get available providers');
             }
-            
+
             const availableProviders = providersResponse.providers;
             const supabaseProvider = availableProviders.find(p => p.id === 'supabase');
-            
+
             // Check if Supabase is available
             if (!supabaseProvider || !supabaseProvider.isAvailable) {
                 throw new Error('Supabase is not configured. Please configure Supabase credentials first.');
             }
-            
+
             // Perform bidirectional sync between IndexedDB and Supabase
             const response = await this.sendMessageWithRetry({
                 action: 'database-provider-sync',
                 providers: ['indexeddb', 'supabase']
             });
-            
+
             if (response && response.success) {
                 this.showSuccess(response.message || 'Databases synced successfully');
                 await this.updateDatabaseSize();
-                
+
                 // Refresh search results to show any changes from sync
                 await this.performSearch();
             } else {
@@ -843,10 +843,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error syncing databases:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Sync failed: ' + error.message);
         } finally {
             this.hideButtonLoading(syncButton);
@@ -876,10 +876,10 @@ class OptionsPageManager {
 
             if (response && response.success) {
                 this.showSuccess('Supabase configuration saved successfully');
-                
+
                 // Clear sensitive fields for security
                 this.supabaseApiKey.value = '';
-                
+
                 // Now test and switch with clear status feedback
                 this.updateSupabaseStatus('info', 'Testing credentials…');
                 const testResponse = await this.sendMessageWithRetry({ action: 'supabase-test' });
@@ -897,10 +897,10 @@ class OptionsPageManager {
                         }
                     } catch (switchError) {
                         console.error('Failed to switch to Supabase after configuration:', JSON.stringify({
-          error: switchError.message,
-          errorName: switchError.name,
-          errorStack: switchError.stack
-        }, null, 2));
+                            error: switchError.message,
+                            errorName: switchError.name,
+                            errorStack: switchError.stack
+                        }, null, 2));
                         this.updateSupabaseStatus('danger', 'Configuration saved but failed to switch: ' + switchError.message);
                     }
                 } else {
@@ -911,10 +911,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error saving Supabase config:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Failed to save configuration: ' + error.message);
         }
     }
@@ -924,18 +924,18 @@ class OptionsPageManager {
      */
     async testSupabaseConnection() {
         const testButton = this.getElementById('supabase_test');
-        
+
         try {
             this.showButtonLoading(testButton, 'Testing...');
-            
+
             const response = await this.sendMessageWithRetry({
                 action: 'supabase-test'
             });
-            
+
             if (response && response.success) {
                 // Check if table exists after successful connection
                 const tableExists = await this.checkTableExists();
-                
+
                 if (tableExists) {
                     this.updateSupabaseStatus('success', response.message || 'Connection successful - table is ready!');
                     // Hide setup instructions if connection and table are both OK
@@ -949,10 +949,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error testing connection:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.updateSupabaseStatus('danger', 'Connection test failed: ' + error.message);
         } finally {
             this.hideButtonLoading(testButton);
@@ -976,9 +976,9 @@ class OptionsPageManager {
                 // Clear form fields
                 this.supabaseUrl.value = '';
                 this.supabaseApiKey.value = '';
-                
+
                 this.showSuccess('Supabase configuration cleared');
-                
+
                 // Switch back to IndexedDB UI and actually switch
                 this.providerIndexedDB.checked = true;
                 this.providerSupabase.checked = false;
@@ -989,10 +989,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error clearing Supabase config:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Failed to clear configuration: ' + error.message);
         }
     }
@@ -1003,7 +1003,7 @@ class OptionsPageManager {
     async copySqlToClipboard() {
         try {
             const sqlCode = this.getElementById('supabase-sql-code').textContent;
-            
+
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(sqlCode);
                 this.showSuccess('SQL code copied to clipboard');
@@ -1017,21 +1017,21 @@ class OptionsPageManager {
                 document.body.appendChild(textArea);
                 textArea.focus();
                 textArea.select();
-                
+
                 if (document.execCommand('copy')) {
                     this.showSuccess('SQL code copied to clipboard');
                 } else {
                     throw new Error('Clipboard not supported');
                 }
-                
+
                 document.body.removeChild(textArea);
             }
         } catch (error) {
             console.error('Error copying to clipboard:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Failed to copy to clipboard. Please select and copy the text manually.');
         }
     }
@@ -1045,14 +1045,14 @@ class OptionsPageManager {
             const response = await this.sendMessageWithRetry({
                 action: 'supabase-check-table'
             });
-            
+
             return response && response.success && response.tableExists;
         } catch (error) {
             console.error('Error checking table existence:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             return false;
         }
     }
@@ -1094,9 +1094,9 @@ class OptionsPageManager {
             'could not find table',
             'table not found'
         ];
-        
+
         const lowerErrorMessage = errorMessage.toLowerCase();
-        return tableNotExistIndicators.some(indicator => 
+        return tableNotExistIndicators.some(indicator =>
             lowerErrorMessage.includes(indicator.toLowerCase())
         );
     }
@@ -1106,12 +1106,12 @@ class OptionsPageManager {
      */
     showSetupInstructions() {
         this.supabaseSetupInstructions.classList.remove('d-none');
-        
+
         // Scroll to the setup instructions for better visibility
         setTimeout(() => {
-            this.supabaseSetupInstructions.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'nearest' 
+            this.supabaseSetupInstructions.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
             });
         }, 100);
     }
@@ -1140,11 +1140,11 @@ class OptionsPageManager {
 
             if (credentialsResponse && credentialsResponse.success && credentialsResponse.credentials) {
                 const credentials = credentialsResponse.credentials;
-                
+
                 // Display current configuration
                 this.currentUrl.textContent = credentials.supabaseUrl || '-';
                 this.currentApiKey.textContent = credentials.apiKey || '-';
-                
+
                 this.currentConfig.classList.remove('d-none');
             } else {
                 this.currentConfig.classList.add('d-none');
@@ -1154,10 +1154,10 @@ class OptionsPageManager {
 
         } catch (error) {
             console.error('Error loading Supabase config:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.currentConfig.classList.add('d-none');
         }
     }
@@ -1167,26 +1167,26 @@ class OptionsPageManager {
      */
     async syncBrowserHistory() {
         const syncButton = this.getElementById('sync-history');
-        
+
         try {
             this.showButtonLoading(syncButton, 'Syncing...');
-            
+
             const response = await this.sendMessageWithRetry({
                 action: 'history-synchronize'
             });
-            
+
             if (response && response.success) {
                 const videoCount = response.videoCount || 0;
                 this.showSuccess(`Browser history synchronized! Added ${videoCount} videos.`);
                 await this.updateDatabaseSize();
-                
+
                 // Refresh search results to show newly added videos
                 if (videoCount > 0) {
                     await this.performSearch();
                 }
             } else {
                 const errorMessage = response?.error || 'History synchronization failed';
-                
+
                 // Show more user-friendly error messages
                 if (errorMessage.includes('Database not initialized') || errorMessage.includes('Extension not fully initialized')) {
                     this.showError('Extension is still initializing. Please wait a moment and try again.');
@@ -1196,11 +1196,11 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error syncing browser history:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
-            
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
+
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
                 this.showError('Extension is still initializing. Please wait a moment and try again.');
@@ -1217,26 +1217,26 @@ class OptionsPageManager {
      */
     async syncYouTubeHistory() {
         const syncButton = this.getElementById('sync-youtube');
-        
+
         try {
             this.showButtonLoading(syncButton, 'Syncing...');
-            
+
             const response = await this.sendMessageWithRetry({
                 action: 'youtube-synchronize'
             });
-            
+
             if (response && response.success) {
                 const videoCount = response.videoCount || 0;
                 this.showSuccess(`YouTube history synchronized! Added ${videoCount} videos.`);
                 await this.updateDatabaseSize();
-                
+
                 // Refresh search results to show newly added videos
                 if (videoCount > 0) {
                     await this.performSearch();
                 }
             } else {
                 const errorMessage = response?.error || 'YouTube synchronization failed';
-                
+
                 // Show more user-friendly error messages
                 if (errorMessage.includes('Database not initialized') || errorMessage.includes('Extension not fully initialized')) {
                     this.showError('Extension is still initializing. Please wait a moment and try again.');
@@ -1246,11 +1246,11 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error syncing YouTube history:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
-            
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
+
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
                 this.showError('Extension is still initializing. Please wait a moment and try again.');
@@ -1267,26 +1267,26 @@ class OptionsPageManager {
      */
     async syncYouTubeLikes() {
         const syncButton = this.getElementById('sync-youtube-likes');
-        
+
         try {
             this.showButtonLoading(syncButton, 'Syncing...');
-            
+
             const response = await this.sendMessageWithRetry({
                 action: 'youtube-liked-videos'
             });
-            
+
             if (response && response.success) {
                 const videoCount = response.videoCount || 0;
                 this.showSuccess(`YouTube likes synchronized! Added ${videoCount} videos.`);
                 await this.updateDatabaseSize();
-                
+
                 // Refresh search results to show newly added videos
                 if (videoCount > 0) {
                     await this.performSearch();
                 }
             } else {
                 const errorMessage = response?.error || 'YouTube likes synchronization failed';
-                
+
                 // Show more user-friendly error messages
                 if (errorMessage.includes('Database not initialized') || errorMessage.includes('Extension not fully initialized')) {
                     this.showError('Extension is still initializing. Please wait a moment and try again.');
@@ -1296,11 +1296,11 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error syncing YouTube likes:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
-            
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
+
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
                 this.showError('Extension is still initializing. Please wait a moment and try again.');
@@ -1317,13 +1317,13 @@ class OptionsPageManager {
      */
     async syncAllSources() {
         const syncButton = this.getElementById('sync-all');
-        
+
         try {
             this.showButtonLoading(syncButton, 'Syncing All...');
-            
+
             let totalVideos = 0;
             const results = [];
-            
+
             // Sync browser history
             try {
                 const historyResponse = await this.sendMessageWithRetry({
@@ -1335,13 +1335,13 @@ class OptionsPageManager {
                 }
             } catch (error) {
                 console.error('Browser history sync failed:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                    error: error.message,
+                    errorName: error.name,
+                    errorStack: error.stack
+                }, null, 2));
                 results.push('Browser history: failed');
             }
-            
+
             // Sync YouTube history
             try {
                 const youtubeResponse = await this.sendMessageWithRetry({
@@ -1353,13 +1353,13 @@ class OptionsPageManager {
                 }
             } catch (error) {
                 console.error('YouTube history sync failed:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                    error: error.message,
+                    errorName: error.name,
+                    errorStack: error.stack
+                }, null, 2));
                 results.push('YouTube history: failed');
             }
-            
+
             // Sync YouTube likes
             try {
                 const likesResponse = await this.sendMessageWithRetry({
@@ -1371,32 +1371,32 @@ class OptionsPageManager {
                 }
             } catch (error) {
                 console.error('YouTube likes sync failed:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                    error: error.message,
+                    errorName: error.name,
+                    errorStack: error.stack
+                }, null, 2));
                 results.push('YouTube likes: failed');
             }
-            
+
             // Update database size
             await this.updateDatabaseSize();
-            
+
             // Refresh search results to show newly added videos
             if (totalVideos > 0) {
                 await this.performSearch();
             }
-            
+
             // Show results
             const resultMessage = `All sources synchronized! Total: ${totalVideos} videos added.\n\n${results.join('\n')}`;
             this.showSuccess(resultMessage);
-            
+
         } catch (error) {
             console.error('Error syncing all sources:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
-            
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
+
             // Show more user-friendly error messages
             if (error.message.includes('Database not initialized') || error.message.includes('Extension not fully initialized')) {
                 this.showError('Extension is still initializing. Please wait a moment and try again.');
@@ -1418,11 +1418,11 @@ class OptionsPageManager {
     async performSearch() {
         // Prevent multiple concurrent searches
         if (this.searchState.isSearching) return;
-        
+
         const searchQuery = this.getElementById('idSearch_Query');
         const searchButton = this.getElementById('idSearch_Lookup');
         const searchResults = this.getElementById('idSearch_Results');
-        
+
         // Use the query from search state if available, otherwise from input
         let query = this.searchState.currentQuery;
         if (query === undefined || query === null) {
@@ -1451,21 +1451,21 @@ class OptionsPageManager {
                 this.searchState.totalResults = response.totalResults || 0;
                 this.displaySearchResults(response.results);
             } else {
-                const errorMessage = query 
-                    ? 'Search failed. Please try again.' 
-                    : 'Failed to load watch history.';
+                const errorMessage = query ?
+                    'Search failed. Please try again.' :
+                    'Failed to load watch history.';
                 this.showError(response?.error || errorMessage);
                 searchResults.innerHTML = `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}</div>`;
             }
         } catch (error) {
             console.error('Search error:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
-            const errorMessage = query 
-                ? 'Search failed. Please try again.' 
-                : 'Failed to load watch history.';
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
+            const errorMessage = query ?
+                'Search failed. Please try again.' :
+                'Failed to load watch history.';
             this.showError(errorMessage);
             searchResults.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>An error occurred. Please try again.</div>`;
         } finally {
@@ -1486,7 +1486,7 @@ class OptionsPageManager {
             // Initialize search state for initial load
             this.searchState.currentQuery = '';
             this.searchState.currentPage = 1;
-            
+
             const response = await this.sendMessageWithRetry({
                 action: 'search-videos',
                 query: '', // Empty query to show all videos
@@ -1505,10 +1505,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Initial search error:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             // Don't show error toast on initial load
             const searchResults = this.getElementById('idSearch_Results');
             searchResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>No videos found in your watch history. Try synchronizing your browser history or YouTube history first.</div>';
@@ -1521,11 +1521,11 @@ class OptionsPageManager {
      */
     displaySearchResults(results) {
         const searchResults = this.getElementById('idSearch_Results');
-        
+
         if (!results || results.length === 0) {
-            const message = this.searchState.currentQuery 
-                ? 'No videos found matching your search.' 
-                : 'No videos found in your watch history. Try synchronizing your browser history or YouTube history first.';
+            const message = this.searchState.currentQuery ?
+                'No videos found matching your search.' :
+                'No videos found in your watch history. Try synchronizing your browser history or YouTube history first.';
             searchResults.innerHTML = `<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>${message}</div>`;
             return;
         }
@@ -1600,13 +1600,13 @@ class OptionsPageManager {
         `;
 
         searchResults.innerHTML = html;
-        
+
         // Add fade-in animation
         searchResults.classList.add('animate-fade-in');
-        
+
         // Set up pagination event listeners
         this.setupPaginationListeners(searchResults);
-        
+
         // Add event listeners for delete buttons
         const deleteButtons = searchResults.querySelectorAll('.delete-video-btn');
         deleteButtons.forEach(button => {
@@ -1626,10 +1626,10 @@ class OptionsPageManager {
         if (!confirm('Are you sure you want to delete this video from your watch history?')) {
             return;
         }
-        
+
         try {
             this.showButtonLoading(deleteButton, 'Deleting...');
-            
+
             const response = await this.sendMessageWithRetry({
                 action: 'search-delete',
                 videoId: videoId
@@ -1637,16 +1637,16 @@ class OptionsPageManager {
 
             if (response && response.success) {
                 this.showSuccess('Video deleted successfully');
-                
+
                 // Update database size to reflect the deletion
                 await this.updateDatabaseSize();
-                
+
                 // Refresh the search results, but check if we need to go back a page
                 const totalPagesAfterDelete = Math.ceil((this.searchState.totalResults - 1) / this.searchState.pageSize);
                 if (this.searchState.currentPage > totalPagesAfterDelete && totalPagesAfterDelete > 0) {
                     this.searchState.currentPage = totalPagesAfterDelete;
                 }
-                
+
                 // Refresh the current search
                 await this.performSearch();
             } else {
@@ -1654,10 +1654,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Delete error:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             this.showError('Delete error: ' + error.message);
         } finally {
             this.hideButtonLoading(deleteButton);
@@ -1673,13 +1673,13 @@ class OptionsPageManager {
         if (!date || isNaN(date.getTime())) {
             return 'Invalid Date';
         }
-        
+
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
-        
+
         return `${year}.${month}.${day} - ${hours}:${minutes}`;
     }
 
@@ -1705,11 +1705,11 @@ class OptionsPageManager {
             return result[elementId] || false;
         } catch (error) {
             console.error(`Error getting toggle state for ${elementId}:`, JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack,
-          elementId: elementId
-        }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack,
+                elementId: elementId
+            }, null, 2));
             return false;
         }
     }
@@ -1722,14 +1722,16 @@ class OptionsPageManager {
     async setToggleState(elementId, state) {
         try {
             // Store in sync storage - now used by both options page and background script
-            await chrome.storage.sync.set({ [elementId]: state });
+            await chrome.storage.sync.set({
+                [elementId]: state
+            });
         } catch (error) {
             console.error(`Error setting toggle state for ${elementId}:`, JSON.stringify({
-          error: error.message,
-          errorName: error.name,
-          errorStack: error.stack,
-          elementId: elementId
-        }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack,
+                elementId: elementId
+            }, null, 2));
         }
     }
 
@@ -1742,14 +1744,14 @@ class OptionsPageManager {
                 this.updateDatabaseSize(),
                 this.updateProviderStatus(),
                 this.performInitialSearch(), // Show all videos by default without errors
-                
+
             ]);
         } catch (error) {
             console.error('Error loading initial data:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
         }
     }
 
@@ -1772,10 +1774,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error sending message to update database size:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             if (this.databaseSize) {
                 this.databaseSize.textContent = 'Error';
             }
@@ -1793,7 +1795,7 @@ class OptionsPageManager {
         if (!date || isNaN(date.getTime())) {
             return 'Invalid Date';
         }
-        
+
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
     }
 
@@ -1812,7 +1814,7 @@ class OptionsPageManager {
         }
 
         const text = loadingText || 'Loading...';
-        
+
         // For labels acting as buttons, we must preserve the input element
         const input = button.querySelector('input');
         const inputHTML = input ? input.outerHTML : '';
@@ -1967,18 +1969,18 @@ class OptionsPageManager {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // Get page number from button or its parent
                 let pageElement = e.target;
                 let page = pageElement.getAttribute('data-page');
-                
+
                 // If clicked on span inside button, get page from button
                 if (!page && pageElement.parentElement) {
                     page = pageElement.parentElement.getAttribute('data-page');
                 }
-                
+
                 page = parseInt(page);
-                
+
                 if (page && !pageElement.disabled && !pageElement.parentElement?.disabled) {
                     this.goToPage(page);
                 }
@@ -1992,14 +1994,14 @@ class OptionsPageManager {
      */
     async goToPage(page) {
         if (page < 1) return;
-        
+
         // Update the current page in search state
         this.searchState.currentPage = page;
-        
+
         // Get the current search query from the input
         const searchQuery = this.getElementById('idSearch_Query');
         this.searchState.currentQuery = searchQuery.value.trim();
-        
+
         // Perform the search with the updated page
         await this.performSearch();
     }
@@ -2012,10 +2014,10 @@ class OptionsPageManager {
             const response = await this.sendMessageWithRetry({
                 action: 'database-provider-status'
             });
-            
+
             if (response && response.success) {
                 const status = response.status;
-                
+
                 // Update provider radio buttons based on actual provider type
                 if (status.type === 'indexeddb') {
                     this.providerIndexedDB.checked = true;
@@ -2032,7 +2034,7 @@ class OptionsPageManager {
                     this.providerSupabase.checked = false;
                     this.supabaseConfig.classList.add('d-none');
                 }
-                
+
                 // Load auto-sync setting from sync storage
                 const autoSyncResult = await chrome.storage.sync.get(['auto_sync_enabled']);
                 this.enableAutoSync.checked = autoSyncResult.auto_sync_enabled || false;
@@ -2045,10 +2047,10 @@ class OptionsPageManager {
             }
         } catch (error) {
             console.error('Error updating provider status:', JSON.stringify({
-        error: error.message,
-        errorName: error.name,
-        errorStack: error.stack
-      }, null, 2));
+                error: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            }, null, 2));
             // Default to IndexedDB on error
             this.providerIndexedDB.checked = true;
             this.providerSupabase.checked = false;
@@ -2062,24 +2064,24 @@ class OptionsPageManager {
      * @returns {Promise<Object>} Response from background
      */
     async sendMessageWithRetry(message) {
-      try {
-        return await chrome.runtime.sendMessage(message);
-      } catch (error) {
-        if (error.message && (error.message.includes('Receiving end does not exist') ||
-                             error.message.includes('Extension context invalidated') ||
-                             error.message.includes('context invalidated'))) {
-          console.log('Retrying message due to service worker termination or context invalidation');
-          try {
+        try {
             return await chrome.runtime.sendMessage(message);
-          } catch (retryError) {
-            console.log('Retry also failed, extension context may be permanently invalidated');
-            throw new Error("Extension context invalidated");
-          }
+        } catch (error) {
+            if (error.message && (error.message.includes('Receiving end does not exist') ||
+                    error.message.includes('Extension context invalidated') ||
+                    error.message.includes('context invalidated'))) {
+                console.log('Retrying message due to service worker termination or context invalidation');
+                try {
+                    return await chrome.runtime.sendMessage(message);
+                } catch (retryError) {
+                    console.log('Retry also failed, extension context may be permanently invalidated');
+                    throw new Error("Extension context invalidated");
+                }
+            }
+            throw error;
         }
-        throw error;
-      }
     }
-   
+
 }
 
 // Initialize the options page manager

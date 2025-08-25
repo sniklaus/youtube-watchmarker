@@ -1,60 +1,59 @@
 {
-  "manifest_version": 3,
-  "name": "Watchmarker for Youtube Reloaded",
-  "description": "A fork of the original Youtube Watchmarker, using manifest v3 with supabase remote sync and a new UI",
-  "homepage_url": "https://github.com/widike/youtube-watchmarker",
-  "version": "0.9.8",
-  "permissions": [
-    "storage",
-    "alarms",
-    "downloads",
-    "history",
-    "tabs",
-    "cookies",
-    "webRequest",
-    "scripting",
-    "declarativeNetRequest",
-    "notifications"
-  ],
-  "host_permissions": [
-    "https://www.youtube.com/*",
-    "https://m.youtube.com/*",
-    "https://*.supabase.co/*",
-    "https://*.supabase.in/*"
-  ],
-  "background": {
-    "service_worker": "background.js",
-    "type": "module"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://www.youtube.com/*",
-        "*://m.youtube.com/*"
-      ],
-      "js": [
-        "youtube.js"
-      ]
-    }
-  ],
-  "options_ui": {
-    "page": "content/index.html",
-    "open_in_tab": true
-  },
-  "action": {
-    "default_title": "Watchmarker for Youtube Reloaded",
-    "default_icon": {
-      "72": "content/icon.png"
+    "manifest_version": 3,
+    "name": "Watchmarker for Youtube",
+    "description": "Automatically mark videos on Youtube that you have already watched.",
+    "homepage_url": "https://github.com/sniklaus/youtube-watchmarker",
+    "version": "5.0.0",
+    "permissions": [
+        "storage",
+        "alarms",
+        "downloads",
+        "history",
+        "tabs",
+        "cookies",
+        "webRequest",
+        "scripting",
+        "declarativeNetRequest",
+        "notifications"
+    ],
+    "host_permissions": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://*.supabase.co/*",
+        "https://*.supabase.in/*"
+    ],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
     },
-    "default_popup": "popup.html"
-  },
-  "icons": {
-    "72": "content/icon.png"
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "yourect@coderect.com",
-      "strict_min_version": "60.0"
+    "content_scripts": [{
+        "matches": [
+            "*://www.youtube.com/*",
+            "*://m.youtube.com/*"
+        ],
+        "js": [
+            "youtube.js"
+        ]
+    }],
+    "options_ui": {
+        "page": "content/index.html",
+        "open_in_tab": true
+    },
+    "action": {
+        "default_title": "Watchmarker for Youtube Reloaded",
+        "default_icon": {
+            "72": "content/icon.png"
+        },
+        "default_popup": "popup.html"
+    },
+    "content_security_policy": "script-src 'self' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com;",
+    "icons": {
+        "72": "content/icon.png"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "yourect@coderect.com",
+            "strict_min_version": "60.0"
+        }
     }
-  }
 }

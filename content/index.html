@@ -1,393 +1,404 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="YouTube Watchmarker Extension - Manage your video watching preferences and synchronize across devices" />
-    
+
     <title>YouTube Watchmarker Reloaded - Settings</title>
-    
+
     <link rel="icon" type="image/png" href="icon.png" />
-    
+
     <!-- External Dependencies -->
     <script src="moment.js"></script>
-    
+
     <!-- Stylesheets -->
     <link rel="stylesheet" href="bootstrap.css" />
     <link rel="stylesheet" type="text/css" href="fontawesome.css" />
     <link rel="stylesheet" href="styles.css" />
-    
+
     <style>
-      /* Fix search input expansion issues */
-      .search-input-container {
-        position: relative;
-        overflow: hidden;
-      }
-      
-      .search-input-container .form-control {
-        max-width: 100%;
-        transition: none !important;
-        transform: none !important;
-      }
-      
-      .search-input-container .form-control:focus {
-        max-width: 100%;
-        transform: none !important;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-      }
-      
-      /* Dark theme support for search results */
-      [data-bs-theme="dark"] .table-dark {
-        --bs-table-bg: var(--color-bg-secondary);
-        --bs-table-color: var(--color-text-primary);
-      }
-      
-      [data-bs-theme="dark"] .table-secondary {
-        --bs-table-bg: var(--color-bg-tertiary);
-        --bs-table-color: var(--color-text-primary);
-        background-color: var(--color-bg-tertiary) !important;
-        color: var(--color-text-primary) !important;
-      }
-      
-      [data-bs-theme="dark"] .table thead th {
-        background-color: var(--color-bg-secondary) !important;
-        color: var(--color-text-primary) !important;
-        border-color: var(--color-border) !important;
-      }
-      
-      [data-bs-theme="dark"] .search-result-item:hover {
-        background-color: var(--color-bg-tertiary);
-      }
+        /* Fix search input expansion issues */
+        .search-input-container {
+            position: relative;
+            overflow: hidden;
+        }
 
-      /* Dark theme for Supabase setup instructions */
-      [data-bs-theme="dark"] #supabase-setup-instructions .alert-info {
-        background-color: var(--color-bg-card) !important;
-        color: var(--color-text-primary) !important;
-        border-color: var(--color-border) !important;
-      }
-      [data-bs-theme="dark"] #supabase-setup-instructions .alert-info .text-dark,
-      [data-bs-theme="dark"] #supabase-setup-instructions h6,
-      [data-bs-theme="dark"] #supabase-setup-instructions p,
-      [data-bs-theme="dark"] #supabase-setup-instructions ol,
-      [data-bs-theme="dark"] #supabase-setup-instructions li {
-        color: var(--color-text-primary) !important;
-      }
-      [data-bs-theme="dark"] #supabase-setup-instructions a {
-        color: var(--color-primary) !important;
-      }
-      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark {
-        background-color: #0f172a !important;
-        border-color: var(--color-border) !important;
-      }
-      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark,
-      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark pre,
-      [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark code {
-        color: #ffffff !important;
-      }
-      
-      /* Enhanced dark theme body styling */
-      [data-bs-theme="dark"] .bg-body-tertiary {
-        background-color: var(--color-bg-primary) !important;
-      }
-      
-      [data-bs-theme="dark"] .container {
-        color: var(--color-text-primary);
-      }
-      
-      /* Search card height and styling */
-      .search-results {
-        min-height: 800px;
-        max-height: none;
-        overflow-y: visible;
-      }
-      
-      .search-card {
-        min-height: 900px;
-      }
-      
-      .table-responsive {
-        max-height: none;
-        overflow-y: visible;
-      }
-      
-      /* Pagination styling */
-      .pagination .page-link {
-        border-radius: 0.375rem;
-        margin: 0 0.125rem;
-      }
-      
-      .pagination .page-item button.page-link {
-        background-color: var(--color-bg-card);
-        border: 1px solid var(--color-border);
-        color: var(--color-primary);
-        transition: all var(--transition-fast);
-      }
-      
-      .pagination .page-item button.page-link:hover:not(:disabled) {
-        background-color: var(--color-primary);
-        border-color: var(--color-primary);
-        color: white;
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-      }
-      
-      .pagination .page-item.active button.page-link {
-        background-color: var(--color-primary);
-        border-color: var(--color-primary);
-        color: white;
-        box-shadow: var(--shadow-sm);
-      }
-      
-      .pagination .page-item button.page-link:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        background-color: var(--color-bg-tertiary);
-        color: var(--color-text-muted);
-      }
+        .search-input-container .form-control {
+            max-width: 100%;
+            transition: none !important;
+            transform: none !important;
+        }
 
-      /* Ensure visible border for Test Connection button */
-      #supabase_test.btn-outline-secondary {
-        border: 1px solid var(--color-border) !important;
-      }
-      #supabase_test.btn-outline-secondary:disabled {
-        border: 1px solid var(--color-border) !important;
-      }
-      
-      /* Animation for search results */
-      .animate-fade-in {
-        animation: fadeIn 0.3s ease-in-out;
-      }
-      
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      
-      /* Loading state for search */
-      .search-loading {
-        pointer-events: none;
-        opacity: 0.6;
-      }
-      
-      /* Popup-specific styling */
-      @media (max-width: 800px) {
-        body {
-          min-width: 600px;
-          min-height: 500px;
+        .search-input-container .form-control:focus {
+            max-width: 100%;
+            transform: none !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
         }
-        
-        .container {
-          max-width: 100%;
-          padding: 0.5rem;
+
+        /* Dark theme support for search results */
+        [data-bs-theme="dark"] .table-dark {
+            --bs-table-bg: var(--color-bg-secondary);
+            --bs-table-color: var(--color-text-primary);
         }
-        
-        header {
-          padding: 1rem 0;
-          margin-bottom: 1rem;
+
+        [data-bs-theme="dark"] .table-secondary {
+            --bs-table-bg: var(--color-bg-tertiary);
+            --bs-table-color: var(--color-text-primary);
+            background-color: var(--color-bg-tertiary) !important;
+            color: var(--color-text-primary) !important;
         }
-        
-        .card {
-          margin-bottom: 1rem;
+
+        [data-bs-theme="dark"] .table thead th {
+            background-color: var(--color-bg-secondary) !important;
+            color: var(--color-text-primary) !important;
+            border-color: var(--color-border) !important;
         }
-        
-        .card-body {
-          padding: 1rem;
+
+        [data-bs-theme="dark"] .search-result-item:hover {
+            background-color: var(--color-bg-tertiary);
         }
-        
+
+        /* Dark theme for Supabase setup instructions */
+        [data-bs-theme="dark"] #supabase-setup-instructions .alert-info {
+            background-color: var(--color-bg-card) !important;
+            color: var(--color-text-primary) !important;
+            border-color: var(--color-border) !important;
+        }
+
+        [data-bs-theme="dark"] #supabase-setup-instructions .alert-info .text-dark,
+        [data-bs-theme="dark"] #supabase-setup-instructions h6,
+        [data-bs-theme="dark"] #supabase-setup-instructions p,
+        [data-bs-theme="dark"] #supabase-setup-instructions ol,
+        [data-bs-theme="dark"] #supabase-setup-instructions li {
+            color: var(--color-text-primary) !important;
+        }
+
+        [data-bs-theme="dark"] #supabase-setup-instructions a {
+            color: var(--color-primary) !important;
+        }
+
+        [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark {
+            background-color: #0f172a !important;
+            border-color: var(--color-border) !important;
+        }
+
+        [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark,
+        [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark pre,
+        [data-bs-theme="dark"] #supabase-setup-instructions .bg-dark code {
+            color: #ffffff !important;
+        }
+
+        /* Enhanced dark theme body styling */
+        [data-bs-theme="dark"] .bg-body-tertiary {
+            background-color: var(--color-bg-primary) !important;
+        }
+
+        [data-bs-theme="dark"] .container {
+            color: var(--color-text-primary);
+        }
+
+        /* Search card height and styling */
         .search-results {
-          min-height: 300px;
-          max-height: 400px;
-          overflow-y: auto;
+            min-height: 800px;
+            max-height: none;
+            overflow-y: visible;
         }
-        
+
         .search-card {
-          min-height: 400px;
+            min-height: 900px;
         }
-      }
+
+        .table-responsive {
+            max-height: none;
+            overflow-y: visible;
+        }
+
+        /* Pagination styling */
+        .pagination .page-link {
+            border-radius: 0.375rem;
+            margin: 0 0.125rem;
+        }
+
+        .pagination .page-item button.page-link {
+            background-color: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            color: var(--color-primary);
+            transition: all var(--transition-fast);
+        }
+
+        .pagination .page-item button.page-link:hover:not(:disabled) {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .pagination .page-item.active button.page-link {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .pagination .page-item button.page-link:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: var(--color-bg-tertiary);
+            color: var(--color-text-muted);
+        }
+
+        /* Ensure visible border for Test Connection button */
+        #supabase_test.btn-outline-secondary {
+            border: 1px solid var(--color-border) !important;
+        }
+
+        #supabase_test.btn-outline-secondary:disabled {
+            border: 1px solid var(--color-border) !important;
+        }
+
+        /* Animation for search results */
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loading state for search */
+        .search-loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* Popup-specific styling */
+        @media (max-width: 800px) {
+            body {
+                min-width: 600px;
+                min-height: 500px;
+            }
+
+            .container {
+                max-width: 100%;
+                padding: 0.5rem;
+            }
+
+            header {
+                padding: 1rem 0;
+                margin-bottom: 1rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+
+            .search-results {
+                min-height: 300px;
+                max-height: 400px;
+                overflow-y: auto;
+            }
+
+            .search-card {
+                min-height: 400px;
+            }
+        }
     </style>
-    
+
     <!-- Main JavaScript Module -->
     <script type="module" src="index.js"></script>
-  </head>
-  
-  <body class="bg-body-tertiary">
+</head>
+
+<body class="bg-body-tertiary">
     <!-- Header -->
     <header class="bg-primary text-white py-4 mb-4">
-      <div class="container">
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <img src="icon.png" alt="YouTube Watchmarker Reloaded" class="header-icon" width="48" height="48" />
-          </div>
-          <div class="col">
-            <h1 class="h3 mb-0">YouTube Watchmarker Reloaded</h1>
-            <p class="mb-0 opacity-75">Manage your video watching preferences</p>
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-outline-light btn-sm" id="theme-toggle" type="button" aria-label="Toggle theme">
-              <i class="fas fa-sun" id="theme-icon"></i>
-            </button>
-          </div>
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <img src="icon.png" alt="YouTube Watchmarker Reloaded" class="header-icon" width="48" height="48" />
+                </div>
+                <div class="col">
+                    <h1 class="h3 mb-0">YouTube Watchmarker Reloaded</h1>
+                    <p class="mb-0 opacity-75">Manage your video watching preferences</p>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-light btn-sm" id="theme-toggle" type="button" aria-label="Toggle theme">
+                        <i class="fas fa-sun" id="theme-icon"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
     </header>
 
     <!-- Main Content -->
     <main id="main-content" class="container pb-5" tabindex="-1">
-      <div class="row g-4">
-        <!-- Database Management -->
-        <div class="col-12">
-          <section class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-              <h2 class="card-title h5 mb-0">
-                <i class="fas fa-database me-2"></i>
-                Database Management
-              </h2>
-            </div>
-            <div class="card-body">
-              <!-- Database Provider Selection -->
-              <div class="mb-4">
-                <h3 class="h6 mb-3">Primary Database</h3>
-                <div class="row g-3 mb-3">
-                  <div class="col-12 col-md-6">
-                    <div class="form-check">
-                      <input class="form-check-input" type="radio" name="databaseProvider" id="provider_indexeddb" value="indexeddb">
-                      <label class="form-check-label d-flex align-items-center" for="provider_indexeddb">
-                        <i class="fas fa-hdd me-2"></i>
-                        <div>
-                          <strong>Local Storage (IndexedDB)</strong>
-                          <br><small class="text-muted">Store data locally in your browser</small>
-                        </div>
-                      </label>
+        <div class="row g-4">
+            <!-- Database Management -->
+            <div class="col-12">
+                <section class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="card-title h5 mb-0">
+                            <i class="fas fa-database me-2"></i>
+                            Database Management
+                        </h2>
                     </div>
-                  </div>
-                  
-                  <div class="col-12 col-md-6">
-                    <div class="form-check">
-                      <input class="form-check-input" type="radio" name="databaseProvider" id="provider_supabase" value="supabase">
-                      <label class="form-check-label d-flex align-items-center" for="provider_supabase">
-                        <i class="fas fa-cloud me-2"></i>
-                        <div>
-                          <strong>Supabase (PostgreSQL)</strong>
-                          <br><small class="text-muted">Store data in Supabase cloud database</small>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Data Migration Option -->
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="enable_auto_sync">
-                  <label class="form-check-label" for="enable_auto_sync">
-                    Keep both databases in sync (requires Supabase setup)
+                    <div class="card-body">
+                        <!-- Database Provider Selection -->
+                        <div class="mb-4">
+                            <h3 class="h6 mb-3">Primary Database</h3>
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="databaseProvider" id="provider_indexeddb" value="indexeddb">
+                                        <label class="form-check-label d-flex align-items-center" for="provider_indexeddb">
+                                            <i class="fas fa-hdd me-2"></i>
+                                            <div>
+                                                <strong>Local Storage (IndexedDB)</strong>
+                                                <br><small class="text-muted">Store data locally in your browser</small>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
 
-                  </label>
-                </div>             
-              
-              <!-- Database Operations -->
-              <div class="mb-4">
-                <h3 class="h6 mb-3">Database Operations</h3>
-                <div class="d-flex flex-wrap gap-2">
-                  <button class="btn btn-primary" id="idDatabase_Export">
-                    <i class="fas fa-download me-2"></i>Export
-                  </button>
-                  <label class="btn btn-primary" title="Import database from JSON or legacy base64-encoded .database files">
-                    <i class="fas fa-upload me-2"></i>Import
-                    <input type="file" id="idDatabase_Import" class="d-none" accept=".json,.database" title="Select a JSON export file or legacy .database file">
-                  </label>
-                  <button class="btn btn-warning" id="idDatabase_Reset">
-                    <i class="fas fa-trash me-2"></i>Reset
-                  </button>
-                  <button class="btn btn-info text-white" id="idDatabase_Sync">
-                    <i class="fas fa-sync me-2"></i>Sync Databases
-                  </button>
-                </div>
-              </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="databaseProvider" id="provider_supabase" value="supabase">
+                                        <label class="form-check-label d-flex align-items-center" for="provider_supabase">
+                                            <i class="fas fa-cloud me-2"></i>
+                                            <div>
+                                                <strong>Supabase (PostgreSQL)</strong>
+                                                <br><small class="text-muted">Store data in Supabase cloud database</small>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
 
-              <!-- Supabase Configuration (hidden by default) -->
-              <div id="supabase-config" class="mb-4 d-none">
-                <h3 class="h6 mb-3">Supabase Configuration</h3>
-                
-                <!-- Current Configuration Display -->
-                <div id="current-config" class="mb-3 d-none">
-                  <div class="alert alert-info">
-                    <h6 class="alert-heading">
-                      <i class="fas fa-info-circle me-2"></i>
-                      Current Configuration
-                    </h6>
-                    <div class="row">
-                      <div class="col-md-6">
-                        <small class="text-muted">Supabase URL:</small>
-                        <div class="font-monospace" id="current-url">-</div>
-                      </div>
-                      <div class="col-md-6">
-                        <small class="text-muted">Service Role API Key:</small>
-                        <div class="font-monospace" id="current-api-key">-</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="row g-3">
-                  <div class="col-12">
-                    <label for="supabase_url" class="form-label">Supabase URL</label>
-                    <input type="url" class="form-control" id="supabase_url" 
-                           placeholder="https://your-project.supabase.co">
-                    <div class="form-text">Your Supabase project URL</div>
-                  </div>
-                  
-                  <div class="col-12">
-                    <label for="supabase_api_key" class="form-label">Service Role API Key</label>
-                    <input type="password" class="form-control" id="supabase_api_key" 
-                           placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-                    <div class="form-text">Your Supabase service role key (not anon key)</div>
-                  </div>
-                </div>
-                
-                <!-- Supabase status strip (dynamic) -->
-                <div id="supabase-status" class="alert alert-secondary d-none mt-3" role="status" aria-live="polite" aria-atomic="true">
-                  <span id="supabase-status-icon" class="me-2"><i class="fas fa-info-circle"></i></span>
-                  <span id="supabase-status-text">Checking saved credentials…</span>
-                </div>
-                
-                <div class="mt-3">
-                  <button type="button" class="btn btn-outline-primary me-2" id="supabase_save">
-                    <i class="fas fa-save me-2"></i>Save Configuration
-                  </button>
-                  <button type="button" class="btn btn-outline-secondary me-2" id="supabase_test">
-                    <i class="fas fa-plug me-2"></i>Test Connection
-                  </button>
-                  <button type="button" class="btn btn-outline-danger me-2" id="supabase_clear">
-                    <i class="fas fa-trash me-2"></i>Clear Configuration
-                  </button>
-                </div>
-                
-                <!-- Supabase Table Setup Instructions (hidden by default) -->
-                <div id="supabase-setup-instructions" class="mt-4 d-none">
-                  <div class="alert alert-info border-primary">
-                    <h6 class="alert-heading text-primary">
-                      <i class="fas fa-info-circle me-2"></i>
-                      Database Table Setup Required
-                    </h6>
-                    <p class="mb-3 text-dark">
-                      If this is your first time using Supabase, your Supabase database does not have the required table to store the videos yet. Please follow these simple steps to create it:
-                    </p>
-                    
-                    <div class="mb-3">
-                      <h6 class="text-primary">Supabase SQL Editor</h6>
-                      <ol class="mb-2 text-dark">
-                        <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-primary">Supabase Dashboard</a></li>
-                        <li>Select your project</li>
-                        <li>Open the <strong>SQL Editor</strong> from the sidebar</li>
-                        <li>Copy and paste the SQL code below</li>
-                        <li>Click <strong>Run</strong> to execute the query</li>
-                      </ol>
-                    </div>
-                                         
-                    <div class="mb-3">
-                      <h6 class="text-primary">SQL Code to Execute:</h6>
-                      <div class="bg-dark text-light p-3 rounded border" style="font-family: 'Courier New', monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto;">
-                        <pre class="mb-0" id="supabase-sql-code">-- YouTube Watchmarker Table Schema
+                            <!-- Data Migration Option -->
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="enable_auto_sync">
+                                <label class="form-check-label" for="enable_auto_sync">
+                                    Keep both databases in sync (requires Supabase setup)
+
+                                </label>
+                            </div>
+
+                            <!-- Database Operations -->
+                            <div class="mb-4">
+                                <h3 class="h6 mb-3">Database Operations</h3>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-primary" id="idDatabase_Export">
+                                        <i class="fas fa-download me-2"></i>Export
+                                    </button>
+                                    <label class="btn btn-primary" title="Import database from JSON or legacy base64-encoded .database files">
+                                        <i class="fas fa-upload me-2"></i>Import
+                                        <input type="file" id="idDatabase_Import" class="d-none" accept=".json,.database" title="Select a JSON export file or legacy .database file">
+                                    </label>
+                                    <button class="btn btn-warning" id="idDatabase_Reset">
+                                        <i class="fas fa-trash me-2"></i>Reset
+                                    </button>
+                                    <button class="btn btn-info text-white" id="idDatabase_Sync">
+                                        <i class="fas fa-sync me-2"></i>Sync Databases
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Supabase Configuration (hidden by default) -->
+                            <div id="supabase-config" class="mb-4 d-none">
+                                <h3 class="h6 mb-3">Supabase Configuration</h3>
+
+                                <!-- Current Configuration Display -->
+                                <div id="current-config" class="mb-3 d-none">
+                                    <div class="alert alert-info">
+                                        <h6 class="alert-heading">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Current Configuration
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Supabase URL:</small>
+                                                <div class="font-monospace" id="current-url">-</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Service Role API Key:</small>
+                                                <div class="font-monospace" id="current-api-key">-</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label for="supabase_url" class="form-label">Supabase URL</label>
+                                        <input type="url" class="form-control" id="supabase_url" placeholder="https://your-project.supabase.co">
+                                        <div class="form-text">Your Supabase project URL</div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label for="supabase_api_key" class="form-label">Service Role API Key</label>
+                                        <input type="password" class="form-control" id="supabase_api_key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                                        <div class="form-text">Your Supabase service role key (not anon key)</div>
+                                    </div>
+                                </div>
+
+                                <!-- Supabase status strip (dynamic) -->
+                                <div id="supabase-status" class="alert alert-secondary d-none mt-3" role="status" aria-live="polite" aria-atomic="true">
+                                    <span id="supabase-status-icon" class="me-2"><i class="fas fa-info-circle"></i></span>
+                                    <span id="supabase-status-text">Checking saved credentials…</span>
+                                </div>
+
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-outline-primary me-2" id="supabase_save">
+                                        <i class="fas fa-save me-2"></i>Save Configuration
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary me-2" id="supabase_test">
+                                        <i class="fas fa-plug me-2"></i>Test Connection
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger me-2" id="supabase_clear">
+                                        <i class="fas fa-trash me-2"></i>Clear Configuration
+                                    </button>
+                                </div>
+
+                                <!-- Supabase Table Setup Instructions (hidden by default) -->
+                                <div id="supabase-setup-instructions" class="mt-4 d-none">
+                                    <div class="alert alert-info border-primary">
+                                        <h6 class="alert-heading text-primary">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Database Table Setup Required
+                                        </h6>
+                                        <p class="mb-3 text-dark">
+                                            If this is your first time using Supabase, your Supabase database does not have the required table to store the videos yet. Please follow these simple steps to create it:
+                                        </p>
+
+                                        <div class="mb-3">
+                                            <h6 class="text-primary">Supabase SQL Editor</h6>
+                                            <ol class="mb-2 text-dark">
+                                                <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener" class="text-primary">Supabase Dashboard</a></li>
+                                                <li>Select your project</li>
+                                                <li>Open the <strong>SQL Editor</strong> from the sidebar</li>
+                                                <li>Copy and paste the SQL code below</li>
+                                                <li>Click <strong>Run</strong> to execute the query</li>
+                                            </ol>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <h6 class="text-primary">SQL Code to Execute:</h6>
+                                            <div class="bg-dark text-light p-3 rounded border" style="font-family: 'Courier New', monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto;">
+                                                <pre class="mb-0" id="supabase-sql-code">-- YouTube Watchmarker Table Schema
 -- Run this SQL in your Supabase SQL Editor
 
 -- Create main table for storing YouTube watch history
@@ -432,345 +443,340 @@ SELECT
 FROM pg_tables 
 WHERE schemaname = 'public' 
 AND tablename = 'youtube_watch_history';</pre>
-                      </div>
-                      <div class="mt-2">
-                        <button type="button" class="btn btn-sm btn-primary" id="copy-sql-button">
-                          <i class="fas fa-copy me-1"></i>Copy SQL Code
-                        </button>
-                      </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <button type="button" class="btn btn-sm btn-primary" id="copy-sql-button">
+                                                    <i class="fas fa-copy me-1"></i>Copy SQL Code
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <p class="mb-0 text-dark">
+                                            <strong>⚠️ Important:</strong> After running the SQL, click the "Test Connection" button above to verify the setup.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Database Status -->
+                            <div class="alert alert-info d-flex align-items-center">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <div>
+                                    <strong>Database Size:</strong>
+                                    <span id="idDatabase_Size" class="badge bg-secondary ms-2">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                </section>
+            </div>
+
+            <!-- Synchronization -->
+            <div class="col-12">
+                <section class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h2 class="card-title h5 mb-0">
+                            <i class="fas fa-sync me-2"></i>
+                            Data Synchronization
+                        </h2>
                     </div>
-                    
-                    <p class="mb-0 text-dark">
-                      <strong>⚠️ Important:</strong> After running the SQL, click the "Test Connection" button above to verify the setup.
-                    </p>
-                  </div>
-                </div>
-              </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">
+                            Synchronize your watch history from various sources to keep your data up-to-date.
+                        </p>
 
-              <!-- Database Status -->
-              <div class="alert alert-info d-flex align-items-center">
-                <i class="fas fa-info-circle me-2"></i>
-                <div>
-                  <strong>Database Size:</strong> 
-                  <span id="idDatabase_Size" class="badge bg-secondary ms-2">Loading...</span>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+                        <div class="row g-4">
+                            <!-- Browser History Sync -->
+                            <div class="col-12 col-md-4">
+                                <div class="card border-primary h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-history fa-2x text-primary mb-3"></i>
+                                        <h5 class="card-title">Browser History</h5>
+                                        <p class="card-text text-muted small">
+                                            Import YouTube videos from your browser's history
+                                        </p>
 
-        <!-- Synchronization -->
-        <div class="col-12">
-          <section class="card shadow-sm">
-            <div class="card-header bg-success text-white">
-              <h2 class="card-title h5 mb-0">
-                <i class="fas fa-sync me-2"></i>
-                Data Synchronization
-              </h2>
-            </div>
-            <div class="card-body">
-              <p class="text-muted mb-4">
-                Synchronize your watch history from various sources to keep your data up-to-date.
-              </p>
-              
-              <div class="row g-4">
-                <!-- Browser History Sync -->
-                <div class="col-12 col-md-4">
-                  <div class="card border-primary h-100">
-                    <div class="card-body text-center">
-                      <i class="fas fa-history fa-2x text-primary mb-3"></i>
-                      <h5 class="card-title">Browser History</h5>
-                      <p class="card-text text-muted small">
-                        Import YouTube videos from your browser's history
-                      </p>
+                                        <button class="btn btn-primary" id="sync-history">
+                                            <i class="fas fa-sync me-2"></i>Sync History
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
 
-                      <button class="btn btn-primary" id="sync-history">
-                        <i class="fas fa-sync me-2"></i>Sync History
-                      </button>
+                            <!-- YouTube History Sync -->
+                            <div class="col-12 col-md-4">
+                                <div class="card border-warning h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fab fa-youtube fa-2x text-danger mb-3"></i>
+                                        <h5 class="card-title">YouTube History</h5>
+                                        <p class="card-text text-muted small">
+                                            Import latest 200 videos from your YouTube watch history
+                                        </p>
+
+                                        <button class="btn btn-warning" id="sync-youtube">
+                                            <i class="fas fa-sync me-2"></i>Sync YouTube
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- YouTube Likes Sync -->
+                            <div class="col-12 col-md-4">
+                                <div class="card border-info h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-heart fa-2x text-danger mb-3"></i>
+                                        <h5 class="card-title">YouTube Likes</h5>
+                                        <p class="card-text text-muted small">
+                                            Import latest 100 videos from your YouTube liked videos
+                                        </p>
+
+                                        <button class="btn btn-info" id="sync-youtube-likes">
+                                            <i class="fas fa-sync me-2"></i>Sync Likes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sync All Button -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <button class="btn btn-lg btn-outline-primary" id="sync-all">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    Sync All Sources
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                  </div>
-                </div>
-                
-                <!-- YouTube History Sync -->
-                <div class="col-12 col-md-4">
-                  <div class="card border-warning h-100">
-                    <div class="card-body text-center">
-                      <i class="fab fa-youtube fa-2x text-danger mb-3"></i>
-                      <h5 class="card-title">YouTube History</h5>
-                      <p class="card-text text-muted small">
-                        Import latest 200 videos from your YouTube watch history
-                      </p>
+                </section>
+            </div>
 
-                      <button class="btn btn-warning" id="sync-youtube">
-                        <i class="fas fa-sync me-2"></i>Sync YouTube
-                      </button>
+            <!-- Watch Conditions -->
+            <div class="col-12">
+                <section class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h2 class="card-title h5 mb-0">
+                            <i class="fas fa-eye me-2"></i>
+                            Watch Detection Conditions
+                        </h2>
                     </div>
-                  </div>
-                </div>
-                
-                <!-- YouTube Likes Sync -->
-                <div class="col-12 col-md-4">
-                  <div class="card border-info h-100">
-                    <div class="card-body text-center">
-                      <i class="fas fa-heart fa-2x text-danger mb-3"></i>
-                      <h5 class="card-title">YouTube Likes</h5>
-                      <p class="card-text text-muted small">
-                        Import latest 100 videos from your YouTube liked videos
-                      </p>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">
+                            Choose when videos should be marked as watched. Multiple conditions can be active simultaneously.
+                        </p>
 
-                      <button class="btn btn-info" id="sync-youtube-likes">
-                        <i class="fas fa-sync me-2"></i>Sync Likes
-                      </button>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idCondition_Brownav" />
+                                    <label class="form-check-label" for="idCondition_Brownav">
+                                        <strong>Browser Navigation</strong>
+                                        <br><small class="text-muted">Mark when video is opened in browser</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idCondition_Browhist" />
+                                    <label class="form-check-label" for="idCondition_Browhist">
+                                        <strong>Browser History</strong>
+                                        <br><small class="text-muted">Mark when video appears in browser history</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idCondition_Youprog" />
+                                    <label class="form-check-label" for="idCondition_Youprog">
+                                        <strong>YouTube Progress</strong>
+                                        <br><small class="text-muted">Mark when player reports progress to YouTube</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idCondition_Youbadge" />
+                                    <label class="form-check-label" for="idCondition_Youbadge">
+                                        <strong>YouTube Badge</strong>
+                                        <br><small class="text-muted">Mark when video has official YouTube watched badge</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idCondition_Youhist" />
+                                    <label class="form-check-label" for="idCondition_Youhist">
+                                        <strong>YouTube History</strong>
+                                        <br><small class="text-muted">Mark when video appears in YouTube's watch history (includes automatic hourly sync)</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idCondition_Yourating" />
+                                    <label class="form-check-label" for="idCondition_Yourating">
+                                        <strong>Video Rating</strong>
+                                        <br><small class="text-muted">Mark when user rates video (like or dislike)</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Sync All Button -->
-              <div class="row mt-4">
-                <div class="col-12 text-center">
-                  <button class="btn btn-lg btn-outline-primary" id="sync-all">
-                    <i class="fas fa-sync-alt me-2"></i>
-                    Sync All Sources
-                  </button>
-                </div>
-              </div>
+                </section>
             </div>
-          </section>
-        </div>
 
-        <!-- Watch Conditions -->
-        <div class="col-12">
-          <section class="card shadow-sm">
-            <div class="card-header bg-warning text-dark">
-              <h2 class="card-title h5 mb-0">
-                <i class="fas fa-eye me-2"></i>
-                Watch Detection Conditions
-              </h2>
-            </div>
-            <div class="card-body">
-              <p class="text-muted mb-4">
-                Choose when videos should be marked as watched. Multiple conditions can be active simultaneously.
-              </p>
-              
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idCondition_Brownav" />
-                    <label class="form-check-label" for="idCondition_Brownav">
-                      <strong>Browser Navigation</strong>
-                      <br><small class="text-muted">Mark when video is opened in browser</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idCondition_Browhist" />
-                    <label class="form-check-label" for="idCondition_Browhist">
-                      <strong>Browser History</strong>
-                      <br><small class="text-muted">Mark when video appears in browser history</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idCondition_Youprog" />
-                    <label class="form-check-label" for="idCondition_Youprog">
-                      <strong>YouTube Progress</strong>
-                      <br><small class="text-muted">Mark when player reports progress to YouTube</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idCondition_Youbadge" />
-                    <label class="form-check-label" for="idCondition_Youbadge">
-                      <strong>YouTube Badge</strong>
-                      <br><small class="text-muted">Mark when video has official YouTube watched badge</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idCondition_Youhist" />
-                    <label class="form-check-label" for="idCondition_Youhist">
-                      <strong>YouTube History</strong>
-                      <br><small class="text-muted">Mark when video appears in YouTube's watch history (includes automatic hourly sync)</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idCondition_Yourating" />
-                    <label class="form-check-label" for="idCondition_Yourating">
-                      <strong>Video Rating</strong>
-                      <br><small class="text-muted">Mark when user rates video (like or dislike)</small>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+            <!-- Visual Settings -->
+            <div class="col-12">
+                <section class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h2 class="card-title h5 mb-0">
+                            <i class="fas fa-palette me-2"></i>
+                            Visual Appearance
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">
+                            Customize how watched videos are displayed on YouTube pages.
+                        </p>
 
-        <!-- Visual Settings -->
-        <div class="col-12">
-          <section class="card shadow-sm">
-            <div class="card-header bg-info text-white">
-              <h2 class="card-title h5 mb-0">
-                <i class="fas fa-palette me-2"></i>
-                Visual Appearance
-              </h2>
-            </div>
-            <div class="card-body">
-              <p class="text-muted mb-4">
-                Customize how watched videos are displayed on YouTube pages.
-              </p>
-              
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idVisualization_Fadeout" />
-                    <label class="form-check-label" for="idVisualization_Fadeout">
-                      <strong>Fade Out</strong>
-                      <br><small class="text-muted">Slightly fade watched video thumbnails</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idVisualization_Grayout" />
-                    <label class="form-check-label" for="idVisualization_Grayout">
-                      <strong>Grayscale</strong>
-                      <br><small class="text-muted">Convert watched thumbnails to grayscale</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idVisualization_Showbadge" />
-                    <label class="form-check-label" for="idVisualization_Showbadge">
-                      <strong>Show Badge</strong>
-                      <br><small class="text-muted">Display text badge on watched videos</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idVisualization_Showdate" />
-                    <label class="form-check-label" for="idVisualization_Showdate">
-                      <strong>Show Date</strong>
-                      <br><small class="text-muted">Include watch date in badge</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idVisualization_Hideprogress" />
-                    <label class="form-check-label" for="idVisualization_Hideprogress">
-                      <strong>Hide Progress Bar</strong>
-                      <br><small class="text-muted">Hide YouTube's progress bar on watched videos</small>
-                    </label>
-                  </div>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="idVisualization_Showpublishdate" />
-                    <label class="form-check-label" for="idVisualization_Showpublishdate">
-                      <strong>Show Publishing Date</strong>
-                      <br><small class="text-muted">Display publishing date after video title on all video wall thumbnails</small>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idVisualization_Fadeout" />
+                                    <label class="form-check-label" for="idVisualization_Fadeout">
+                                        <strong>Fade Out</strong>
+                                        <br><small class="text-muted">Slightly fade watched video thumbnails</small>
+                                    </label>
+                                </div>
+                            </div>
 
-        <!-- Search -->
-        <div class="col-12">
-          <section class="card shadow-sm search-card">
-            <div class="card-header bg-dark text-white">
-              <h2 class="card-title h5 mb-0">
-                <i class="fas fa-search me-2"></i>
-                Search Watch History
-              </h2>
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idVisualization_Grayout" />
+                                    <label class="form-check-label" for="idVisualization_Grayout">
+                                        <strong>Grayscale</strong>
+                                        <br><small class="text-muted">Convert watched thumbnails to grayscale</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idVisualization_Showbadge" />
+                                    <label class="form-check-label" for="idVisualization_Showbadge">
+                                        <strong>Show Badge</strong>
+                                        <br><small class="text-muted">Display text badge on watched videos</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idVisualization_Showdate" />
+                                    <label class="form-check-label" for="idVisualization_Showdate">
+                                        <strong>Show Date</strong>
+                                        <br><small class="text-muted">Include watch date in badge</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idVisualization_Hideprogress" />
+                                    <label class="form-check-label" for="idVisualization_Hideprogress">
+                                        <strong>Hide Progress Bar</strong>
+                                        <br><small class="text-muted">Hide YouTube's progress bar on watched videos</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="idVisualization_Showpublishdate" />
+                                    <label class="form-check-label" for="idVisualization_Showpublishdate">
+                                        <strong>Show Publishing Date</strong>
+                                        <br><small class="text-muted">Display publishing date after video title on all video wall thumbnails</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-            <div class="card-body">
-              <div class="row g-3">
-                <div class="col-12">
-                  <div class="input-group search-input-container">
-                    <input 
-                      type="text" 
-                      class="form-control" 
-                      id="idSearch_Query" 
-                      placeholder="Search your watch history..."
-                      aria-label="Search query"
-                    />
-                    <button class="btn btn-primary" type="button" id="idSearch_Lookup">
-                      <i class="fas fa-search" id="search-icon"></i>
-                      <i class="fas fa-spinner fa-spin d-none" id="search-spinner"></i>
-                      <span class="visually-hidden">Search</span>
-                    </button>
-                  </div>
-                </div>
-                
-                <div class="col-12">
-                  <div id="idSearch_Results" class="search-results"></div>
-                </div>
-              </div>
+
+            <!-- Search -->
+            <div class="col-12">
+                <section class="card shadow-sm search-card">
+                    <div class="card-header bg-dark text-white">
+                        <h2 class="card-title h5 mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            Search Watch History
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="input-group search-input-container">
+                                    <input type="text" class="form-control" id="idSearch_Query" placeholder="Search your watch history..." aria-label="Search query" />
+                                    <button class="btn btn-primary" type="button" id="idSearch_Lookup">
+                                        <i class="fas fa-search" id="search-icon"></i>
+                                        <i class="fas fa-spinner fa-spin d-none" id="search-spinner"></i>
+                                        <span class="visually-hidden">Search</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div id="idSearch_Results" class="search-results"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-          </section>
         </div>
-      </div>
     </main>
 
 
 
     <!-- Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
-      <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header bg-success text-white">
-          <i class="fas fa-check-circle me-2"></i>
-          <strong class="me-auto">Success</strong>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-success text-white">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="successToastMessage">
+                Operation completed successfully!
+            </div>
         </div>
-        <div class="toast-body" id="successToastMessage">
-          Operation completed successfully!
+
+        <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-white">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="errorToastMessage">
+                An error occurred. Please try again.
+            </div>
         </div>
-      </div>
-      
-      <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header bg-danger text-white">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong class="me-auto">Error</strong>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body" id="errorToastMessage">
-          An error occurred. Please try again.
-        </div>
-      </div>
     </div>
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="bootstrap.bundle.min.js"></script>
-    
+
     <!-- Accessibility: Announce to screen readers when content changes -->
     <div id="sr-announcements" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
-    
+
     <!-- Skip to main content link for keyboard navigation -->
     <a href="#main-content" class="visually-hidden-focusable btn btn-primary position-absolute top-0 start-0 m-2" style="z-index: 9999;">
-      Skip to main content
+        Skip to main content
     </a>
-  </body>
+</body>
+
 </html>

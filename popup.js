@@ -23,19 +23,19 @@ class PopupSearchManager {
         try {
             // Wait for Bootstrap to be available
             await this.waitForBootstrap();
-            
+
             // Cache DOM elements
             this.cacheElements();
-            
+
             // Set up event listeners
             this.setupEventListeners();
-            
+
             // Initialize theme
             await this.initializeTheme();
-            
+
             // Load initial search results
             await this.performInitialSearch();
-            
+
             this.isInitialized = true;
         } catch (error) {
             console.error('Failed to initialize popup:', error);
@@ -67,7 +67,7 @@ class PopupSearchManager {
         // Theme elements
         this.themeToggle = document.getElementById('theme-toggle');
         this.themeIcon = document.getElementById('theme-icon');
-        
+
         // Search elements
         this.searchQuery = document.getElementById('idSearch_Query');
         this.searchButton = document.getElementById('idSearch_Lookup');
@@ -75,10 +75,10 @@ class PopupSearchManager {
         this.searchIcon = document.getElementById('search-icon');
         this.searchSpinner = document.getElementById('search-spinner');
         this.initialLoading = document.getElementById('initial-loading');
-        
+
         // Options link
         this.openOptionsLink = document.getElementById('open-options');
-        
+
         // Toast elements
         this.successToast = new this.bootstrap.Toast(document.getElementById('successToast'));
         this.errorToast = new this.bootstrap.Toast(document.getElementById('errorToast'));
@@ -92,16 +92,16 @@ class PopupSearchManager {
     setupEventListeners() {
         // Search functionality
         this.setupSearchListeners();
-        
+
         // Theme toggle
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
-        
+
         // Options link
         this.openOptionsLink.addEventListener('click', (e) => {
             e.preventDefault();
             this.openFullOptions();
         });
-        
+
         // Keyboard shortcuts
         this.setupKeyboardShortcuts();
     }
@@ -112,7 +112,7 @@ class PopupSearchManager {
     setupSearchListeners() {
         // Search button click
         this.searchButton.addEventListener('click', () => this.performSearch());
-        
+
         // Enter key search
         this.searchQuery.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
@@ -120,19 +120,19 @@ class PopupSearchManager {
                 this.performSearch();
             }
         });
-        
+
         // Auto-search with debounce (1 second delay)
         let searchTimeout;
         this.searchQuery.addEventListener('input', () => {
             clearTimeout(searchTimeout);
-            
+
             searchTimeout = setTimeout(() => {
                 const query = this.searchQuery.value.trim();
-                
+
                 // Reset to first page when query changes
                 this.searchState.currentPage = 1;
                 this.searchState.currentQuery = query;
-                
+
                 // Always search (empty query shows all videos)
                 this.performSearch();
             }, 1000);
@@ -149,7 +149,7 @@ class PopupSearchManager {
                 event.preventDefault();
                 this.searchQuery.focus();
             }
-            
+
             // Escape to close popup
             if (event.key === 'Escape') {
                 window.close();
@@ -178,7 +178,7 @@ class PopupSearchManager {
         try {
             const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            
+
             this.setTheme(newTheme);
             await chrome.storage.sync.set({ theme: newTheme });
         } catch (error) {
@@ -191,7 +191,7 @@ class PopupSearchManager {
      */
     setTheme(theme) {
         document.documentElement.setAttribute('data-bs-theme', theme);
-        
+
         if (theme === 'dark') {
             this.themeIcon.classList.remove('fa-sun');
             this.themeIcon.classList.add('fa-moon');
@@ -210,9 +210,9 @@ class PopupSearchManager {
         try {
             return await chrome.runtime.sendMessage(message);
         } catch (error) {
-            if (error.message && (error.message.includes("Extension context invalidated") || 
-                               error.message.includes("context invalidated") ||
-                               error.message.includes("Receiving end does not exist"))) {
+            if (error.message && (error.message.includes("Extension context invalidated") ||
+                    error.message.includes("context invalidated") ||
+                    error.message.includes("Receiving end does not exist"))) {
                 console.log("Extension context invalidated during sendMessage - retrying once");
                 // Try once more in case it was a temporary issue
                 try {
@@ -242,12 +242,12 @@ class PopupSearchManager {
             // Initialize search state for initial load
             this.searchState.currentQuery = '';
             this.searchState.currentPage = 1;
-            
+
             // Add retry logic for database initialization timing
             const maxRetries = 3;
             let retryCount = 0;
             let response = null;
-            
+
             while (retryCount < maxRetries) {
                 try {
                     response = await this.safeSendMessage({
@@ -256,12 +256,12 @@ class PopupSearchManager {
                         page: 1,
                         pageSize: this.searchState.pageSize
                     });
-                    
+
                     // If successful, break out of retry loop
                     if (response && response.success) {
                         break;
                     }
-                    
+
                     // If failed but not due to database issues, don't retry
                     if (response && response.error && !response.error.includes('Database')) {
                         break;
@@ -269,7 +269,7 @@ class PopupSearchManager {
                 } catch (error) {
                     console.warn(`Initial search attempt ${retryCount + 1} failed:`, error);
                 }
-                
+
                 retryCount++;
                 if (retryCount < maxRetries) {
                     // Wait before retrying (exponential backoff)
@@ -281,7 +281,7 @@ class PopupSearchManager {
                 this.searchState.totalResults = response.totalResults || 0;
                 this.hideInitialLoading();
                 this.displaySearchResults(response.results);
-                
+
                 // Show a subtle message if it took multiple retries
                 if (retryCount > 0) {
                     // Search successful after multiple attempts
@@ -304,7 +304,7 @@ class PopupSearchManager {
     async performSearch() {
         // Prevent multiple concurrent searches
         if (this.searchState.isSearching) return;
-        
+
         // Use the query from search state if available, otherwise from input
         let query = this.searchState.currentQuery;
         if (query === undefined || query === null) {
@@ -333,18 +333,18 @@ class PopupSearchManager {
                 this.searchState.totalResults = response.totalResults || 0;
                 this.displaySearchResults(response.results);
             } else {
-                const errorMessage = query 
-                    ? 'Search failed. Please try again.' 
-                    : 'Failed to load watch history.';
+                const errorMessage = query ?
+                    'Search failed. Please try again.' :
+                    'Failed to load watch history.';
                 this.hideInitialLoading();
                 this.showError(response?.error || errorMessage);
                 this.searchResults.innerHTML = `<div class="alert alert-warning m-3"><i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}</div>`;
             }
         } catch (error) {
             console.error('Search error:', error);
-            const errorMessage = query 
-                ? 'Search failed. Please try again.' 
-                : 'Failed to load watch history.';
+            const errorMessage = query ?
+                'Search failed. Please try again.' :
+                'Failed to load watch history.';
             this.hideInitialLoading();
             this.showError(errorMessage);
             this.searchResults.innerHTML = `<div class="alert alert-danger m-3"><i class="fas fa-exclamation-circle me-2"></i>An error occurred. Please try again.</div>`;
@@ -373,11 +373,11 @@ class PopupSearchManager {
     displaySearchResults(results) {
         // Ensure initial loading is hidden
         this.hideInitialLoading();
-        
+
         if (!results || results.length === 0) {
-            const message = this.searchState.currentQuery 
-                ? 'No videos found matching your search.' 
-                : 'No videos found in your watch history.';
+            const message = this.searchState.currentQuery ?
+                'No videos found matching your search.' :
+                'No videos found in your watch history.';
             this.searchResults.innerHTML = `<div class="alert alert-info m-3"><i class="fas fa-info-circle me-2"></i>${message}</div>`;
             return;
         }
@@ -449,13 +449,13 @@ class PopupSearchManager {
         `;
 
         this.searchResults.innerHTML = html;
-        
+
         // Add fade-in animation
         this.searchResults.classList.add('animate-fade-in');
-        
+
         // Set up pagination event listeners
         this.setupPaginationListeners();
-        
+
         // Add event listeners for delete buttons
         const deleteButtons = this.searchResults.querySelectorAll('.delete-video-btn');
         deleteButtons.forEach(button => {
@@ -487,13 +487,13 @@ class PopupSearchManager {
      */
     async goToPage(page) {
         if (page < 1) return;
-        
+
         // Update the current page in search state
         this.searchState.currentPage = page;
-        
+
         // Get the current search query from the input
         this.searchState.currentQuery = this.searchQuery.value.trim();
-        
+
         // Perform the search with the updated page
         await this.performSearch();
     }
@@ -559,11 +559,11 @@ class PopupSearchManager {
         if (!confirm('Are you sure you want to delete this video from your watch history?')) {
             return;
         }
-        
+
         try {
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            
+
             const response = await this.safeSendMessage({
                 action: 'search-delete',
                 videoId: videoId
@@ -571,13 +571,13 @@ class PopupSearchManager {
 
             if (response && response.success) {
                 this.showSuccess('Video deleted successfully');
-                
+
                 // Check if we need to go back a page
                 const totalPagesAfterDelete = Math.ceil((this.searchState.totalResults - 1) / this.searchState.pageSize);
                 if (this.searchState.currentPage > totalPagesAfterDelete && totalPagesAfterDelete > 0) {
                     this.searchState.currentPage = totalPagesAfterDelete;
                 }
-                
+
                 // Refresh the current search
                 await this.performSearch();
             } else {
@@ -638,4 +638,4 @@ class PopupSearchManager {
 document.addEventListener('DOMContentLoaded', () => {
     const popupManager = new PopupSearchManager();
     popupManager.initialize();
-}); 
+});
