@@ -165,21 +165,29 @@ const Utils = {
     /**
      * Get video selectors for finding video elements
      */
-    getVideoSelectors() {
-        return [
-            'a.ytd-thumbnail[href^="/watch?v="]',
-            'a.yt-lockup-view-model-wiz__content-image[href^="/watch?v="]',
-            'ytd-compact-video-renderer a.yt-simple-endpoint[href^="/watch?v="]',
-            'a.ytp-ce-covering-overlay[href*="/watch?v="]',
-            'a.ytp-videowall-still[href*="/watch?v="]',
-            'a.ytd-thumbnail[href^="/shorts/"]',
-            'a.ShortsLockupViewModelHostEndpoint[href^="/shorts/"]',
-            'a.reel-item-endpoint[href^="/shorts/"]',
-            'a.media-item-thumbnail-container[href^="/watch?v="]',
-            // Notification panel entries
-            'ytd-notification-renderer a',
-            'ytd-notification-renderer .thumbnail-container img'
-        ];
+  getVideoSelectors() {
+    return [
+      'a.ytd-thumbnail[href^="/watch?v="]',
+      // New lockup-based home/shelf UI (A/B tested, rolled out Aug 2025)
+      // Be permissive: anchors inside the lockup that navigate to watch/shorts
+      'yt-lockup-view-model a.yt-simple-endpoint[href^="/watch?v="]',
+      'yt-lockup-view-model a[href^="/watch?v="]',
+      'yt-lockup-view-model a.yt-simple-endpoint[href^="/shorts/"]',
+      'yt-lockup-view-model a[href^="/shorts/"]',
+      // Legacy/other experimental class name that sometimes appears
+      'a.yt-lockup-view-model-wiz__content-image[href^="/watch?v="]',
+      'ytd-compact-video-renderer a.yt-simple-endpoint[href^="/watch?v="]',
+      'ytd-compact-video-renderer a[href^="/watch?v="]',
+      'a.ytp-ce-covering-overlay[href*="/watch?v="]',
+      'a.ytp-videowall-still[href*="/watch?v="]',
+      'a.ytd-thumbnail[href^="/shorts/"]',
+      'a.ShortsLockupViewModelHostEndpoint[href^="/shorts/"]',
+      'a.reel-item-endpoint[href^="/shorts/"]',
+      'a.media-item-thumbnail-container[href^="/watch?v="]',
+      // Notification panel entries
+      'ytd-notification-renderer a',
+      'ytd-notification-renderer .thumbnail-container img'
+      ];
     },
 
     /**
@@ -532,13 +540,17 @@ class CSSManager {
 
         if (settings.idVisualization_Fadeout && settings.stylesheet_Fadeout) {
             cssContent += settings.stylesheet_Fadeout + '\n';
-            // Ensure new A/B tested thumbnail model is also targeted
+            // Ensure new A/B tested thumbnail models are also targeted
             cssContent += '.youwatch-mark yt-thumbnail-view-model img { opacity:0.3; }\n';
+            cssContent += '.youwatch-mark yt-collection-thumbnail-view-model img { opacity:0.3; }\n';
+            cssContent += '.youwatch-mark yt-collections-stack img { opacity:0.3; }\n';
         }
         if (settings.idVisualization_Grayout && settings.stylesheet_Grayout) {
             cssContent += settings.stylesheet_Grayout + '\n';
-            // Ensure new A/B tested thumbnail model is also targeted
+            // Ensure new A/B tested thumbnail models are also targeted
             cssContent += '.youwatch-mark yt-thumbnail-view-model img { filter:grayscale(1.0); }\n';
+            cssContent += '.youwatch-mark yt-collection-thumbnail-view-model img { filter:grayscale(1.0); }\n';
+            cssContent += '.youwatch-mark yt-collections-stack img { filter:grayscale(1.0); }\n';
         }
         if (settings.idVisualization_Showbadge && settings.stylesheet_Showbadge) {
             cssContent += settings.stylesheet_Showbadge + '\n';

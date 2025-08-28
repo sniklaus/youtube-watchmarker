@@ -3,7 +3,7 @@
     "name": "Watchmarker for Youtube",
     "description": "Automatically mark videos on Youtube that you have already watched.",
     "homepage_url": "https://github.com/sniklaus/youtube-watchmarker",
-    "version": "5.0.0",
+    "version": "5.0.1",
     "permissions": [
         "storage",
         "alarms",
@@ -46,7 +46,9 @@
         },
         "default_popup": "popup.html"
     },
-    "content_security_policy": "script-src 'self' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com;",
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self';"
+    },
     "icons": {
         "72": "content/icon.png"
     },
