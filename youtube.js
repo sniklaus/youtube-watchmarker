@@ -601,28 +601,63 @@ class VideoMarkerManager {
     /**
      * Mark video as watched or unwatched
      */
-    markVideo(videoElement, videoId) {
-        const isWatched = this.watchDates.hasOwnProperty(videoId);
+  markVideo(videoElement, videoId) {
+    const isWatched = this.watchDates.hasOwnProperty(videoId);
 
-        // Prefer marking only the thumbnail within notifications
-        let markTarget = videoElement;
+    // Prefer marking only the thumbnail within notifications
+    let markTarget = videoElement;
+    try {
+      const notification = videoElement.closest && videoElement.closest('ytd-notification-renderer');
+      if (notification) {
+        markTarget =
+          notification.querySelector('.thumbnail-container') ||
+          notification.querySelector('yt-img-shadow') ||
+          notification.querySelector('img') ||
+          videoElement;
+        // Ensure we don't keep the class on the outer notification link
+        if (markTarget !== videoElement && videoElement.classList?.contains('youwatch-mark')) {
+          videoElement.classList.remove('youwatch-mark');
+          if (videoElement.hasAttribute && videoElement.hasAttribute('watchdate')) {
+            videoElement.removeAttribute('watchdate');
+          }
+        }
+      }
+
+      // Normalize within lockup/compact renderers: apply to the thumbnail link only
+      const container =
+        videoElement.closest &&
+        videoElement.closest('yt-lockup-view-model, ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer');
+      if (container) {
+        let thumbLink = null;
+        // Prefer :has() if supported
         try {
-            const notification = videoElement.closest && videoElement.closest('ytd-notification-renderer');
-            if (notification) {
-                markTarget =
-                    notification.querySelector('.thumbnail-container') ||
-                    notification.querySelector('yt-img-shadow') ||
-                    notification.querySelector('img') ||
-                    videoElement;
-                // Ensure we don't keep the class on the outer notification link
-                if (markTarget !== videoElement && videoElement.classList?.contains('youwatch-mark')) {
-                    videoElement.classList.remove('youwatch-mark');
-                    if (videoElement.hasAttribute && videoElement.hasAttribute('watchdate')) {
-                        videoElement.removeAttribute('watchdate');
-                    }
-                }
+          thumbLink = container.querySelector(
+            'a[href^="/watch?v="]:has(yt-collection-thumbnail-view-model, yt-thumbnail-view-model, yt-image, yt-img-shadow, yt-collections-stack, img),\n' +
+            'a[href^="/shorts/"]:has(yt-collection-thumbnail-view-model, yt-thumbnail-view-model, yt-image, yt-img-shadow, yt-collections-stack, img)'
+          );
+        } catch (_) {
+          // Fallback without :has(): find an image/thumbnail then climb to anchor
+          const imgLike =
+            container.querySelector('yt-collection-thumbnail-view-model, yt-thumbnail-view-model, yt-image, yt-img-shadow, yt-collections-stack, img');
+          thumbLink = imgLike?.closest?.('a[href^="/watch?v="], a[href^="/shorts/"]') ||
+            container.querySelector('a.ytd-thumbnail[href^="/watch?v="], a#thumbnail[href^="/watch?v="]');
+        }
+
+        if (thumbLink) {
+          markTarget = thumbLink;
+        }
+
+        // Remove marks from other watch/shorts links in the same card to avoid duplicates
+        container.querySelectorAll('a[href^="/watch?v="], a[href^="/shorts/"]').forEach(a => {
+          if (a !== markTarget && a.classList?.contains('youwatch-mark')) {
+            a.classList.remove('youwatch-mark');
+            if (a.hasAttribute && a.hasAttribute('watchdate')) {
+              a.removeAttribute('watchdate');
             }
-        } catch (_) {}
+          }
+        });
+      }
+    } catch (_) {}
 
         const hasWatchedClass = markTarget.classList.contains("youwatch-mark");
 
