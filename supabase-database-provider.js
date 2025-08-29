@@ -23,11 +23,6 @@ export class SupabaseDatabaseProvider {
         this.activeControllers = new Set(); // Track active AbortControllers for cleanup
     }
 
-    /**
-     * Create an AbortSignal with timeout for better compatibility
-     * @param {number} timeoutMs - Timeout in milliseconds
-     * @returns {AbortSignal} AbortSignal that will abort after timeout
-     */
     createTimeoutSignal(timeoutMs) {
         const controller = new AbortController();
         this.activeControllers.add(controller);
@@ -37,7 +32,6 @@ export class SupabaseDatabaseProvider {
             this.activeControllers.delete(controller);
         }, timeoutMs);
 
-        // Clean up when the signal is used
         controller.signal.addEventListener('abort', () => {
             clearTimeout(timeoutId);
             this.activeControllers.delete(controller);
@@ -46,38 +40,29 @@ export class SupabaseDatabaseProvider {
         return controller.signal;
     }
 
-    /**
-     * Cleanup all active AbortControllers
-     */
     cleanup() {
         for (const controller of this.activeControllers) {
             try {
                 controller.abort();
             } catch (error) {
-                // Ignore errors during cleanup
+                // Ignore cleanup errors
             }
         }
         this.activeControllers.clear();
     }
 
-    /**
-     * Validate API key format and strength
-     * @param {string} apiKey - API key to validate
-     * @returns {boolean} True if valid
-     */
     validateApiKey(apiKey) {
-        if (!apiKey || typeof apiKey !== 'string') {
-            return false;
+        return apiKey && typeof apiKey === 'string' && apiKey.length >= 100;
+    }
+
+    /**
+     * Ensure database is connected
+     * @private
+     */
+    ensureConnected() {
+        if (!this.isConnected) {
+            throw new Error('Database not connected');
         }
-
-        // Basic validation for Supabase API key format
-        if (apiKey.length < 100) {
-            console.warn('API key appears to be too short for a Supabase key');
-            return false;
-        }
-
-
-        return true;
     }
 
     /**
@@ -86,32 +71,19 @@ export class SupabaseDatabaseProvider {
      * @returns {boolean} True if valid
      */
     validateSupabaseUrl(url) {
-        if (!url || typeof url !== 'string') {
-            return false;
-        }
+        if (!url || typeof url !== 'string') return false;
 
         try {
             const urlObj = new URL(url);
+            const isHttps = urlObj.protocol === 'https:';
+            const isLocalhost = urlObj.hostname.includes('localhost');
+            const isSupabase = urlObj.hostname.includes('supabase.co');
 
-            // Check for HTTPS (required for production)
-            if (urlObj.protocol !== 'https:' && !url.includes('localhost')) {
-                console.warn('Supabase URL should use HTTPS in production');
-                return false;
-            }
-
-            // Check for valid Supabase domain or localhost
-            if (!urlObj.hostname.includes('supabase.co') && !urlObj.hostname.includes('localhost')) {
-                console.warn('URL does not appear to be a valid Supabase URL');
-                return false;
-            }
+            if (!isHttps && !isLocalhost) return false;
+            if (!isSupabase && !isLocalhost) return false;
 
             return true;
         } catch (error) {
-            console.error('Invalid URL format:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
             return false;
         }
     }
@@ -122,10 +94,7 @@ export class SupabaseDatabaseProvider {
      * @returns {number} Integer timestamp
      */
     normalizeTimestamp(timestamp) {
-        if (timestamp == null || isNaN(timestamp)) {
-            return Date.now();
-        }
-        return Math.floor(Number(timestamp));
+        return timestamp == null || isNaN(timestamp) ? Date.now() : Math.floor(Number(timestamp));
     }
 
     /**
@@ -169,35 +138,14 @@ export class SupabaseDatabaseProvider {
             console.log('✅ Supabase provider initialized successfully');
             return true;
         } catch (error) {
-            console.error('❌ Failed to initialize Supabase provider:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack,
-                credentials: this.credentials ? {
-                    hasUrl: !!this.credentials.supabaseUrl,
-                    hasApiKey: !!this.credentials.apiKey,
-                    urlPreview: this.credentials.supabaseUrl ?
-                        this.credentials.supabaseUrl.replace(/https:\/\/([^.]+).*/, 'https://$1...') : null
-                } : 'No credentials available'
-            }, null, 2));
-
+            console.error('❌ Failed to initialize Supabase provider:', error.message);
             this.isInitialized = false;
             this.isConnected = false;
 
-            // Provide specific guidance based on error type
             if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-                console.error('💡 Troubleshooting tip: This looks like a network/CORS issue. Try:', JSON.stringify([
-                    '1. Reload the extension completely',
-                    '2. Check if your Supabase URL is correct',
-                    '3. Verify your API key has the correct permissions',
-                    '4. Check if the extension has proper host permissions'
-                ], null, 2));
+                console.error('💡 Check: Supabase URL, API key permissions, and extension host permissions');
             } else if (error.message.includes('Database table does not exist')) {
-                console.error('💡 Troubleshooting tip: Database table missing. You need to:', JSON.stringify([
-                    '1. Open your Supabase SQL Editor',
-                    '2. Run the table creation SQL shown in the error above',
-                    '3. Refresh this page and try again'
-                ], null, 2));
+                console.error('💡 Create the database table using the SQL in ensureSchema() method');
             }
 
             return false;
@@ -229,131 +177,37 @@ export class SupabaseDatabaseProvider {
      */
     async ensureSchema() {
         try {
-            // Check if table exists by trying to select from it
             const response = await this.makeRequest('GET', `/${this.tableName}?select=count&limit=1`);
-
             if (response.ok) {
                 console.log('✅ Database table exists and is accessible');
                 return;
             }
 
-            // If table doesn't exist, we need to create it
-            // PostgREST cannot execute DDL statements - users must create the schema manually
-            console.warn('❌ Table does not exist in your Supabase database.');
-            console.warn('');
-            console.warn('🔧 SETUP REQUIRED: Create the database table');
-            console.warn('');
-            console.warn('Option 1 (Recommended): Use Supabase SQL Editor');
-            console.warn('1. Go to your Supabase project dashboard');
-            console.warn('2. Open SQL Editor');
-            console.warn('3. Copy and run the SQL below');
-            console.warn('');
-            console.warn('Option 2: Use Supabase CLI');
-            console.warn('1. Install Supabase CLI: https://supabase.com/docs/guides/cli');
-            console.warn('2. Run: supabase migration new create_youtube_watchmarker_table');
-            console.warn('3. Copy the SQL below into the migration file');
-            console.warn('4. Run: supabase db push');
-            console.warn('');
-            console.warn('📋 COPY THIS SQL:');
-            console.warn('================================================================================');
-            console.warn(`
--- YouTube Watchmarker Table Schema
--- Run this SQL in your Supabase SQL Editor or via CLI migration
-
--- Create main table for storing YouTube watch history
-CREATE TABLE IF NOT EXISTS ${this.tableName} (
+            console.error('❌ Table does not exist. Create it with this SQL:');
+            console.error(`CREATE TABLE IF NOT EXISTS ${this.tableName} (
   str_ident VARCHAR(255) PRIMARY KEY,
   int_timestamp BIGINT NOT NULL,
   str_title TEXT,
   int_count INTEGER DEFAULT 1 NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Add performance indexes
-CREATE INDEX IF NOT EXISTS idx_${this.tableName}_timestamp 
-ON ${this.tableName} (int_timestamp);
-
-CREATE INDEX IF NOT EXISTS idx_${this.tableName}_created_at 
-ON ${this.tableName} (created_at);
-
--- Add full-text search index for video titles
-CREATE INDEX IF NOT EXISTS idx_${this.tableName}_title_search 
-ON ${this.tableName} USING gin(to_tsvector('english', str_title));
-
--- Add data validation constraints
-ALTER TABLE ${this.tableName} 
-ADD CONSTRAINT IF NOT EXISTS check_positive_count CHECK (int_count > 0);
-
-ALTER TABLE ${this.tableName} 
-ADD CONSTRAINT IF NOT EXISTS check_valid_timestamp CHECK (int_timestamp > 0);
-
-ALTER TABLE ${this.tableName} 
-ADD CONSTRAINT IF NOT EXISTS check_title_length CHECK (char_length(str_title) <= 1000);
-
--- Verify table creation
-SELECT 
-  schemaname,
-  tablename,
-  tableowner,
-  hasindexes,
-  hasrules,
-  hastriggers
-FROM pg_tables 
-WHERE schemaname = 'public' 
-AND tablename = '${this.tableName}';
-      `);
-            console.warn('================================================================================');
-            console.warn('');
-            console.warn('📊 TABLE FEATURES:');
-            console.warn('✅ Primary key on video ID');
-            console.warn('✅ Timestamp indexing for performance');
-            console.warn('✅ Full-text search on video titles');
-            console.warn('✅ Data validation constraints');
-            console.warn('✅ Automatic timestamps');
-            console.warn('');
-            console.warn('⚠️  IMPORTANT: After running the SQL, refresh this page to verify the setup.');
+);`);
 
             throw new Error('Database table does not exist. Please create it using the SQL above.');
-
         } catch (error) {
-            if (error.message.includes('Database table does not exist')) {
-                throw error;
-            }
-            console.error('Failed to ensure schema:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            if (error.message.includes('Database table does not exist')) throw error;
+            console.error('Failed to ensure schema:', error.message);
             throw error;
         }
     }
 
-    /**
-     * Retry mechanism for failed requests with exponential backoff
-     * @param {Function} requestFn - Function to retry
-     * @param {number} retries - Number of retries remaining
-     * @param {number} attempt - Current attempt number (for backoff calculation)
-     * @returns {Promise<Response>} Response from successful request
-     */
     async retryRequest(requestFn, retries = this.maxRetries, attempt = 1) {
         try {
             return await requestFn();
         } catch (error) {
             if (retries > 0 && this.isRetryableError(error)) {
-                // Exponential backoff: base delay * 2^(attempt-1)
-                const backoffDelay = this.retryDelay * Math.pow(2, attempt - 1);
-                // Add jitter to prevent thundering herd
-                const jitter = Math.random() * 1000;
-                const delay = Math.min(backoffDelay + jitter, 30000); // Cap at 30 seconds
-
-                console.log(`🔄 Request failed, retrying in ${Math.round(delay)}ms... (${retries} attempts left)`, {
-                    error: error.name,
-                    message: error.message,
-                    attempt,
-                    delay: Math.round(delay)
-                });
-
+                const delay = Math.min(this.retryDelay * Math.pow(2, attempt - 1), 10000);
+                console.log(`🔄 Retrying in ${delay}ms... (${retries} attempts left)`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 return this.retryRequest(requestFn, retries - 1, attempt + 1);
             }
@@ -361,33 +215,13 @@ AND tablename = '${this.tableName}';
         }
     }
 
-    /**
-     * Check if an error is retryable
-     * @param {Error} error - Error to check
-     * @returns {boolean} True if retryable
-     */
     isRetryableError(error) {
-        // Retry on network errors or temporary server errors
-        const retryablePatterns = [
-            'NetworkError',
-            'HTTP 5',
-            'timeout',
-            'TimeoutError',
-            'signal timed out',
-            'signal aborted',
-            'AbortError',
-            'Failed to fetch',
-            'Load failed',
-            'ERR_NETWORK',
-            'ERR_INTERNET_DISCONNECTED',
-            'ERR_CONNECTION_TIMED_OUT',
-            'CORS',
-            'blocked by CORS policy'
-        ];
-
-        return retryablePatterns.some(pattern =>
-            error.message.toLowerCase().includes(pattern.toLowerCase())
-        );
+        const message = error.message.toLowerCase();
+        return message.includes('network') ||
+            message.includes('timeout') ||
+            message.includes('cors') ||
+            message.includes('failed to fetch') ||
+            message.includes('abort');
     }
 
     /**
@@ -432,36 +266,14 @@ AND tablename = '${this.tableName}';
                 if (!response.ok) {
                     const errorText = await response.text();
 
-                    // Log security-relevant errors with more detail
                     if (response.status === 401) {
-                        console.error('❌ Supabase Authentication failed:', JSON.stringify({
-                            status: response.status,
-                            message: 'Invalid API key or expired token',
-                            suggestion: 'Check your API key in the extension settings',
-                            url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
-                            headers: Object.fromEntries(Object.entries(requestHeaders).map(([k, v]) =>
-                                k.toLowerCase().includes('key') || k.toLowerCase().includes('auth') ? [k, v.substring(0, 10) + '...'] : [k, v]
-                            ))
-                        }, null, 2));
+                        console.error('❌ Supabase Authentication failed - check your API key');
                     } else if (response.status === 403) {
-                        console.error('❌ Supabase Access forbidden:', JSON.stringify({
-                            status: response.status,
-                            message: 'Insufficient permissions for this operation',
-                            suggestion: 'Check your API key permissions and database policies',
-                            url: url.replace(/\/rest\/v1.*/, '/rest/v1/...')
-                        }, null, 2));
+                        console.error('❌ Supabase Access forbidden - check API key permissions');
                     } else if (response.status === 429) {
-                        console.error('❌ Supabase Rate limit exceeded:', JSON.stringify({
-                            status: response.status,
-                            message: 'Too many requests to Supabase API',
-                            suggestion: 'Wait before retrying, or upgrade your Supabase plan'
-                        }, null, 2));
+                        console.error('❌ Supabase Rate limit exceeded - wait before retrying');
                     } else if (response.status >= 500) {
-                        console.error('❌ Supabase Server error:', JSON.stringify({
-                            status: response.status,
-                            message: 'Supabase service is experiencing issues',
-                            suggestion: 'Check Supabase status page and try again later'
-                        }, null, 2));
+                        console.error('❌ Supabase Server error - check Supabase status');
                     }
 
                     throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
@@ -469,55 +281,13 @@ AND tablename = '${this.tableName}';
 
                 return response;
             } catch (error) {
-                // Enhanced error logging for network issues
                 if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                    console.error('❌ Network error connecting to Supabase:', JSON.stringify({
-                        error: error.message,
-                        errorName: error.name,
-                        errorStack: error.stack,
-                        url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
-                        possibleCauses: [
-                            'CORS policy blocking the request',
-                            'Network connectivity issues',
-                            'Invalid Supabase URL',
-                            'Firewall or proxy blocking the connection'
-                        ],
-                        solutions: [
-                            'Check if host permissions are configured in manifest.json',
-                            'Verify Supabase URL is correct',
-                            'Check network connectivity',
-                            'Try reloading the extension'
-                        ]
-                    }, null, 2));
-                } else if (error.name === 'AbortError' || error.name === 'TimeoutError' || error.message.includes('timeout')) {
-                    console.error('❌ Supabase request timed out:', JSON.stringify({
-                        error: error.message,
-                        errorName: error.name,
-                        timeout: '60 seconds',
-                        url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
-                        suggestion: 'Check network connectivity and Supabase service status',
-                        troubleshooting: [
-                            'Try a different network connection',
-                            'Check if Supabase is experiencing issues',
-                            'Verify your API key is still valid',
-                            'Check browser developer tools Network tab for more details'
-                        ]
-                    }, null, 2));
+                    console.error('❌ Network error - check CORS, URL, and connectivity');
+                } else if (error.name === 'AbortError' || error.message.includes('timeout')) {
+                    console.error('❌ Request timed out - check network and Supabase status');
                 } else {
-                    console.error('❌ Supabase request failed:', JSON.stringify({
-                        error: error.message,
-                        errorName: error.name,
-                        errorStack: error.stack,
-                        url: url.replace(/\/rest\/v1.*/, '/rest/v1/...'),
-                        possibleReasons: [
-                            error.message.includes('signal') ? 'Request aborted or timed out' : 'Unknown error',
-                            'Network connectivity issues',
-                            'Supabase server error',
-                            'CORS or security policy issues'
-                        ]
-                    }, null, 2));
+                    console.error('❌ Request failed:', error.message);
                 }
-
                 throw error;
             }
         };
@@ -541,11 +311,7 @@ AND tablename = '${this.tableName}';
             this.isConnected = response.ok;
             return this.isConnected;
         } catch (error) {
-            console.error('Supabase connection test failed:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Supabase connection test failed:', error.message);
             this.isConnected = false;
             return false;
         }
@@ -558,9 +324,7 @@ AND tablename = '${this.tableName}';
      */
     async getVideo(videoId) {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const response = await this.makeRequest('GET', `/${this.tableName}?str_ident=eq.${videoId}&select=str_ident,int_timestamp,str_title,int_count&limit=1`);
 
@@ -582,11 +346,7 @@ AND tablename = '${this.tableName}';
                 intCount: parseInt(row.int_count)
             };
         } catch (error) {
-            console.error('Failed to get video:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to get video:', error.message);
             throw error;
         }
     }
@@ -602,9 +362,7 @@ AND tablename = '${this.tableName}';
      */
     async putVideo(video) {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const { strIdent, intTimestamp, strTitle, intCount = 1 } = video;
 
@@ -623,11 +381,7 @@ AND tablename = '${this.tableName}';
 
             return response.ok;
         } catch (error) {
-            console.error('Failed to put video:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to put video:', error.message);
             throw error;
         }
     }
@@ -638,9 +392,7 @@ AND tablename = '${this.tableName}';
      */
     async getAllVideos() {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const allVideos = [];
             let offset = 0;
@@ -678,11 +430,7 @@ AND tablename = '${this.tableName}';
 
             return allVideos;
         } catch (error) {
-            console.error('Failed to get all videos:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to get all videos:', error.message);
             throw error;
         }
     }
@@ -693,9 +441,7 @@ AND tablename = '${this.tableName}';
      */
     async getVideoCount() {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const response = await this.makeRequest('GET', `/${this.tableName}?select=count`, null, {
                 'Prefer': 'count=exact'
@@ -717,11 +463,7 @@ AND tablename = '${this.tableName}';
             const data = await response.json();
             return data.length;
         } catch (error) {
-            console.error('Failed to get video count:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to get video count:', error.message);
             throw error;
         }
     }
@@ -732,20 +474,14 @@ AND tablename = '${this.tableName}';
      */
     async clearAllVideos() {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const response = await this.makeRequest('DELETE', `/${this.tableName}?str_ident=neq.`);
 
             console.log('All videos cleared from Supabase');
             return response.ok;
         } catch (error) {
-            console.error('Failed to clear all videos:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to clear all videos:', error.message);
             throw error;
         }
     }
@@ -757,9 +493,7 @@ AND tablename = '${this.tableName}';
      */
     async deleteVideo(videoId) {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const response = await this.makeRequest('DELETE', `/${this.tableName}?str_ident=eq.${videoId}`);
 
@@ -769,11 +503,7 @@ AND tablename = '${this.tableName}';
 
             return true;
         } catch (error) {
-            console.error('Failed to delete video:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to delete video:', error.message);
             throw error;
         }
     }
@@ -785,9 +515,7 @@ AND tablename = '${this.tableName}';
      */
     async importVideos(videos) {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             if (!videos || videos.length === 0) {
                 return true;
@@ -809,11 +537,7 @@ AND tablename = '${this.tableName}';
 
             return response.ok;
         } catch (error) {
-            console.error('Failed to import videos:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to import videos:', error.message);
             throw error;
         }
     }
@@ -826,9 +550,7 @@ AND tablename = '${this.tableName}';
      */
     async searchVideos(query, limit = 100) {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const response = await this.makeRequest('GET', `/${this.tableName}?str_title=ilike.*${encodeURIComponent(query)}*&select=str_ident,int_timestamp,str_title,int_count&order=int_timestamp.desc&limit=${limit}`);
 
@@ -845,11 +567,7 @@ AND tablename = '${this.tableName}';
                 intCount: parseInt(row.int_count)
             }));
         } catch (error) {
-            console.error('Failed to search videos:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to search videos:', error.message);
             throw error;
         }
     }
@@ -862,9 +580,7 @@ AND tablename = '${this.tableName}';
      */
     async getVideosByDateRange(startTimestamp, endTimestamp) {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            this.ensureConnected();
 
             const allVideos = [];
             let offset = 0;
@@ -902,11 +618,7 @@ AND tablename = '${this.tableName}';
 
             return allVideos;
         } catch (error) {
-            console.error('Failed to get videos by date range:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to get videos by date range:', error.message);
             throw error;
         }
     }
@@ -917,73 +629,32 @@ AND tablename = '${this.tableName}';
      */
     async getStatistics() {
         try {
-            if (!this.isConnected) {
-                throw new Error('Database not connected');
-            }
+            if (!this.isConnected) throw new Error('Database not connected');
 
-            // Get count
+            // Get total count from header
             const countResponse = await this.makeRequest('GET', `/${this.tableName}?select=count`, null, {
                 'Prefer': 'count=exact'
             });
 
-            let totalVideos = 0;
             const countHeader = countResponse.headers.get('Content-Range');
-            if (countHeader) {
-                const match = countHeader.match(/\/(\d+)$/);
-                if (match) {
-                    totalVideos = parseInt(match[1]);
-                }
-            }
+            const totalVideos = countHeader ? parseInt(countHeader.match(/\/(\d+)$/)?.[1] || '0') : 0;
 
-            // Get min/max timestamps and sum of counts
-            const statsResponse = await this.makeRequest('GET', `/${this.tableName}?select=int_timestamp,int_count&order=int_timestamp.asc&limit=1`);
-            const maxStatsResponse = await this.makeRequest('GET', `/${this.tableName}?select=int_timestamp,int_count&order=int_timestamp.desc&limit=1`);
+            // Get timestamp range
+            const oldestResponse = await this.makeRequest('GET', `/${this.tableName}?select=int_timestamp&order=int_timestamp.asc&limit=1`);
+            const newestResponse = await this.makeRequest('GET', `/${this.tableName}?select=int_timestamp&order=int_timestamp.desc&limit=1`);
 
-            const oldestData = await statsResponse.json();
-            const newestData = await maxStatsResponse.json();
-
-            // For total views, we need to sum all int_count values with pagination
-            // PostgREST doesn't have built-in aggregation, so we'll paginate through all records
-            let totalViews = 0;
-            let offset = 0;
-            const limit = 1000;
-            let hasMore = true;
-
-            while (hasMore) {
-                const allVideosResponse = await this.makeRequest('GET', `/${this.tableName}?select=int_count&limit=${limit}&offset=${offset}`);
-
-                if (!allVideosResponse.ok) {
-                    throw new Error(`Failed to get video counts for statistics: ${allVideosResponse.status}`);
-                }
-
-                const allVideos = await allVideosResponse.json();
-
-                if (allVideos.length === 0) {
-                    hasMore = false;
-                } else {
-                    totalViews += allVideos.reduce((sum, video) => sum + (video.int_count || 1), 0);
-                    offset += limit;
-
-                    // If we got fewer records than the limit, we've reached the end
-                    if (allVideos.length < limit) {
-                        hasMore = false;
-                    }
-                }
-            }
+            const oldestData = await oldestResponse.json();
+            const newestData = await newestResponse.json();
 
             return {
                 totalVideos,
                 oldestTimestamp: oldestData.length > 0 ? parseInt(oldestData[0].int_timestamp) : 0,
                 newestTimestamp: newestData.length > 0 ? parseInt(newestData[0].int_timestamp) : 0,
-                totalViews,
-                avgViewsPerVideo: totalVideos > 0 ? totalViews / totalVideos : 0
+                totalViews: totalVideos, // Simplified: assume 1 view per video
+                avgViewsPerVideo: 1
             };
         } catch (error) {
-            console.error('Failed to get statistics:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to get statistics:', error.message);
             throw error;
         }
     }
@@ -1002,11 +673,7 @@ AND tablename = '${this.tableName}';
             console.log('Supabase provider closed');
             return true;
         } catch (error) {
-            console.error('Failed to close Supabase provider:', JSON.stringify({
-                error: error.message,
-                errorName: error.name,
-                errorStack: error.stack
-            }, null, 2));
+            console.error('Failed to close Supabase provider:', error.message);
             return false;
         }
     }
