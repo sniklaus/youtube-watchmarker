@@ -23,6 +23,9 @@
         "https://*.supabase.in/*"
     ],
     "background": {
+        "scripts": [
+            "background.js"
+        ],
         "service_worker": "background.js",
         "type": "module"
     },
@@ -32,6 +35,7 @@
             "*://m.youtube.com/*"
         ],
         "js": [
+            "polyfill.js",
             "youtube.js"
         ]
     }],

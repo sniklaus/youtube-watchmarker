@@ -1,5 +1,8 @@
 "use strict";
 
+// Ensure Firefox compatibility before any imports use chrome.* promises
+import "./polyfill.js";
+
 import {
   sendMessageToTab,
   createResponseCallback,
