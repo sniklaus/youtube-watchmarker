@@ -24,7 +24,6 @@
     "scripts": [
       "background.js"
     ],
-    "preferred_environment": "service_worker",
     "type": "module"
   },
   "content_scripts": [
