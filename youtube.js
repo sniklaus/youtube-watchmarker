@@ -8,15 +8,11 @@ let objObservers = new WeakMap();
 
 let videos = function(strIdent) {
     return Array.from(window.document.querySelectorAll(([
-        'a.ytd-thumbnail[href^="/watch?v=' + strIdent + '"]', // regular
-        'a.yt-lockup-view-model-wiz__content-image[href^="/watch?v=' + strIdent + '"]', // regular
-        'ytd-compact-video-renderer a.yt-simple-endpoint[href^="/watch?v=' + strIdent + '"]', // regular
-        'a.ytp-ce-covering-overlay[href*="/watch?v=' + strIdent + '"]', // overlays
-        'a.ytp-videowall-still[href*="/watch?v=' + strIdent + '"]', // videowall
-        'a.ytd-thumbnail[href^="/shorts/' + strIdent + '"]', // shorts
-        'a.ShortsLockupViewModelHostEndpoint[href^="/shorts/' + strIdent + '"]', // shorts
+        'a.yt-lockup-view-model__content-image[href^="/watch?v=' + strIdent + '"]', // regular
+        'a.ytd-thumbnail[href^="/watch?v=' + strIdent + '"]', // list
         'a.reel-item-endpoint[href^="/shorts/' + strIdent + '"]', // shorts
-        'a.media-item-thumbnail-container[href^="/watch?v=' + strIdent + '"]', // mobile
+        'a.ytp-videowall-still[href*="/watch?v=' + strIdent + '"]', // videowall
+        'a.ytp-ce-covering-overlay[href*="/watch?v=' + strIdent + '"]', // overlays
     ]).join(', ')));
 };
 
@@ -46,12 +42,14 @@ let refresh = function() {
             'strIdent': strIdent,
             'strTitle': strTitle
         }, function(objResponse) {
-            if (objResponse !== null) {
-                intWatchdate[objResponse.strIdent] = objResponse.intTimestamp;
+            if ((objResponse === null) || (objResponse === undefined)) {
+                return;
+            }
 
-                for (let objVideo of videos(objResponse.strIdent)) {
-                    mark(objVideo, objResponse.strIdent);
-                }
+            intWatchdate[objResponse.strIdent] = objResponse.intTimestamp;
+
+            for (let objVideo of videos(objResponse.strIdent)) {
+                mark(objVideo, objResponse.strIdent);
             }
         });
     }
@@ -90,6 +88,29 @@ let observe = function(objVideo) {
 
     objObservers.set(objVideo, objObserver);
 };
+
+// ##########################################################
+
+document.addEventListener('youtubeProgress', function(objEvent) {
+    chrome.runtime.sendMessage({
+        'strMessage': 'youtubeProgress',
+        'strIdent': objEvent.detail['strIdent'],
+        'strTitle': objEvent.detail['strTitle'],
+        'boolEnsure': true
+    }, function(objResponse) {
+        // ...
+    });
+
+    if (false) {
+        window.setTimeout(function() {
+            for (let objElement of document.querySelectorAll('span, a, yt-formatted-string')) {
+                if (objElement.textContent.includes(objEvent.detail['strTitle']) === true) {
+                    objElement.textContent = 'HOOK';
+                }
+            }
+        }, 3000);
+    }
+});
 
 // ##########################################################
 
