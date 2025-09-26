@@ -16,6 +16,8 @@ Chrome: [https://chrome.google.com/webstore/detail/watchmarker-for-youtube/](htt
 ## special thanks
 I would like to express my gratitude to [XP1](https://github.com/XP1) who has been a significant contributor to this project throughout the years. Not only does he support other users with their issues and opens up pull reuqest to improve this extension, he also comes up with [creative solutions](https://github.com/sniklaus/youtube-watchmarker/pull/126) such as adding a mutation observer to certain objects to detect changes in the Youtube layout.
 
+Also special thanks to [johan456789](https://github.com/johan456789), [widike](https://github.com/widike), and [andrei-cb](https://github.com/andrei-cb) for making many contributions to support the new manifest version. For example, consider [this](https://github.com/widike/youtube-watchmarker) fork for an entirely different spin of the extension that also supports syncing to a Supabase database.
+
 ## links
 * 2025.01 - this [project](https://github.com/yutotakano/youtube-takeout-json-to-watchmarker) to import from takeout by [yutotakano](https://github.com/yutotakano)
 * 2025.01 - this [project](https://github.com/serossi/YT2Grayjay) to import from takeout and export to grayjay by [serossi](https://github.com/serossi)
@@ -23,6 +25,7 @@ I would like to express my gratitude to [XP1](https://github.com/XP1) who has be
 
 ## contributors
 * [0xva](https://github.com/0xva)
+* [andrei-cb](https://github.com/andrei-cb)
 * [JeffBuckles](https://github.com/JeffBuckles)
 * [JGKle](https://github.com/JGKle)
 * [johan456789](https://github.com/johan456789)
@@ -31,6 +34,7 @@ I would like to express my gratitude to [XP1](https://github.com/XP1) who has be
 * [ngoclong19](https://github.com/ngoclong19)
 * [shoaibshakeel381](https://github.com/shoaibshakeel381)
 * [TotalCaesar659](https://github.com/TotalCaesar659)
+* [widike](https://github.com/widike)
 * [XP1](https://github.com/XP1)
 * [Yentis](https://github.com/Yentis)
 
