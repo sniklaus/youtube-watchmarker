@@ -16,20 +16,20 @@ let funcStorageset = async function(strKey, objValue) {
      await chrome.storage.local.set({ [strKey]: String(objValue) });
 };
 
-let funcCookie = async function(strCookie) {
-    let objCookie = await chrome.cookies.get({
-        'url': 'https://www.youtube.com',
-        'name': strCookie
-    });
-
-    if (objCookie === null) {
-        return null;
-    }
-
-    return objCookie.value;
-};
-
 let funcYoufetch = async function(strLink, objPayload, objContext, strClicktrack) {
+    let funcCookie = async function(strCookie) {
+        let objCookie = await chrome.cookies.get({
+            'url': 'https://www.youtube.com',
+            'name': strCookie
+        });
+
+        if (objCookie === null) {
+            return null;
+        }
+
+        return objCookie.value;
+    };
+
     let intTime = Math.round(new Date().getTime() / 1000.0);
     let strCookie = await funcCookie('SAPISID') || await funcCookie('__Secure-3PAPISID');
     let strOrigin = 'https://www.youtube.com';
@@ -162,22 +162,6 @@ let funcHackyparse = function(strJson) {
     return null;
 };
 
-let funcSendmessage = function(intTab, objMessage, intRetry) {
-    if (intRetry === 0) {
-        return;
-
-    } else if (intRetry === undefined) {
-        intRetry = 100;
-
-    }
-
-    chrome.tabs.sendMessage(intTab, objMessage, {}, function(objResponse) {
-        if ((chrome.runtime.lastError !== undefined) && (chrome.runtime.lastError !== null)) {
-            setTimeout(funcSendmessage, 100, intTab, objMessage, intRetry - 1);
-        }
-    });
-};
-
 // ##########################################################
 
 let Database = {
@@ -252,7 +236,8 @@ let Database = {
 
     export: async function(objRequest, funcProgress) {
         let objVideos = [];
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readonly');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
         let objCursor = await objDatabase.openCursor();
 
         while (objCursor) {
@@ -279,7 +264,8 @@ let Database = {
         let intNew = 0;
         let intExisting = 0;
 
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
 
         for (let objVideo of objRequest.objVideos) {
             let strIdent = objVideo.strIdent;
@@ -330,20 +316,24 @@ let Database = {
             funcProgress({
                 'strProgress': 'imported ' + (intNew + intExisting) + ' videos - ' + intNew + ' were new'
             });
-
         }
 
         await funcStorageset('extensions.Youwatch.Database.intSize', await objDatabase.count());
+
+        await objTransaction.done;
 
         return {};
     },
 
     reset: async function(objRequest) {
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
 
         await objDatabase.clear();
 
         await funcStorageset('extensions.Youwatch.Database.intSize', await objDatabase.count());
+
+        await objTransaction.done;
 
         return {};
     }
@@ -380,7 +370,8 @@ let History = {
             'maxResults': 1000000
         });
 
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
 
         for (let objEntry of objHistory) {
             if ((objEntry.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objEntry.url.indexOf('https://www.youtube.com/shorts/') !== 0) && (objEntry.url.indexOf('https://m.youtube.com/watch?v=') !== 0)) {
@@ -447,6 +438,8 @@ let History = {
 
         await funcStorageset('extensions.Youwatch.Database.intSize', await objDatabase.count());
         await funcStorageset('extensions.Youwatch.History.intTimestamp', new Date().getTime());
+
+        await objTransaction.done;
 
         return {};
     }
@@ -532,7 +525,8 @@ let Youtube = {
                 strContinuation = strRegex[1];
             }
 
-            let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
+            let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
+            let objDatabase = objTransaction.objectStore('storeDatabase');
 
             while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
                 let strIdent = strRegex[1];
@@ -595,6 +589,8 @@ let Youtube = {
             await funcStorageset('extensions.Youwatch.Database.intSize', await objDatabase.count());
             await funcStorageset('extensions.Youwatch.Youtube.intTimestamp', new Date().getTime());
 
+            await objTransaction.done;
+
             if (intExisting > objRequest.intThreshold) {
                 break;
 
@@ -608,7 +604,8 @@ let Youtube = {
     },
 
     lookup: async function(objRequest) {
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readonly');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
 
         let objGet = await objDatabase.index('strIdent').get(objRequest.strIdent);
 
@@ -625,7 +622,8 @@ let Youtube = {
     },
 
     mark: async function(objRequest) {
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
 
         let strIdent = objRequest.strIdent;
         let intTimestamp = objRequest.intTimestamp;
@@ -684,6 +682,8 @@ let Youtube = {
 
         await funcStorageset('extensions.Youwatch.Database.intSize', await objDatabase.count());
 
+        await objTransaction.done;
+
         return {
             'strIdent': strIdent,
             'intTimestamp': intTimestamp,
@@ -723,7 +723,8 @@ let Search = {
 
     lookup: async function(objRequest) {
         let objVideos = [];
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readonly').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readonly');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
         let objCursor = await objDatabase.index('intTimestamp').openCursor(null, 'prev');
 
         while (objCursor) {
@@ -755,18 +756,21 @@ let Search = {
     },
 
     delete: async function(objRequest, funcProgress) {
-        let objDatabase = Database.objDatabase.transaction(['storeDatabase'], 'readwrite').objectStore('storeDatabase');
+        let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
+        let objDatabase = objTransaction.objectStore('storeDatabase');
 
         funcProgress({
-            'strProgress': '1/4 - deleting it from the database'
+            'strProgress': '1/5 - deleting it from the database'
         });
 
         await objDatabase.delete(objRequest.strIdent);
 
         await funcStorageset('extensions.Youwatch.Database.intSize', await objDatabase.count());
 
+        await objTransaction.done;
+
         funcProgress({
-            'strProgress': '2/4 - deleting it from the history in the browser'
+            'strProgress': '2/5 - deleting it from the history in the browser'
         });
 
         let objHistory = await chrome.history.search({
@@ -790,7 +794,7 @@ let Search = {
         }
 
         funcProgress({
-            'strProgress': '3/4 - locating it in the history on youtube'
+            'strProgress': '3/5 - locating it in the history on youtube'
         });
 
         let objLookup = null; // only deleting the first occurrence since going through the entire history would take too much time
@@ -858,32 +862,19 @@ let Search = {
 
         if (objLookup === null) {
             funcProgress({
-                'strProgress': '4/4 - did not find it in the history on youtube'
+                'strProgress': '4/5 - did not find it in the history on youtube'
             });
 
         } else if (objLookup !== null) {
             funcProgress({
-                'strProgress': '4/4 - deleting it from the history on youtube'
+                'strProgress': '4/5 - deleting it from the history on youtube'
             });
 
-            let intTime = Math.round(new Date().getTime() / 1000.0);
-            let strCookie = await funcCookie('SAPISID') || await funcCookie('__Secure-3PAPISID');
-            let strOrigin = 'https://www.youtube.com';
-            let strHash = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(intTime + ' ' + strCookie + ' ' + strOrigin)); // https://stackoverflow.com/a/32065323
-            let strAuth = 'SAPISIDHASH ' + intTime + '_' + Array.from(new Uint8Array(strHash)).map(function(intByte) { return intByte.toString(16).padStart(2, '0'); }).join('');
-
-            objContext['client']['acceptHeader'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            objContext['client']['screenWidthPoints'] = 1629;
-            objContext['client']['screenHeightPoints'] = 1312;
-            objContext['client']['screenPixelDensity'] = 1;
-            objContext['client']['screenDensityFloat'] = 1;
-            objContext['client']['utcOffsetMinutes'] = -420;
-            objContext['client']['userInterfaceTheme'] = 'USER_INTERFACE_THEME_LIGHT';
-
-            objContext['request']['internalExperimentFlags'] = [];
-            objContext['request']['consistencyTokenJars'] = [];
-
             await funcYoufetch('https://www.youtube.com/youtubei/v1/feedback', { 'feedbackTokens': [objLookup.strFeedback], 'isFeedbackTokenUnencrypted': false, 'shouldMerge': false }, objContext, strClicktrack);
+
+            funcProgress({
+                'strProgress': '5/5 - looks like we are all done here'
+            });
 
         }
 
@@ -959,7 +950,7 @@ let Search = {
     }
 
     if ((await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress') === null) || ((await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress')).indexOf('do not modify') === -1)) {
-        await funcStorageset('extensions.Youwatch.Stylesheet.strHideprogress', 'yt-thumbnail-bottom-overlay-view-model, ytd-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
+        await funcStorageset('extensions.Youwatch.Stylesheet.strHideprogress', 'yt-thumbnail-overlay-progress-bar-view-model, ytd-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
     }
 
     await Database.init();
@@ -1021,44 +1012,6 @@ let Search = {
         }
     });
 
-    chrome.history.onVisited.addListener(async function(objEntry) {
-        if ((objEntry.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objEntry.url.indexOf('https://www.youtube.com/shorts/') !== 0) && (objEntry.url.indexOf('https://m.youtube.com/watch?v=') !== 0)) {
-            return;
-
-        } else if ((objEntry.title === undefined) || (objEntry.title === null)) {
-            return;
-
-        }
-
-        if (await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
-            let strIdent = objEntry.url.split('&')[0].slice(-11);
-            let strTitle = objEntry.title;
-
-            if (strTitle.slice(-10) === ' - YouTube') {
-                strTitle = strTitle.slice(0, -10);
-            }
-
-            await Youtube.mark({
-                'strIdent': strIdent,
-                'strTitle': strTitle
-            });
-
-            chrome.tabs.query({
-                'url': '*://*.youtube.com/*'
-            }, function(objTabs) {
-                for (let objTab of objTabs) {
-                    funcSendmessage(objTab.id, {
-                        'strMessage': 'youtubeMark',
-                        'strIdent': strIdent,
-                        'intTimestamp': 0,
-                        'strTitle': strTitle,
-                        'intCount': 0
-                    });
-                }
-            });
-        }
-    });
-
     chrome.tabs.onUpdated.addListener(async function(intTab, objChange, objTab) {
         if (objTab.id < 0) {
             return;
@@ -1066,6 +1019,38 @@ let Search = {
         } else if ((objTab.url.indexOf('https://www.youtube.com') !== 0) && (objTab.url.indexOf('https://m.youtube.com') !== 0)) {
             return;
 
+        }
+
+        if (await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
+            if ((objTab.url.indexOf('https://www.youtube.com/watch?v=') === 0) || (objTab.url.indexOf('https://www.youtube.com/shorts/') === 0) || (objTab.url.indexOf('https://m.youtube.com/watch?v=') === 0)) {
+                if ((objChange.title !== undefined) && (objChange.title !== null)) {
+                    let strIdent = objTab.url.split('&')[0].slice(-11);
+                    let strTitle = objChange.title;
+
+                    if (strTitle.slice(-10) === ' - YouTube') {
+                        strTitle = strTitle.slice(0, -10);
+                    }
+
+                    await Youtube.mark({
+                        'strIdent': strIdent,
+                        'strTitle': strTitle
+                    });
+
+                    chrome.tabs.query({
+                        'url': '*://*.youtube.com/*'
+                    }, function(objTabs) {
+                        for (let objTab of objTabs) {
+                            chrome.tabs.sendMessage(objTab.id, {
+                                'strMessage': 'youtubeMark',
+                                'strIdent': strIdent,
+                                'intTimestamp': 0,
+                                'strTitle': strTitle,
+                                'intCount': 0
+                            });
+                        }
+                    });
+                }
+            }
         }
 
         if (await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true)) {

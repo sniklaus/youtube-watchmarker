@@ -16,7 +16,7 @@ let videos = function(strIdent) {
     ]).join(', ')));
 };
 
-let refresh = function() {
+let refresh = async function() {
     let objVideos = videos('');
 
     for (let objVideo of objVideos) {
@@ -37,7 +37,7 @@ let refresh = function() {
             }
         }
 
-        chrome.runtime.sendMessage({
+        await chrome.runtime.sendMessage({
             'strMessage': 'youtubeLookup',
             'strIdent': strIdent,
             'strTitle': strTitle
@@ -91,8 +91,8 @@ let observe = function(objVideo) {
 
 // ##########################################################
 
-document.addEventListener('youtubeProgress', function(objEvent) {
-    chrome.runtime.sendMessage({
+document.addEventListener('youtubeProgress', async function(objEvent) {
+    await chrome.runtime.sendMessage({
         'strMessage': 'youtubeProgress',
         'strIdent': objEvent.detail['strIdent'],
         'strTitle': objEvent.detail['strTitle'],
@@ -114,9 +114,9 @@ document.addEventListener('youtubeProgress', function(objEvent) {
 
 // ##########################################################
 
-chrome.runtime.onMessage.addListener(function(objData, objSender, funcResponse) {
+chrome.runtime.onMessage.addListener(async function(objData, objSender, funcResponse) {
     if (objData.strMessage === 'youtubeRefresh') {
-        refresh();
+        await refresh();
 
     } else if (objData.strMessage === 'youtubeMark') {
         intWatchdate[objData.strIdent] = objData.intTimestamp;
@@ -140,7 +140,7 @@ document.addEventListener('yt-navigate-finish', function() {
     strLastchange = null; // there is a chance that this is not sufficient, the page may not be updated yet so if the interval function triggers it may have been too soon
 });
 
-window.setInterval(function() {
+window.setInterval(async function() {
     if (document.hidden === true) {
         return;
 
@@ -149,5 +149,11 @@ window.setInterval(function() {
 
     }
 
-    refresh();
+    await refresh();
 }, 300);
+
+document.addEventListener('visibilitychange', async function() {
+    if (document.visibilityState === 'visible') {
+        await refresh();
+    }
+});
