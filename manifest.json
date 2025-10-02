@@ -5,7 +5,7 @@
     "description": "Automatically mark videos on Youtube that you have already watched.",
     "homepage_url": "https://sniklaus.com/",
 
-    "version": "5.0.1",
+    "version": "5.0.2",
 
     "permissions": [
         "alarms",
@@ -19,6 +19,10 @@
     ],
 
     "host_permissions": ["*://www.youtube.com/*", "*://m.youtube.com/*"],
+
+    "action": {
+        "default_title": "Open the settings page for the Watchmarker."
+    },
 
     "options_ui": {
         "page": "content/index.html",

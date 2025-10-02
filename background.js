@@ -162,6 +162,113 @@ let funcHackyparse = function(strJson) {
     return null;
 };
 
+let funcParsevideos = function(strText, boolProgress) {
+    let objVideos = [];
+
+    for (let strVideo of strText.split('{"lockupViewModel":').slice(1)) {
+        let objVideo = funcHackyparse('{"lockupViewModel":' + strVideo);
+
+        if (objVideo === null) {
+            continue;
+        }
+
+        if (boolProgress === true) {
+            if (JSON.stringify(objVideo).indexOf('"thumbnailOverlayProgressBarViewModel"') === -1) {
+                continue;
+            }
+        }
+
+        let strIdent = objVideo['lockupViewModel']['contentId'];
+        let strTitle = null;
+
+        if (strTitle === null) {
+            try {
+                strTitle = objVideo['lockupViewModel']['metadata']['lockupMetadataViewModel']['title']['content'];
+            } catch (objError) {
+                // ...
+            }
+        }
+
+        if (strTitle === null) {
+            try {
+                strTitle = objVideo['lockupViewModel']['rendererContext']['accessibilityContext']['label'];
+            } catch (objError) {
+                // ...
+            }
+        }
+
+        if (strIdent.length !== 11) {
+            continue;
+
+        } else if (strTitle === null) {
+            continue;
+
+        }
+
+        objVideos.push({
+            'objVideo': objVideo,
+            'strIdent': strIdent,
+            'strTitle': strTitle
+        })
+    }
+
+    for (let strVideo of strText.split('{"videoRenderer":{"videoId":"').slice(1)) {
+        let objVideo = funcHackyparse('{"videoRenderer":{"videoId":"' + strVideo);
+
+        if (objVideo === null) {
+            continue;
+        }
+
+        if (boolProgress === true) {
+            if (JSON.stringify(objVideo).indexOf('"percentDurationWatched"') === -1) {
+                continue;
+            }
+        }
+
+        let strIdent = objVideo['videoRenderer']['videoId'];
+        let strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
+
+        if (strIdent.length !== 11) {
+            continue;
+        }
+
+        objVideos.push({
+            'objVideo': objVideo,
+            'strIdent': strIdent,
+            'strTitle': strTitle
+        })
+    }
+
+    for (let strVideo of strText.split('{"playlistVideoRenderer":{"videoId":"').slice(1)) {
+        let objVideo = funcHackyparse('{"playlistVideoRenderer":{"videoId":"' + strVideo);
+
+        if (objVideo === null) {
+            continue;
+        }
+
+        if (boolProgress === true) {
+            if (JSON.stringify(objVideo).indexOf('"percentDurationWatched"') === -1) {
+                continue;
+            }
+        }
+
+        let strIdent = objVideo['playlistVideoRenderer']['videoId'];
+        let strTitle = objVideo['playlistVideoRenderer']['title']['runs'][0]['text'];
+
+        if (strIdent.length !== 11) {
+            continue;
+        }
+
+        objVideos.push({
+            'objVideo': objVideo,
+            'strIdent': strIdent,
+            'strTitle': strTitle
+        })
+    }
+
+    return objVideos;
+};
+
 // ##########################################################
 
 let Database = {
@@ -505,41 +612,32 @@ let Youtube = {
 
             }
 
-            let strText = await objFetch.text();
+            let strResponse = await objFetch.text();
 
             if (objContext === null) {
-                objContext = funcHackyparse(strText.split('"INNERTUBE_CONTEXT":')[1]);
+                objContext = funcHackyparse(strResponse.split('"INNERTUBE_CONTEXT":')[1]);
             }
 
             let strRegex = null;
             let objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
             let objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
-            let objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"text"[^"]*"([^"]*)"', 'g');
-            let strUnescaped = strText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-            if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
+            if ((strRegex = objClicktrack.exec(strResponse)) !== null) {
                 strClicktrack = strRegex[1];
             }
 
-            if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
+            if ((strRegex = objContinuation.exec(strResponse)) !== null) {
                 strContinuation = strRegex[1];
             }
 
             let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
             let objDatabase = objTransaction.objectStore('storeDatabase');
 
-            while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                let strIdent = strRegex[1];
+            for (let objVideo of funcParsevideos(strResponse, false)) {
+                let strIdent = objVideo['strIdent'];
                 let intTimestamp = null;
-                let strTitle = strRegex[2];
+                let strTitle = objVideo['strTitle'];
                 let intCount = null;
-
-                strTitle = strTitle.split('\\u0022').join('"');
-                strTitle = strTitle.split('\\u0026').join('&');
-                strTitle = strTitle.split('\\u003C').join('<');
-                strTitle = strTitle.split('\\u003C').join('=');
-                strTitle = strTitle.split('\\u003E').join('>');
-                strTitle = strTitle.split('\\u003E').join('>');
 
                 let objGet = await objDatabase.index('strIdent').get(strIdent);
 
@@ -820,33 +918,47 @@ let Search = {
 
                 }
 
-                let strText = await objFetch.text();
+                let strResponse = await objFetch.text();
 
                 if (objContext === null) {
-                    objContext = funcHackyparse(strText.split('"INNERTUBE_CONTEXT":')[1]);
+                    objContext = funcHackyparse(strResponse.split('"INNERTUBE_CONTEXT":')[1]);
                 }
 
                 let strRegex = null;
                 let objClicktrack = new RegExp('"continuationEndpoint":[^"]*"clickTrackingParams":[^"]*"([^"]*)"', 'g');
                 let objContinuation = new RegExp('"continuationCommand":[^"]*"token":[^"]*"([^"]*)"', 'g');
-                let objVideo = new RegExp('"videoRenderer":[^"]*"videoId":[^"]*"([^"]{11})".*?"topLevelButtons".*?"clickTrackingParams"[^"]*"([^"]*)".*?"feedbackToken"[^"]*"([^"]*)"', 'g');
-                let strUnescaped = strText.split('\\"').join('\\u0022').split('\r').join('').split('\n').join('');
 
-                if ((strRegex = objClicktrack.exec(strUnescaped)) !== null) {
+                if ((strRegex = objClicktrack.exec(strResponse)) !== null) {
                     strClicktrack = strRegex[1];
                 }
 
-                if ((strRegex = objContinuation.exec(strUnescaped)) !== null) {
+                if ((strRegex = objContinuation.exec(strResponse)) !== null) {
                     strContinuation = strRegex[1];
                 }
 
-                while ((strRegex = objVideo.exec(strUnescaped)) !== null) {
-                    let strIdent = strRegex[1];
-                    let strClicktrack = strRegex[2];
-                    let strFeedback = strRegex[3];
+                for (let objVideo of funcParsevideos(strResponse, false)) {
+                    let strIdent = objVideo['strIdent'];
 
                     if (strIdent !== objRequest.strIdent) {
                         continue;
+                    }
+
+                    let strClicktrack = null;
+                    let strFeedback = null;
+
+                    for (let objItem of objVideo['objVideo']['lockupViewModel']['metadata']['lockupMetadataViewModel']['menuButton']['buttonViewModel']['onTap']['innertubeCommand']['showSheetCommand']['panelLoadingStrategy']['inlineContent']['sheetViewModel']['content']['listViewModel']['listItems']) {
+                        if (JSON.stringify(objItem).indexOf('"DELETE"') !== -1) {
+                            strClicktrack = objItem['listItemViewModel']['rendererContext']['commandContext']['onTap']['innertubeCommand']['clickTrackingParams'];
+                            strFeedback = objItem['listItemViewModel']['rendererContext']['commandContext']['onTap']['innertubeCommand']['feedbackEndpoint']['feedbackToken'];
+                        }
+                    }
+
+                    if (strClicktrack === null) {
+                        continue;
+
+                    } else if (strFeedback === null) {
+                        continue;
+
                     }
 
                     objLookup = {
@@ -926,7 +1038,7 @@ let Search = {
     }
 
     if (await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === null) {
-        await funcStorageset('extensions.Youwatch.Visualization.boolShowdate', true);
+        await funcStorageset('extensions.Youwatch.Visualization.boolShowdate', false);
     }
 
     if (await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === null) {
@@ -959,9 +1071,7 @@ let Search = {
     await Search.init();
 
     chrome.action.onClicked.addListener(function() {
-        chrome.tabs.create({
-            'url': 'content/index.html'
-        });
+        chrome.runtime.openOptionsPage();
     });
 
     chrome.runtime.onMessage.addListener(function(objRequest, objSender, funcResponse) {
@@ -1144,3 +1254,7 @@ let Search = {
         }
     });
 })();
+
+// ##########################################################
+
+setInterval(chrome.runtime.getPlatformInfo, 20000); // https://stackoverflow.com/a/66618269
