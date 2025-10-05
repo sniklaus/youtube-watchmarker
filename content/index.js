@@ -1,19 +1,19 @@
 'use strict';
 
 let objDatabase = chrome.runtime.connect({
-    'name': 'database'
+    'name': 'database',
 });
 
 let objHistory = chrome.runtime.connect({
-    'name': 'history'
+    'name': 'history',
 });
 
 let objYoutube = chrome.runtime.connect({
-    'name': 'youtube'
+    'name': 'youtube',
 });
 
 let objSearch = chrome.runtime.connect({
-    'name': 'search'
+    'name': 'search',
 });
 
 let funcStorageget = async function(strKey) {
@@ -33,14 +33,14 @@ let funcStorageset = async function(strKey, objValue) {
 jQuery(window.document).ready(async function() {
     jQuery('html')
         .attr({
-            'data-bs-theme': window.matchMedia('(prefers-color-scheme: dark)').matches === true ? 'dark' : ''
+            'data-bs-theme': window.matchMedia('(prefers-color-scheme: dark)').matches === true ? 'dark' : '',
         })
     ;
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(objEvent) {
         jQuery('html')
             .attr({
-                'data-bs-theme': window.matchMedia('(prefers-color-scheme: dark)').matches === true ? 'dark' : ''
+                'data-bs-theme': window.matchMedia('(prefers-color-scheme: dark)').matches === true ? 'dark' : '',
             })
         ;
     });
@@ -49,7 +49,7 @@ jQuery(window.document).ready(async function() {
         .on('click', function() {
             jQuery('#idLoading_Container')
                 .css({
-                    'display': 'block'
+                    'display': 'block',
                 })
             ;
 
@@ -67,7 +67,7 @@ jQuery(window.document).ready(async function() {
 
             objDatabase.postMessage({
                 'strMessage': 'databaseExport',
-                'objRequest': {}
+                'objRequest': {},
             });
         })
         .each(function() {
@@ -104,7 +104,7 @@ jQuery(window.document).ready(async function() {
         .on('change', function() {
             jQuery('#idLoading_Container')
                 .css({
-                    'display': 'block'
+                    'display': 'block',
                 })
             ;
 
@@ -126,8 +126,8 @@ jQuery(window.document).ready(async function() {
                 objDatabase.postMessage({
                     'strMessage': 'databaseImport',
                     'objRequest': {
-                        'objVideos': JSON.parse(decodeURIComponent(escape(atob(objEvent.target.result))))
-                    }
+                        'objVideos': JSON.parse(decodeURIComponent(escape(atob(objEvent.target.result)))),
+                    },
                 });
             };
 
@@ -170,13 +170,13 @@ jQuery(window.document).ready(async function() {
         .on('click', function() {
             jQuery(this)
                 .css({
-                    'display': 'none'
+                    'display': 'none',
                 })
             ;
 
             jQuery('#idDatabase_Resyes').closest('.input-group')
                 .css({
-                    'display': 'inline'
+                    'display': 'inline',
                 })
             ;
         })
@@ -186,7 +186,7 @@ jQuery(window.document).ready(async function() {
         .on('click', function() {
             objDatabase.postMessage({
                 'strMessage': 'databaseReset',
-                'objRequest': {}
+                'objRequest': {},
             });
         })
         .each(function() {
@@ -206,7 +206,7 @@ jQuery(window.document).ready(async function() {
         .on('click', function() {
             jQuery('#idLoading_Container')
                 .css({
-                    'display': 'block'
+                    'display': 'block',
                 })
             ;
 
@@ -225,8 +225,8 @@ jQuery(window.document).ready(async function() {
             objHistory.postMessage({
                 'strMessage': 'historySynchronize',
                 'objRequest': {
-                    'intTimestamp': 0
-                }
+                    'intTimestamp': 0,
+                },
             });
         })
         .each(function() {
@@ -266,7 +266,7 @@ jQuery(window.document).ready(async function() {
         .on('click', function() {
             jQuery('#idLoading_Container')
                 .css({
-                    'display': 'block'
+                    'display': 'block',
                 })
             ;
 
@@ -285,8 +285,8 @@ jQuery(window.document).ready(async function() {
             objYoutube.postMessage({
                 'strMessage': 'youtubeSynchronize',
                 'objRequest': {
-                    'intThreshold': 1000000
-                }
+                    'intThreshold': 1000000,
+                },
             });
         })
         .each(function() {
@@ -330,12 +330,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -344,12 +344,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -363,12 +363,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -377,12 +377,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -396,12 +396,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -410,12 +410,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYoubadge') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -429,12 +429,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -443,12 +443,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -462,12 +462,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -476,12 +476,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -495,12 +495,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -509,12 +509,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -528,12 +528,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -542,12 +542,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -561,12 +561,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -575,12 +575,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -594,12 +594,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'none' : 'block'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'none' : 'block',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'block' : 'none'
+                            'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'block' : 'none',
                         })
                     .end()
                 .end()
@@ -608,12 +608,12 @@ jQuery(window.document).ready(async function() {
         .find('i')
             .eq(0)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'none' : 'block'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'none' : 'block',
                 })
             .end()
             .eq(1)
                 .css({
-                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'block' : 'none'
+                    'display': await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true) ? 'block' : 'none',
                 })
             .end()
         .end()
@@ -624,7 +624,7 @@ jQuery(window.document).ready(async function() {
             if (objEvent.keyCode === 13) {
                 jQuery('#idSearch_Lookup')
                     .data({
-                        'intSkip' : 0
+                        'intSkip' : 0,
                     })
                 ;
 
@@ -635,13 +635,13 @@ jQuery(window.document).ready(async function() {
 
     jQuery('#idSearch_Lookup')
         .data({
-            'intSkip' : 0
+            'intSkip' : 0,
         })
         .on('click', function(objEvent) {
             if (objEvent.originalEvent !== undefined) {
                 jQuery('#idSearch_Lookup')
                     .data({
-                        'intSkip' : 0
+                        'intSkip' : 0,
                     })
                 ;
             }
@@ -651,12 +651,12 @@ jQuery(window.document).ready(async function() {
                 .find('i')
                     .eq(0)
                         .css({
-                            'display': 'none'
+                            'display': 'none',
                         })
                     .end()
                     .eq(1)
                         .css({
-                            'display': 'inline'
+                            'display': 'inline',
                         })
                     .end()
                 .end()
@@ -667,8 +667,8 @@ jQuery(window.document).ready(async function() {
                 'objRequest': {
                     'strQuery': jQuery('#idSearch_Query').val(),
                     'intSkip': jQuery('#idSearch_Lookup').data('intSkip'),
-                    'intLength': 10
-                }
+                    'intLength': 10,
+                },
             });
         })
         .each(function() {
@@ -683,12 +683,12 @@ jQuery(window.document).ready(async function() {
                         .find('i')
                             .eq(0)
                                 .css({
-                                    'display': 'inline'
+                                    'display': 'inline',
                                 })
                             .end()
                             .eq(1)
                                 .css({
-                                    'display': 'none'
+                                    'display': 'none',
                                 })
                             .end()
                         .end()
@@ -700,7 +700,7 @@ jQuery(window.document).ready(async function() {
                             .css({
                                 'display': 'flex',
                                 'flex-direction': 'column',
-                                'gap': '16px'
+                                'gap': '16px',
                             })
                         ;
                     }
@@ -713,40 +713,40 @@ jQuery(window.document).ready(async function() {
                                     'border-radius': 'var(--bs-border-radius)',
                                     'display': 'flex',
                                     'gap': '12px',
-                                    'padding': '12px'
+                                    'padding': '12px',
                                 })
                                 .append(jQuery('<div></div>')
                                     .append(jQuery('<a></a>')
                                         .attr({
                                             'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent,
-                                            'target': '_blank'
+                                            'target': '_blank',
                                         })
                                         .append(jQuery('<img></img>')
                                             .attr({
-                                                'src': 'https://img.youtube.com/vi/' + objVideo.strIdent + '/mqdefault.jpg'
+                                                'src': 'https://img.youtube.com/vi/' + objVideo.strIdent + '/mqdefault.jpg',
                                             })
                                             .css({
                                                 'border-radius': 'var(--bs-border-radius)',
                                                 'height': '94px',
-                                                'width': '168px'
+                                                'width': '168px',
                                             })
                                         )
                                     )
                                 )
                                 .append(jQuery('<div></div>')
                                     .css({
-                                        'flex': '1'
+                                        'flex': '1',
                                     })
                                     .append(jQuery('<div></div>')
                                         .append(jQuery('<a></a>')
                                             .attr({
                                                 'href': 'https://www.youtube.com/watch?v=' + objVideo.strIdent,
-                                                'target': '_blank'
+                                                'target': '_blank',
                                             })
                                             .css({
                                                 'color': 'inherit',
                                                 'font-size': '16px',
-                                                'text-decoration': 'none'
+                                                'text-decoration': 'none',
                                             })
                                             .text(objVideo.strTitle)
                                         )
@@ -755,7 +755,7 @@ jQuery(window.document).ready(async function() {
                                         .css({
                                             'color': 'var(--bs-secondary-color)',
                                             'font-size': '13px',
-                                            'margin': '5px 0px 0px 0px'
+                                            'margin': '5px 0px 0px 0px',
                                         })
                                         .text(moment(objVideo.intTimestamp).format('YYYY.MM.DD - HH:mm'))
                                     )
@@ -763,7 +763,7 @@ jQuery(window.document).ready(async function() {
                                         .css({
                                             'color': 'var(--bs-secondary-color)',
                                             'font-size': '13px',
-                                            'margin': '5px 0px 0px 0px'
+                                            'margin': '5px 0px 0px 0px',
                                         })
                                         .text(objVideo.intCount + ' View' + (objVideo.intCount == 1 ? '' : 's'))
                                     )
@@ -771,19 +771,19 @@ jQuery(window.document).ready(async function() {
                                 .append(jQuery('<div></div>')
                                     .append(jQuery('<div></div>')
                                         .css({
-                                            'cursor': 'pointer'
+                                            'cursor': 'pointer',
                                         })
                                         .append(jQuery('<i></i>')
                                             .addClass('fa-regular')
                                             .addClass('fa-trash-can')
                                         )
                                         .data({
-                                            'strIdent': objVideo.strIdent
+                                            'strIdent': objVideo.strIdent,
                                         })
                                         .on('click', function() {
                                             jQuery('#idLoading_Container')
                                                 .css({
-                                                    'display': 'block'
+                                                    'display': 'block',
                                                 })
                                             ;
 
@@ -802,8 +802,8 @@ jQuery(window.document).ready(async function() {
                                             objSearch.postMessage({
                                                 'strMessage': 'searchDelete',
                                                 'objRequest': {
-                                                    'strIdent': jQuery(this).data('strIdent')
-                                                }
+                                                    'strIdent': jQuery(this).data('strIdent'),
+                                                },
                                             });
                                         })
                                     )
@@ -821,7 +821,7 @@ jQuery(window.document).ready(async function() {
 
                                         jQuery('#idSearch_Lookup')
                                             .data({
-                                                'intSkip' : jQuery('#idSearch_Lookup').data('intSkip') + 10
+                                                'intSkip' : jQuery('#idSearch_Lookup').data('intSkip') + 10,
                                             })
                                         ;
 

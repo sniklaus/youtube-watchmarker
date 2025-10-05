@@ -74,7 +74,7 @@ let funcParsevideos = function(strText, boolProgress) {
         objVideos.push({
             'objVideo': objVideo,
             'strIdent': strIdent,
-            'strTitle': strTitle
+            'strTitle': strTitle,
         })
     }
 
@@ -101,7 +101,7 @@ let funcParsevideos = function(strText, boolProgress) {
         objVideos.push({
             'objVideo': objVideo,
             'strIdent': strIdent,
-            'strTitle': strTitle
+            'strTitle': strTitle,
         })
     }
 
@@ -128,7 +128,7 @@ let funcParsevideos = function(strText, boolProgress) {
         objVideos.push({
             'objVideo': objVideo,
             'strIdent': strIdent,
-            'strTitle': strTitle
+            'strTitle': strTitle,
         })
     }
 
@@ -140,8 +140,8 @@ let funcEmitvideos = function(strText) {
         document.dispatchEvent(new CustomEvent('youtubeProgress', {
             'detail': {
                 'strIdent': objVideo['strIdent'],
-                'strTitle': objVideo['strTitle']
-            }
+                'strTitle': objVideo['strTitle'],
+            },
         }));
     }
 };
@@ -181,7 +181,7 @@ window.fetch = async function(objRequest, objOptions) {
         objResponse = new Response(strResponse, {
             'status': objResponse.status,
             'statusText': objResponse.statusText,
-            'headers': objResponse.headers
+            'headers': objResponse.headers,
         });
     }
 

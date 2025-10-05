@@ -40,7 +40,7 @@ let refresh = async function() {
         await chrome.runtime.sendMessage({
             'strMessage': 'youtubeLookup',
             'strIdent': strIdent,
-            'strTitle': strTitle
+            'strTitle': strTitle,
         }, function(objResponse) {
             if ((objResponse === null) || (objResponse === undefined)) {
                 return;
@@ -84,7 +84,7 @@ let observe = function(objVideo) {
         mark(objVideo, objVideo.href.split('&')[0].slice(-11));
     });
 
-    objObserver.observe(objVideo, {'attributes': true, 'attributeFilter': ['href']});
+    objObserver.observe(objVideo, { 'attributes': true, 'attributeFilter': ['href'] });
 
     objObservers.set(objVideo, objObserver);
 };
@@ -96,7 +96,7 @@ document.addEventListener('youtubeProgress', async function(objEvent) {
         'strMessage': 'youtubeProgress',
         'strIdent': objEvent.detail['strIdent'],
         'strTitle': objEvent.detail['strTitle'],
-        'boolEnsure': true
+        'boolEnsure': true,
     }, function(objResponse) {
         // ...
     });

@@ -20,7 +20,7 @@ let funcYoufetch = async function(strLink, objPayload, objContext, strClicktrack
     let funcCookie = async function(strCookie) {
         let objCookie = await chrome.cookies.get({
             'url': 'https://www.youtube.com',
-            'name': strCookie
+            'name': strCookie,
         });
 
         if (objCookie === null) {
@@ -47,7 +47,7 @@ let funcYoufetch = async function(strLink, objPayload, objContext, strClicktrack
         'graftUrl': 'https://www.youtube.com/feed/history',
         'pwaInstallabilityStatus': 'PWA_INSTALLABILITY_STATUS_UNKNOWN',
         'webDisplayMode': 'WEB_DISPLAY_MODE_BROWSER',
-        'isWebNativeShareAvailable': false
+        'isWebNativeShareAvailable': false,
     };
 
     objContext['request']['internalExperimentFlags'] = [];
@@ -64,74 +64,74 @@ let funcYoufetch = async function(strLink, objPayload, objContext, strClicktrack
             'X-Goog-Visitor-Id': objContext['client']['visitorData'],
             'X-Youtube-Bootstrap-Logged-In': true,
             'X-Youtube-Client-Name': 1,
-            'X-Youtube-Client-Version': objContext['client']['clientVersion']
+            'X-Youtube-Client-Version': objContext['client']['clientVersion'],
         },
         'body': JSON.stringify({
             'context': {
                 'client': objContext['client'],
                 'user': {
-                    'lockedSafetyMode': false
+                    'lockedSafetyMode': false,
                 },
                 'request': objContext['request'],
                 'clickTracking': {
-                    'clickTrackingParams': strClicktrack
+                    'clickTrackingParams': strClicktrack,
                 },
                 'adSignalsInfo': {
                     'params': [{
                         'key': 'dt',
-                        'value': String(new Date().getTime())
+                        'value': String(new Date().getTime()),
                     }, {
                         'key': 'flash',
-                        'value': '0'
+                        'value': '0',
                     }, {
                         'key': 'frm',
-                        'value': '0'
+                        'value': '0',
                     }, {
                         'key': 'u_tz',
-                        'value': '-420'
+                        'value': '-420',
                     }, {
                         'key': 'u_his',
-                        'value': '3'
+                        'value': '3',
                     }, {
                         'key': 'u_h',
-                        'value': '2160'
+                        'value': '2160',
                     }, {
                         'key': 'u_w',
-                        'value': '3840'
+                        'value': '3840',
                     }, {
                         'key': 'u_ah',
-                        'value': '2112'
+                        'value': '2112',
                     }, {
                         'key': 'u_aw',
-                        'value': '3840'
+                        'value': '3840',
                     }, {
                         'key': 'u_cd',
-                        'value': '24'
+                        'value': '24',
                     }, {
                         'key': 'bc',
-                        'value': '31'
+                        'value': '31',
                     }, {
                         'key': 'bih',
-                        'value': '1312'
+                        'value': '1312',
                     }, {
                         'key': 'biw',
-                        'value': '1629'
+                        'value': '1629',
                     }, {
                         'key': 'brdim',
-                        'value': '-20,-20,-20,-20,3840,0,1960,2152,1629,1312'
+                        'value': '-20,-20,-20,-20,3840,0,1960,2152,1629,1312',
                     }, {
                         'key': 'vis',
-                        'value': '1'
+                        'value': '1',
                     }, {
                         'key': 'wgl',
-                        'value': 'true'
+                        'value': 'true',
                     }, {
                         'key': 'ca_type',
-                        'value': 'image'
-                    }]
-                }
+                        'value': 'image',
+                    }],
+                },
             },
-            ...objPayload
+            ...objPayload,
         })
     });
 };
@@ -208,7 +208,7 @@ let funcParsevideos = function(strText, boolProgress) {
         objVideos.push({
             'objVideo': objVideo,
             'strIdent': strIdent,
-            'strTitle': strTitle
+            'strTitle': strTitle,
         })
     }
 
@@ -235,7 +235,7 @@ let funcParsevideos = function(strText, boolProgress) {
         objVideos.push({
             'objVideo': objVideo,
             'strIdent': strIdent,
-            'strTitle': strTitle
+            'strTitle': strTitle,
         })
     }
 
@@ -262,7 +262,7 @@ let funcParsevideos = function(strText, boolProgress) {
         objVideos.push({
             'objVideo': objVideo,
             'strIdent': strIdent,
-            'strTitle': strTitle
+            'strTitle': strTitle,
         })
     }
 
@@ -284,20 +284,20 @@ let Database = {
 
                 } else if (objDatabase.objectStoreNames.contains('storeDatabase') === false) {
                     objStore = objDatabase.createObjectStore('storeDatabase', {
-                        'keyPath': 'strIdent'
+                        'keyPath': 'strIdent',
                     });
 
                 }
 
                 if (objStore.indexNames.contains('strIdent') === false) {
                     objStore.createIndex('strIdent', 'strIdent', {
-                        'unique': true
+                        'unique': true,
                     });
                 }
 
                 if (objStore.indexNames.contains('intTimestamp') === false) {
                     objStore.createIndex('intTimestamp', 'intTimestamp', {
-                        'unique': false
+                        'unique': false,
                     });
                 }
             }
@@ -312,7 +312,7 @@ let Database = {
                             'objResponse': await Database.export(objData.objRequest, function(objResponse) {
                                 objPort.postMessage({
                                     'strMessage': 'databaseExport-progress',
-                                    'objResponse': objResponse
+                                    'objResponse': objResponse,
                                 });
                             })
                         });
@@ -323,7 +323,7 @@ let Database = {
                             'objResponse': await Database.import(objData.objRequest, function(objResponse) {
                                 objPort.postMessage({
                                     'strMessage': 'databaseImport-progress',
-                                    'objResponse': objResponse
+                                    'objResponse': objResponse,
                                 });
                             })
                         });
@@ -332,7 +332,7 @@ let Database = {
                     } else if (objData.strMessage === 'databaseReset') {
                         objPort.postMessage({
                             'strMessage': 'databaseReset',
-                            'objResponse': await Database.reset(objData.objRequest)
+                            'objResponse': await Database.reset(objData.objRequest),
                         });
 
                     }
@@ -352,18 +352,18 @@ let Database = {
                 'strIdent': objCursor.value.strIdent,
                 'intTimestamp': objCursor.value.intTimestamp,
                 'strTitle': objCursor.value.strTitle,
-                'intCount': objCursor.value.intCount
+                'intCount': objCursor.value.intCount,
             });
 
             funcProgress({
-                'strProgress': 'collected ' + objVideos.length + ' videos'
+                'strProgress': 'collected ' + objVideos.length + ' videos',
             });
 
             objCursor = await objCursor.continue();
         }
 
         return {
-            'objVideos': objVideos
+            'objVideos': objVideos,
         };
     },
 
@@ -397,7 +397,7 @@ let Database = {
                     'strIdent': strIdent,
                     'intTimestamp': intTimestamp,
                     'strTitle': strTitle,
-                    'intCount': intCount
+                    'intCount': intCount,
                 });
 
             } else if ((objGet !== undefined) && (objGet !== null)) {
@@ -415,13 +415,13 @@ let Database = {
                     'strIdent': strIdent,
                     'intTimestamp': intTimestamp,
                     'strTitle': strTitle,
-                    'intCount': intCount
+                    'intCount': intCount,
                 });
 
             }
 
             funcProgress({
-                'strProgress': 'imported ' + (intNew + intExisting) + ' videos - ' + intNew + ' were new'
+                'strProgress': 'imported ' + (intNew + intExisting) + ' videos - ' + intNew + ' were new',
             });
         }
 
@@ -457,9 +457,9 @@ let History = {
                             'objResponse': await History.synchronize(objData.objRequest, function(objResponse) {
                                 objPort.postMessage({
                                     'strMessage': 'historySynchronize-progress',
-                                    'objResponse': objResponse
+                                    'objResponse': objResponse,
                                 });
-                            })
+                            }),
                         });
                     }
                 });
@@ -474,7 +474,7 @@ let History = {
         let objHistory = await chrome.history.search({
             'text': 'youtube.com',
             'startTime': objRequest.intTimestamp,
-            'maxResults': 1000000
+            'maxResults': 1000000,
         });
 
         let objTransaction = Database.objDatabase.transaction(['storeDatabase'], 'readwrite');
@@ -515,7 +515,7 @@ let History = {
                     'strIdent': strIdent,
                     'intTimestamp': intTimestamp,
                     'strTitle': strTitle,
-                    'intCount': intCount
+                    'intCount': intCount,
                 });
 
             } else if ((objGet !== undefined) && (objGet !== null)) {
@@ -533,13 +533,13 @@ let History = {
                     'strIdent': strIdent,
                     'intTimestamp': intTimestamp,
                     'strTitle': strTitle,
-                    'intCount': intCount
+                    'intCount': intCount,
                 });
 
             }
 
             funcProgress({
-                'strProgress': 'imported ' + (intNew + intExisting) + ' videos - ' + intNew + ' were new'
+                'strProgress': 'imported ' + (intNew + intExisting) + ' videos - ' + intNew + ' were new',
             });
         }
 
@@ -565,21 +565,21 @@ let Youtube = {
                             'objResponse': await Youtube.synchronize(objData.objRequest, function(objResponse) {
                                 objPort.postMessage({
                                     'strMessage': 'youtubeSynchronize-progress',
-                                    'objResponse': objResponse
+                                    'objResponse': objResponse,
                                 });
-                            })
+                            }),
                         });
 
                     } else if (objData.strMessage === 'youtubeLookup') {
                         objPort.postMessage({
                             'strMessage': 'youtubeLookup',
-                            'objResponse': await Youtube.lookup(objData.objRequest)
+                            'objResponse': await Youtube.lookup(objData.objRequest),
                         });
 
                     } else if (objData.strMessage === 'youtubeMark') {
                         objPort.postMessage({
                             'strMessage': 'youtubeMark',
-                            'objResponse': await Youtube.mark(objData.objRequest)
+                            'objResponse': await Youtube.mark(objData.objRequest),
                         });
 
                     }
@@ -602,7 +602,7 @@ let Youtube = {
             if ((objContext === null) || (strClicktrack === null) || (strContinuation === null)) {
                 objFetch = await fetch('https://www.youtube.com/feed/history', {
                     'method': 'GET',
-                    'credentials': 'include'
+                    'credentials': 'include',
                 });
 
             } else if ((objContext !== null) && (strClicktrack !== null) && (strContinuation !== null)) {
@@ -656,7 +656,7 @@ let Youtube = {
                         'strIdent': strIdent,
                         'intTimestamp': intTimestamp,
                         'strTitle': strTitle,
-                        'intCount': intCount
+                        'intCount': intCount,
                     });
 
                 } else if ((objGet !== undefined) && (objGet !== null)) {
@@ -674,13 +674,13 @@ let Youtube = {
                         'strIdent': strIdent,
                         'intTimestamp': intTimestamp,
                         'strTitle': strTitle,
-                        'intCount': intCount
+                        'intCount': intCount,
                     });
 
                 }
 
                 funcProgress({
-                    'strProgress': 'imported ' + (intNew + intExisting) + ' videos - ' + intNew + ' were new'
+                    'strProgress': 'imported ' + (intNew + intExisting) + ' videos - ' + intNew + ' were new',
                 });
             }
 
@@ -715,7 +715,7 @@ let Youtube = {
             'strIdent': objGet.strIdent,
             'intTimestamp': objGet.intTimestamp || new Date().getTime(),
             'strTitle': objGet.strTitle || '',
-            'intCount': objGet.intCount || 1
+            'intCount': objGet.intCount || 1,
         };
     },
 
@@ -744,7 +744,7 @@ let Youtube = {
                     'strIdent': strIdent,
                     'intTimestamp': intTimestamp,
                     'strTitle': strTitle,
-                    'intCount': intCount
+                    'intCount': intCount,
                 };
             }
 
@@ -752,7 +752,7 @@ let Youtube = {
                 'strIdent': strIdent,
                 'intTimestamp': intTimestamp,
                 'strTitle': strTitle,
-                'intCount': intCount
+                'intCount': intCount,
             });
 
         } else if ((objGet !== undefined) && (objGet !== null)) {
@@ -765,7 +765,7 @@ let Youtube = {
                     'strIdent': strIdent,
                     'intTimestamp': intTimestamp,
                     'strTitle': strTitle,
-                    'intCount': intCount
+                    'intCount': intCount,
                 };
             }
 
@@ -773,7 +773,7 @@ let Youtube = {
                 'strIdent': strIdent,
                 'intTimestamp': intTimestamp,
                 'strTitle': strTitle,
-                'intCount': intCount
+                'intCount': intCount,
             });
 
         }
@@ -786,7 +786,7 @@ let Youtube = {
             'strIdent': strIdent,
             'intTimestamp': intTimestamp,
             'strTitle': strTitle,
-            'intCount': intCount
+            'intCount': intCount,
         };
     }
 };
@@ -799,7 +799,7 @@ let Search = {
                     if (objData.strMessage === 'searchLookup') {
                         objPort.postMessage({
                             'strMessage': 'searchLookup',
-                            'objResponse': await Search.lookup(objData.objRequest)
+                            'objResponse': await Search.lookup(objData.objRequest),
                         });
 
                     } else if (objData.strMessage === 'searchDelete') {
@@ -808,9 +808,9 @@ let Search = {
                             'objResponse': await Search.delete(objData.objRequest, function(objResponse) {
                                 objPort.postMessage({
                                     'strMessage': 'searchDelete-progress',
-                                    'objResponse': objResponse
+                                    'objResponse': objResponse,
                                 });
-                            })
+                            }),
                         });
 
                     }
@@ -839,7 +839,7 @@ let Search = {
                         'strIdent': objCursor.value.strIdent,
                         'intTimestamp': objCursor.value.intTimestamp,
                         'strTitle': objCursor.value.strTitle,
-                        'intCount': objCursor.value.intCount
+                        'intCount': objCursor.value.intCount,
                     });
 
                 }
@@ -858,7 +858,7 @@ let Search = {
         let objDatabase = objTransaction.objectStore('storeDatabase');
 
         funcProgress({
-            'strProgress': '1/5 - deleting it from the database'
+            'strProgress': '1/5 - deleting it from the database',
         });
 
         await objDatabase.delete(objRequest.strIdent);
@@ -868,13 +868,13 @@ let Search = {
         await objTransaction.done;
 
         funcProgress({
-            'strProgress': '2/5 - deleting it from the history in the browser'
+            'strProgress': '2/5 - deleting it from the history in the browser',
         });
 
         let objHistory = await chrome.history.search({
             'text': objRequest.strIdent,
             'startTime': 0,
-            'maxResults': 1000000
+            'maxResults': 1000000,
         });
 
         for (let objEntry of objHistory) {
@@ -887,12 +887,12 @@ let Search = {
             }
 
             chrome.history.deleteUrl({
-                'url': objEntry.url
+                'url': objEntry.url,
             });
         }
 
         funcProgress({
-            'strProgress': '3/5 - locating it in the history on youtube'
+            'strProgress': '3/5 - locating it in the history on youtube',
         });
 
         let objLookup = null; // only deleting the first occurrence since going through the entire history would take too much time
@@ -908,7 +908,7 @@ let Search = {
                 if ((objContext === null) || (strClicktrack === null) || (strContinuation === null)) {
                     objFetch = await fetch('https://www.youtube.com/feed/history', {
                         'method': 'GET',
-                        'credentials': 'include'
+                        'credentials': 'include',
                     });
 
                 } else if ((objContext !== null) && (strClicktrack !== null) && (strContinuation !== null)) {
@@ -964,7 +964,7 @@ let Search = {
                     objLookup = {
                         'strIdent': strIdent,
                         'strClicktrack': strClicktrack,
-                        'strFeedback': strFeedback
+                        'strFeedback': strFeedback,
                     };
                 }
             }
@@ -974,18 +974,18 @@ let Search = {
 
         if (objLookup === null) {
             funcProgress({
-                'strProgress': '4/5 - did not find it in the history on youtube'
+                'strProgress': '4/5 - did not find it in the history on youtube',
             });
 
         } else if (objLookup !== null) {
             funcProgress({
-                'strProgress': '4/5 - deleting it from the history on youtube'
+                'strProgress': '4/5 - deleting it from the history on youtube',
             });
 
             await funcYoufetch('https://www.youtube.com/youtubei/v1/feedback', { 'feedbackTokens': [objLookup.strFeedback], 'isFeedbackTokenUnencrypted': false, 'shouldMerge': false }, objContext, strClicktrack);
 
             funcProgress({
-                'strProgress': '5/5 - looks like we are all done here'
+                'strProgress': '5/5 - looks like we are all done here',
             });
 
         }
@@ -997,6 +997,12 @@ let Search = {
 // ##########################################################
 
 (async function() {
+    setInterval(chrome.runtime.getPlatformInfo, 20000); // https://github.com/sniklaus/youtube-watchmarker/issues/179
+
+    chrome.runtime.onStartup.addListener(function() {
+        setInterval(chrome.runtime.getPlatformInfo, 20000); // https://github.com/sniklaus/youtube-watchmarker/issues/179
+    });
+
     if (await funcStorageget('extensions.Youwatch.Database.intSize') === null) {
         await funcStorageset('extensions.Youwatch.Database.intSize', 0);
     }
@@ -1082,7 +1088,7 @@ let Search = {
 
             Youtube.lookup({
                 'strIdent': objRequest.strIdent,
-                'strTitle': objRequest.strTitle
+                'strTitle': objRequest.strTitle,
             }).then(funcResponse);
 
             return true; // indicate async response, i also tried using an async function with await but could not make it work
@@ -1095,7 +1101,7 @@ let Search = {
             Youtube.mark({
                 'strIdent': objRequest.strIdent,
                 'strTitle': objRequest.strTitle,
-                'boolEnsure': objRequest.boolEnsure
+                'boolEnsure': objRequest.boolEnsure,
             }).then(funcResponse);
 
             return true; // indicate async response, i also tried using an async function with await but could not make it work
@@ -1111,7 +1117,7 @@ let Search = {
                         Youtube.mark({
                             'strIdent': objRequest.strIdent,
                             'strTitle': objRequest.strTitle,
-                            'boolEnsure': objRequest.boolEnsure
+                            'boolEnsure': objRequest.boolEnsure,
                         }).then(funcResponse);
                     }
                 })
@@ -1143,7 +1149,7 @@ let Search = {
 
                     await Youtube.mark({
                         'strIdent': strIdent,
-                        'strTitle': strTitle
+                        'strTitle': strTitle,
                     });
 
                     chrome.tabs.query({
@@ -1155,7 +1161,7 @@ let Search = {
                                 'strIdent': strIdent,
                                 'intTimestamp': 0,
                                 'strTitle': strTitle,
-                                'intCount': 0
+                                'intCount': 0,
                             });
                         }
                     });
@@ -1166,35 +1172,35 @@ let Search = {
         if (await funcStorageget('extensions.Youwatch.Visualization.boolFadeout') === String(true)) {
             chrome.scripting.insertCSS({
                 target: { tabId: objTab.id },
-                css: await funcStorageget('extensions.Youwatch.Stylesheet.strFadeout')
+                css: await funcStorageget('extensions.Youwatch.Stylesheet.strFadeout'),
             });
         }
 
         if (await funcStorageget('extensions.Youwatch.Visualization.boolGrayout') === String(true)) {
             chrome.scripting.insertCSS({
                 target: { tabId: objTab.id },
-                css: await funcStorageget('extensions.Youwatch.Stylesheet.strGrayout')
+                css: await funcStorageget('extensions.Youwatch.Stylesheet.strGrayout'),
             });
         }
 
         if (await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true)) {
             chrome.scripting.insertCSS({
                 target: { tabId: objTab.id },
-                css: await funcStorageget('extensions.Youwatch.Stylesheet.strShowbadge')
+                css: await funcStorageget('extensions.Youwatch.Stylesheet.strShowbadge'),
             });
         }
 
         if ((await funcStorageget('extensions.Youwatch.Visualization.boolShowbadge') === String(true)) && (await funcStorageget('extensions.Youwatch.Visualization.boolShowdate') === String(true))) {
             chrome.scripting.insertCSS({
                 target: { tabId: objTab.id },
-                css: await funcStorageget('extensions.Youwatch.Stylesheet.strShowdate')
+                css: await funcStorageget('extensions.Youwatch.Stylesheet.strShowdate'),
             });
         }
 
         if (await funcStorageget('extensions.Youwatch.Visualization.boolHideprogress') === String(true)) {
             chrome.scripting.insertCSS({
                 target: { tabId: objTab.id },
-                css: await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress')
+                css: await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress'),
             });
         }
     });
@@ -1208,33 +1214,33 @@ let Search = {
                 requestHeaders: [{
                     header: 'Origin',
                     operation: 'set',
-                    value: 'https://www.youtube.com'
+                    value: 'https://www.youtube.com',
                 }, {
                     header: 'Referer',
                     operation: 'set',
-                    value: 'https://www.youtube.com/feed/history'
+                    value: 'https://www.youtube.com/feed/history',
                 }, {
                     header: 'Sec-Fetch-Mode',
                     operation: 'set',
-                    value: 'same-origin'
+                    value: 'same-origin',
                 }]
             },
             condition: {
                 urlFilter: '|https://www.youtube.com/youtubei/v1/*',
-                resourceTypes: ['xmlhttprequest']
-            }
+                resourceTypes: ['xmlhttprequest'],
+            },
         }],
     });
 
     chrome.alarms.create('synchronize', {
-        'periodInMinutes': 60
+        'periodInMinutes': 60,
     });
 
     chrome.alarms.onAlarm.addListener(async function(objAlarm) {
         if (objAlarm.name === 'synchronize') {
             if (await funcStorageget('extensions.Youwatch.Condition.boolBrowhist') === String(true)) {
                 await History.synchronize({
-                    'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000)
+                    'intTimestamp': new Date().getTime() - (7 * 24 * 60 * 60 * 1000),
                 }, function(objResponse) {
                     // ...
                 });
@@ -1244,7 +1250,7 @@ let Search = {
 
             if (await funcStorageget('extensions.Youwatch.Condition.boolYouhist') === String(true)) {
                 await Youtube.synchronize({
-                    'intThreshold': 512
+                    'intThreshold': 512,
                 }, function(objResponse) {
                     // ...
                 });
@@ -1254,7 +1260,3 @@ let Search = {
         }
     });
 })();
-
-// ##########################################################
-
-setInterval(chrome.runtime.getPlatformInfo, 20000); // https://stackoverflow.com/a/66618269
