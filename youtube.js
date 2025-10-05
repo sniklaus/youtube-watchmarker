@@ -13,6 +13,8 @@ let videos = function(strIdent) {
         'a.reel-item-endpoint[href^="/shorts/' + strIdent + '"]', // shorts
         'a.ytp-videowall-still[href*="/watch?v=' + strIdent + '"]', // videowall
         'a.ytp-ce-covering-overlay[href*="/watch?v=' + strIdent + '"]', // overlays
+        'a.media-item-thumbnail-container[href*="/watch?v=' + strIdent + '"]', // mobile
+        'a.YtmCompactMediaItemImage[href*="/watch?v=' + strIdent + '"]', // mobile
     ]).join(', ')));
 };
 
@@ -132,13 +134,27 @@ chrome.runtime.onMessage.addListener(async function(objData, objSender, funcResp
 
 // ##########################################################
 
-document.addEventListener('yt-service-request-completed', function() {
-    strLastchange = null; // there is a chance that this is not sufficient, the page may not be updated yet so if the interval function triggers it may have been too soon
+document.addEventListener('visibilitychange', async function() {
+    if (document.visibilityState === 'visible') {
+        await refresh();
+    }
 });
 
-document.addEventListener('yt-navigate-finish', function() {
-    strLastchange = null; // there is a chance that this is not sufficient, the page may not be updated yet so if the interval function triggers it may have been too soon
-});
+// ##########################################################
+
+let eventhandler = function() {
+    for (let delay = 0; delay < 3000 + 1; delay += 300) {
+        window.setTimeout(refresh, delay); // refreshing right away might have been too early so instead we do it brute force
+    }
+};
+
+document.addEventListener('yt-service-request-completed', eventhandler); // https://github.com/sota2501/youtube-chat-ex/blob/master/docs/event.md
+document.addEventListener('yt-navigate-finish', eventhandler); // https://github.com/sota2501/youtube-chat-ex/blob/master/docs/event.md
+document.addEventListener('yt-page-type-changed', eventhandler); // https://github.com/sota2501/youtube-chat-ex/blob/master/docs/event.md
+document.addEventListener('yt-page-data-updated', eventhandler); // https://github.com/sota2501/youtube-chat-ex/blob/master/docs/event.md
+document.addEventListener('yt-visibility-refresh', eventhandler); // https://github.com/1natsu172/Outside-YouTube-Player-Bar/blob/develop/src/core/services/eventEffectServices/libs/YT_EVENTS.ts
+
+// ##########################################################
 
 window.setInterval(async function() {
     if (document.hidden === true) {
@@ -151,9 +167,3 @@ window.setInterval(async function() {
 
     await refresh();
 }, 300);
-
-document.addEventListener('visibilitychange', async function() {
-    if (document.visibilityState === 'visible') {
-        await refresh();
-    }
-});

@@ -165,6 +165,12 @@ let funcHackyparse = function(strJson) {
 let funcParsevideos = function(strText, boolProgress) {
     let objVideos = [];
 
+    if (strText.indexOf('\\x22responseContext\\x22') !== -1) {
+        strText = strText.replace(new RegExp('\\\\x([0-9a-f][0-9a-f])', 'g'), function(objMatch) {
+            return String.fromCharCode(parseInt(objMatch.substr(2), 16));
+        });
+    }
+
     for (let strVideo of strText.split('{"lockupViewModel":').slice(1)) {
         let objVideo = funcHackyparse('{"lockupViewModel":' + strVideo);
 
@@ -212,6 +218,53 @@ let funcParsevideos = function(strText, boolProgress) {
         })
     }
 
+    for (let strVideo of strText.split('{"videoWithContextRenderer":').slice(1)) {
+        let objVideo = funcHackyparse('{"videoWithContextRenderer":' + strVideo);
+
+        if (objVideo === null) {
+            continue;
+        }
+
+        if (boolProgress === true) {
+            if (JSON.stringify(objVideo).indexOf('"startTimeSeconds"') === -1) {
+                continue;
+            }
+        }
+
+        let strIdent = objVideo['videoWithContextRenderer']['videoId'];
+        let strTitle = null;
+
+        if (strTitle === null) {
+            try {
+                strTitle = objVideo['videoWithContextRenderer']['headline']['runs'][0]['text'];
+            } catch (objError) {
+                // ...
+            }
+        }
+
+        if (strTitle === null) {
+            try {
+                strTitle = objVideo['videoWithContextRenderer']['headline']['accessibility']['accessibilityData']['label'];
+            } catch (objError) {
+                // ...
+            }
+        }
+
+        if (strIdent.length !== 11) {
+            continue;
+
+        } else if (strTitle === null) {
+            continue;
+
+        }
+
+        objVideos.push({
+            'objVideo': objVideo,
+            'strIdent': strIdent,
+            'strTitle': strTitle,
+        })
+    }
+
     for (let strVideo of strText.split('{"videoRenderer":{"videoId":"').slice(1)) {
         let objVideo = funcHackyparse('{"videoRenderer":{"videoId":"' + strVideo);
 
@@ -227,6 +280,33 @@ let funcParsevideos = function(strText, boolProgress) {
 
         let strIdent = objVideo['videoRenderer']['videoId'];
         let strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
+
+        if (strIdent.length !== 11) {
+            continue;
+        }
+
+        objVideos.push({
+            'objVideo': objVideo,
+            'strIdent': strIdent,
+            'strTitle': strTitle,
+        })
+    }
+
+    for (let strVideo of strText.split('{"compactVideoRenderer":{"videoId":"').slice(1)) {
+        let objVideo = funcHackyparse('{"compactVideoRenderer":{"videoId":"' + strVideo);
+
+        if (objVideo === null) {
+            continue;
+        }
+
+        if (boolProgress === true) {
+            if (JSON.stringify(objVideo).indexOf('"percentDurationWatched"') === -1) {
+                continue;
+            }
+        }
+
+        let strIdent = objVideo['compactVideoRenderer']['videoId'];
+        let strTitle = objVideo['compactVideoRenderer']['title']['runs'][0]['text'];
 
         if (strIdent.length !== 11) {
             continue;
@@ -481,7 +561,7 @@ let History = {
         let objDatabase = objTransaction.objectStore('storeDatabase');
 
         for (let objEntry of objHistory) {
-            if ((objEntry.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objEntry.url.indexOf('https://www.youtube.com/shorts/') !== 0) && (objEntry.url.indexOf('https://m.youtube.com/watch?v=') !== 0)) {
+            if ((objEntry.url.indexOf('.youtube.com/watch?v=') === -1) && (objEntry.url.indexOf('.youtube.com/shorts/') === -1)) {
                 continue;
 
             } else if ((objEntry.title === undefined) || (objEntry.title === null)) {
@@ -878,7 +958,7 @@ let Search = {
         });
 
         for (let objEntry of objHistory) {
-            if ((objEntry.url.indexOf('https://www.youtube.com/watch?v=') !== 0) && (objEntry.url.indexOf('https://www.youtube.com/shorts/') !== 0) && (objEntry.url.indexOf('https://m.youtube.com/watch?v=') !== 0)) {
+            if ((objEntry.url.indexOf('.youtube.com/watch?v=') === -1) && (objEntry.url.indexOf('.youtube.com/shorts/') === -1)) {
                 continue;
 
             } else if ((objEntry.title === undefined) || (objEntry.title === null)) {
@@ -1068,7 +1148,7 @@ let Search = {
     }
 
     if ((await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress') === null) || ((await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress')).indexOf('do not modify') === -1)) {
-        await funcStorageset('extensions.Youwatch.Stylesheet.strHideprogress', 'yt-thumbnail-overlay-progress-bar-view-model, ytd-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
+        await funcStorageset('extensions.Youwatch.Stylesheet.strHideprogress', 'yt-thumbnail-overlay-progress-bar-view-model, ytd-thumbnail-overlay-resume-playback-rendererr, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
     }
 
     await Database.init();
@@ -1132,13 +1212,13 @@ let Search = {
         if (objTab.id < 0) {
             return;
 
-        } else if ((objTab.url.indexOf('https://www.youtube.com') !== 0) && (objTab.url.indexOf('https://m.youtube.com') !== 0)) {
+        } else if (objTab.url.indexOf('.youtube.com') === -1) {
             return;
 
         }
 
         if (await funcStorageget('extensions.Youwatch.Condition.boolBrownav') === String(true)) {
-            if ((objTab.url.indexOf('https://www.youtube.com/watch?v=') === 0) || (objTab.url.indexOf('https://www.youtube.com/shorts/') === 0) || (objTab.url.indexOf('https://m.youtube.com/watch?v=') === 0)) {
+            if ((objTab.url.indexOf('.youtube.com/watch?v=') !== -1) || (objTab.url.indexOf('.youtube.com/shorts/') !== -1)) {
                 if ((objChange.title !== undefined) && (objChange.title !== null)) {
                     let strIdent = objTab.url.split('&')[0].slice(-11);
                     let strTitle = objChange.title;

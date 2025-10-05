@@ -31,6 +31,12 @@ let funcHackyparse = function(strJson) {
 let funcParsevideos = function(strText, boolProgress) {
     let objVideos = [];
 
+    if (strText.indexOf('\\x22responseContext\\x22') !== -1) {
+        strText = strText.replace(new RegExp('\\\\x([0-9a-f][0-9a-f])', 'g'), function(objMatch) {
+            return String.fromCharCode(parseInt(objMatch.substr(2), 16));
+        });
+    }
+
     for (let strVideo of strText.split('{"lockupViewModel":').slice(1)) {
         let objVideo = funcHackyparse('{"lockupViewModel":' + strVideo);
 
@@ -78,6 +84,53 @@ let funcParsevideos = function(strText, boolProgress) {
         })
     }
 
+    for (let strVideo of strText.split('{"videoWithContextRenderer":').slice(1)) {
+        let objVideo = funcHackyparse('{"videoWithContextRenderer":' + strVideo);
+
+        if (objVideo === null) {
+            continue;
+        }
+
+        if (boolProgress === true) {
+            if (JSON.stringify(objVideo).indexOf('"startTimeSeconds"') === -1) {
+                continue;
+            }
+        }
+
+        let strIdent = objVideo['videoWithContextRenderer']['videoId'];
+        let strTitle = null;
+
+        if (strTitle === null) {
+            try {
+                strTitle = objVideo['videoWithContextRenderer']['headline']['runs'][0]['text'];
+            } catch (objError) {
+                // ...
+            }
+        }
+
+        if (strTitle === null) {
+            try {
+                strTitle = objVideo['videoWithContextRenderer']['headline']['accessibility']['accessibilityData']['label'];
+            } catch (objError) {
+                // ...
+            }
+        }
+
+        if (strIdent.length !== 11) {
+            continue;
+
+        } else if (strTitle === null) {
+            continue;
+
+        }
+
+        objVideos.push({
+            'objVideo': objVideo,
+            'strIdent': strIdent,
+            'strTitle': strTitle,
+        })
+    }
+
     for (let strVideo of strText.split('{"videoRenderer":{"videoId":"').slice(1)) {
         let objVideo = funcHackyparse('{"videoRenderer":{"videoId":"' + strVideo);
 
@@ -93,6 +146,33 @@ let funcParsevideos = function(strText, boolProgress) {
 
         let strIdent = objVideo['videoRenderer']['videoId'];
         let strTitle = objVideo['videoRenderer']['title']['runs'][0]['text'];
+
+        if (strIdent.length !== 11) {
+            continue;
+        }
+
+        objVideos.push({
+            'objVideo': objVideo,
+            'strIdent': strIdent,
+            'strTitle': strTitle,
+        })
+    }
+
+    for (let strVideo of strText.split('{"compactVideoRenderer":{"videoId":"').slice(1)) {
+        let objVideo = funcHackyparse('{"compactVideoRenderer":{"videoId":"' + strVideo);
+
+        if (objVideo === null) {
+            continue;
+        }
+
+        if (boolProgress === true) {
+            if (JSON.stringify(objVideo).indexOf('"percentDurationWatched"') === -1) {
+                continue;
+            }
+        }
+
+        let strIdent = objVideo['compactVideoRenderer']['videoId'];
+        let strTitle = objVideo['compactVideoRenderer']['title']['runs'][0]['text'];
 
         if (strIdent.length !== 11) {
             continue;
@@ -149,9 +229,7 @@ let funcEmitvideos = function(strText) {
 // ##########################################################
 
 window.addEventListener('DOMContentLoaded', function() {
-    funcEmitvideos(document.documentElement.outerHTML.split('var ytInitialData = ').slice(-1)[0].split(';</script>')[0].replace(new RegExp(String.fromCharCode(92) + String.fromCharCode(92) + 'x([0-9a-f][0-9a-f])', 'g'), function(objMatch) {
-        return String.fromCharCode(parseInt(objMatch.substr(2), 16));
-    }));
+    funcEmitvideos(document.documentElement.outerHTML.split('var ytInitialData = ').slice(-1)[0].split(';</script>')[0]);
 });
 
 // ##########################################################
@@ -161,7 +239,7 @@ let objFetch = window.fetch;
 
 window.XMLHttpRequest.prototype.open = function() {
     this.addEventListener('load', function() {
-        if (this.responseURL.indexOf('https://www.youtube.com/youtubei/v1/') !== -1) {
+        if (this.responseURL.indexOf('.youtube.com/youtubei/v1/') !== -1) {
             funcEmitvideos(this.responseText);
         }
     });
@@ -172,8 +250,7 @@ window.XMLHttpRequest.prototype.open = function() {
 window.fetch = async function(objRequest, objOptions) {
     let objResponse = await objFetch(objRequest, objOptions);
 
-
-    if ((typeof(objRequest) === 'string' ? objRequest : objRequest.url).indexOf('https://www.youtube.com/youtubei/v1/') !== -1) {
+    if ((typeof(objRequest) === 'string' ? objRequest : objRequest.url).indexOf('.youtube.com/youtubei/v1/') !== -1) {
         let strResponse = await objResponse.text();
 
         funcEmitvideos(strResponse);
