@@ -1148,7 +1148,7 @@ let Search = {
     }
 
     if ((await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress') === null) || ((await funcStorageget('extensions.Youwatch.Stylesheet.strHideprogress')).indexOf('do not modify') === -1)) {
-        await funcStorageset('extensions.Youwatch.Stylesheet.strHideprogress', 'yt-thumbnail-overlay-progress-bar-view-model, ytd-thumbnail-overlay-resume-playback-rendererr, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
+        await funcStorageset('extensions.Youwatch.Stylesheet.strHideprogress', 'yt-thumbnail-overlay-progress-bar-view-model, ytd-thumbnail-overlay-resume-playback-renderer, ytm-thumbnail-overlay-resume-playback-renderer { display:none !important; }');
     }
 
     await Database.init();
